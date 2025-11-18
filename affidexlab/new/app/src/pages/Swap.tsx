@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { TokenSelector } from "@/components/TokenSelector";
 import { ARBITRUM_TOKENS } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
+import { analytics } from "@/lib/analytics";
 import { ArrowDownUp, Loader2 } from "lucide-react";
 
 export default function Swap() {
@@ -27,7 +28,22 @@ export default function Swap() {
   const { data: swapHash, sendTransaction } = useSendTransaction();
   
   const { isLoading: isApproving } = useWaitForTransactionReceipt({ hash: approvalHash });
-  const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+
+  useEffect(() => {
+    if (isSwapSuccess && swapHash && address && quote) {
+      analytics.trackSwap({
+        user: address,
+        tokenIn: fromToken.symbol,
+        tokenOut: toToken.symbol,
+        amountIn: amount,
+        amountOut: formatUnits(BigInt(quote.estimatedOutput), toToken.decimals),
+        route: quote.provider,
+        txHash: swapHash,
+        chainId: 42161,
+      });
+    }
+  }, [isSwapSuccess, swapHash, address, quote, amount, fromToken, toToken]);
 
   // Fetch quote when amount or tokens change
   useEffect(() => {
