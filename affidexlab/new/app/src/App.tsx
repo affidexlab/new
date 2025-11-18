@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Swap from "./pages/Swap";
 import Bridge from "./pages/Bridge";
@@ -20,7 +20,7 @@ export default function App() {
             <a href="#bridge" className="hover:text-primary">Bridge</a>
             <a href="#analytics" className="hover:text-primary">Analytics</a>
           </nav>
-          <Button variant="default">Connect Wallet</Button>
+          <ConnectButton />
         </div>
       </header>
 
