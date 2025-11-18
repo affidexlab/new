@@ -1,47 +1,59 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Swap from "./pages/Swap";
+import Bridge from "./pages/Bridge";
+import Pools from "./pages/Pools";
+import CreatePool from "./pages/CreatePool";
+import PrivacySwap from "./pages/PrivacySwap";
+import Analytics from "./pages/Analytics";
 
-export default function Home() {
+export default function App() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-background">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/10" />
-
-      <main className="container relative z-10 flex max-w-4xl flex-col items-center justify-center gap-10 px-4 py-16 text-center md:py-24">
-        <div className="flex items-center gap-2 rounded-full border border-border/50 bg-background/50 px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
-          <Sparkles size={12} />
-          <span>Vite + Tailwind + shadcn/ui</span>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+          <div className="text-lg font-semibold">DeFiSwap</div>
+          <nav className="hidden gap-6 sm:flex text-sm">
+            <a href="#swap" className="hover:text-primary">Swap</a>
+            <a href="#pools" className="hover:text-primary">Pools</a>
+            <a href="#create" className="hover:text-primary">Create Pool</a>
+            <a href="#bridge" className="hover:text-primary">Bridge</a>
+            <a href="#analytics" className="hover:text-primary">Analytics</a>
+          </nav>
+          <Button variant="default">Connect Wallet</Button>
         </div>
+      </header>
 
-        <div className="space-y-8">
-          <h1 className="font-serif text-4xl font-light tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Welcome to{" "}
-            <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-              Scout
-            </span>
-          </h1>
-          <p className="mx-auto max-w-lg text-lg text-muted-foreground md:text-xl">
-            Your website is on the way. Let Scout Cook.
-          </p>
-        </div>
+      <main className="container mx-auto px-4 py-8">
+        <section className="mb-8 rounded-2xl bg-gradient-to-b from-primary/10 to-transparent p-6">
+          <h1 className="text-3xl font-bold">Trade with Zero Compromise</h1>
+          <p className="text-sm text-muted-foreground">Dynamic routing, MEV-safe privacy option, and cross-chain bridging with CCIP/CCTP.</p>
+        </section>
 
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <a href="https://scout.new" target="_blank" rel="noopener noreferrer">
-            <Button size="lg" className="group">
-              <span>Get Started</span>
-              <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
-            </Button>
-          </a>
-          <a
-            href="https://x.com/scoutdotnew"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="outline" size="lg" className="backdrop-blur-sm">
-              Learn More
-            </Button>
-          </a>
-        </div>
+        <Tabs defaultValue="swap" className="w-full">
+          <TabsList className="mb-4 grid w-full grid-cols-5">
+            <TabsTrigger value="swap">Swap</TabsTrigger>
+            <TabsTrigger value="pools">Pools</TabsTrigger>
+            <TabsTrigger value="create">Create Pool</TabsTrigger>
+            <TabsTrigger value="bridge">Bridge</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+          <TabsContent value="swap"><Swap /></TabsContent>
+          <TabsContent value="pools"><Pools /></TabsContent>
+          <TabsContent value="create"><CreatePool /></TabsContent>
+          <TabsContent value="bridge"><Bridge /></TabsContent>
+          <TabsContent value="analytics"><Analytics /></TabsContent>
+        </Tabs>
+
+        <section id="privacy" className="mt-12">
+          <h2 className="mb-2 text-xl font-semibold">Privacy Swap</h2>
+          <PrivacySwap />
+        </section>
       </main>
+
+      <footer className="border-t py-8 text-center text-xs text-muted-foreground">
+        Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+      </footer>
     </div>
   );
 }
