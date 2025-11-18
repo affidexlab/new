@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "bun run build",
+  "outputDirectory": "dist",
+  "installCommand": "bun install",
+  "devCommand": "bun run dev",
+  "env": {
+    "VITE_WALLETCONNECT_PROJECT_ID": "@walletconnect_project_id",
+    "VITE_SOCKET_API_KEY": "@socket_api_key"
+  }
+}
