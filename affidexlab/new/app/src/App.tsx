@@ -1,18 +1,166 @@
+import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGeoBlock } from "@/hooks/useGeoBlock";
+import { GeoBlockModal } from "@/components/GeoBlockModal";
+import Home from "./pages/Home";
 import Swap from "./pages/Swap";
 import Bridge from "./pages/Bridge";
 import Pools from "./pages/Pools";
 import CreatePool from "./pages/CreatePool";
 import PrivacySwap from "./pages/PrivacySwap";
 import Analytics from "./pages/Analytics";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+
+type Page = "home" | "app" | "terms" | "privacy";
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState<Page>("home");
+  const { blocked, loading, country } = useGeoBlock();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentPage === "terms") {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+          <div className="container mx-auto flex h-14 items-center justify-between px-4">
+            <button
+              onClick={() => setCurrentPage("home")}
+              className="text-lg font-semibold hover:text-primary transition-colors"
+            >
+              DeFiSwap
+            </button>
+            <nav className="hidden gap-6 sm:flex text-sm">
+              <button onClick={() => setCurrentPage("terms")} className="text-primary">Terms</button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-primary">Privacy</button>
+            </nav>
+          </div>
+        </header>
+        <Terms />
+        <footer className="border-t py-8 text-center text-xs text-muted-foreground">
+          <div className="container mx-auto px-4">
+            <div className="mb-4">
+              Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+            </div>
+            <div className="flex justify-center gap-4">
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-foreground">
+                Terms of Service
+              </button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-foreground">
+                Privacy Policy
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  if (currentPage === "privacy") {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+          <div className="container mx-auto flex h-14 items-center justify-between px-4">
+            <button
+              onClick={() => setCurrentPage("home")}
+              className="text-lg font-semibold hover:text-primary transition-colors"
+            >
+              DeFiSwap
+            </button>
+            <nav className="hidden gap-6 sm:flex text-sm">
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-primary">Terms</button>
+              <button onClick={() => setCurrentPage("privacy")} className="text-primary">Privacy</button>
+            </nav>
+          </div>
+        </header>
+        <Privacy />
+        <footer className="border-t py-8 text-center text-xs text-muted-foreground">
+          <div className="container mx-auto px-4">
+            <div className="mb-4">
+              Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+            </div>
+            <div className="flex justify-center gap-4">
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-foreground">
+                Terms of Service
+              </button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-foreground">
+                Privacy Policy
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  if (currentPage === "home") {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <GeoBlockModal open={blocked} country={country} />
+        
+        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+          <div className="container mx-auto flex h-14 items-center justify-between px-4">
+            <button
+              onClick={() => setCurrentPage("home")}
+              className="text-lg font-semibold hover:text-primary transition-colors"
+            >
+              DeFiSwap
+            </button>
+            <nav className="hidden gap-6 sm:flex text-sm">
+              <button onClick={() => setCurrentPage("app")} className="hover:text-primary">App</button>
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-primary">Terms</button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-primary">Privacy</button>
+            </nav>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <main>
+          <Home onLaunchApp={() => !blocked && setCurrentPage("app")} />
+        </main>
+
+        <footer className="border-t py-8 text-center text-xs text-muted-foreground">
+          <div className="container mx-auto px-4">
+            <div className="mb-4">
+              Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+            </div>
+            <div className="flex justify-center gap-4">
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-foreground">
+                Terms of Service
+              </button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-foreground">
+                Privacy Policy
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <GeoBlockModal open={blocked} country={country} />
+      
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <div className="text-lg font-semibold">DeFiSwap</div>
+          <button
+            onClick={() => setCurrentPage("home")}
+            className="text-lg font-semibold hover:text-primary transition-colors"
+          >
+            DeFiSwap
+          </button>
           <nav className="hidden gap-6 sm:flex text-sm">
             <a href="#swap" className="hover:text-primary">Swap</a>
             <a href="#pools" className="hover:text-primary">Pools</a>
@@ -25,11 +173,6 @@ export default function App() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <section className="mb-8 rounded-2xl bg-gradient-to-b from-primary/10 to-transparent p-6">
-          <h1 className="text-3xl font-bold">Trade with Zero Compromise</h1>
-          <p className="text-sm text-muted-foreground">Dynamic routing, MEV-safe privacy option, and cross-chain bridging with CCIP/CCTP.</p>
-        </section>
-
         <Tabs defaultValue="swap" className="w-full">
           <TabsList className="mb-4 grid w-full grid-cols-5">
             <TabsTrigger value="swap">Swap</TabsTrigger>
@@ -52,7 +195,19 @@ export default function App() {
       </main>
 
       <footer className="border-t py-8 text-center text-xs text-muted-foreground">
-        Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+        <div className="container mx-auto px-4">
+          <div className="mb-4">
+            Built for Arbitrum • Routing via 0x + CoW • Bridge via CCIP/CCTP with Socket fallback
+          </div>
+          <div className="flex justify-center gap-4">
+            <button onClick={() => setCurrentPage("terms")} className="hover:text-foreground">
+              Terms of Service
+            </button>
+            <button onClick={() => setCurrentPage("privacy")} className="hover:text-foreground">
+              Privacy Policy
+            </button>
+          </div>
+        </div>
       </footer>
     </div>
   );
