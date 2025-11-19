@@ -13,7 +13,7 @@ export default function Privacy() {
 
           <h2>1. Overview</h2>
           <p>
-            DeFiSwap is a non-custodial, decentralized trading protocol. This Privacy Policy explains how we handle
+            DECAFLOW is a non-custodial, decentralized trading protocol. This Privacy Policy explains how we handle
             information related to your use of the Protocol.
           </p>
 
