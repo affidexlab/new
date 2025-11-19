@@ -65,7 +65,7 @@ After deployment, update the code:
 
 In Vercel dashboard:
 1. Go to your project → Settings → Domains
-2. Add your domain (e.g., `defiswap.xyz`)
+2. Add your domain (e.g., `decaflow.xyz`)
 3. Update DNS records as shown
 4. Wait for SSL (usually < 5 minutes)
 
