@@ -1,8 +1,8 @@
-# Cross-Chain Swap Aggregator (DeFiSwap/ChainSwap style) — MVP Plan
+# Cross-Chain Swap Aggregator (DECAFLOW) — MVP Plan
 
 Audience: Retail via wallets/exchanges
 Scope: Arbitrum first; cross-chain via CCIP + CCTP with Socket fallback; private swap path; include minimal pools
-Theme: DeFiSwap-like dark theme
+Theme: Dark theme with modern UI
 
 ## 1) Product summary
 A web app on Arbitrum L2 that provides:
