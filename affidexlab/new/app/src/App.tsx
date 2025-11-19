@@ -33,17 +33,17 @@ export default function App() {
   if (currentPage === "terms") {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-          <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <header className="sticky top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
+          <div className="container mx-auto flex h-16 items-center justify-between px-4">
             <button
               onClick={() => setCurrentPage("home")}
-              className="text-lg font-semibold hover:text-primary transition-colors"
+              className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:from-blue-500 hover:to-cyan-500 transition-all"
             >
               DECAFLOW
             </button>
-            <nav className="hidden gap-6 sm:flex text-sm">
-              <button onClick={() => setCurrentPage("terms")} className="text-primary">Terms</button>
-              <button onClick={() => setCurrentPage("privacy")} className="hover:text-primary">Privacy</button>
+            <nav className="hidden gap-8 sm:flex text-sm font-medium">
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-blue-400 transition-colors">Terms</button>
+              <button onClick={() => setCurrentPage("privacy")} className="text-blue-400">Privacy</button>
             </nav>
           </div>
         </header>
@@ -109,18 +109,18 @@ export default function App() {
       <div className="min-h-screen bg-background text-foreground">
         <GeoBlockModal open={blocked} country={country} />
         
-        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-          <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <header className="sticky top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
+          <div className="container mx-auto flex h-16 items-center justify-between px-4">
             <button
               onClick={() => setCurrentPage("home")}
-              className="text-lg font-semibold hover:text-primary transition-colors"
+              className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:from-blue-500 hover:to-cyan-500 transition-all"
             >
               DECAFLOW
             </button>
-            <nav className="hidden gap-6 sm:flex text-sm">
-              <button onClick={() => setCurrentPage("app")} className="hover:text-primary">App</button>
-              <button onClick={() => setCurrentPage("terms")} className="hover:text-primary">Terms</button>
-              <button onClick={() => setCurrentPage("privacy")} className="hover:text-primary">Privacy</button>
+            <nav className="hidden gap-8 sm:flex text-sm font-medium">
+              <button onClick={() => setCurrentPage("app")} className="hover:text-blue-400 transition-colors">App</button>
+              <button onClick={() => setCurrentPage("terms")} className="hover:text-blue-400 transition-colors">Terms</button>
+              <button onClick={() => setCurrentPage("privacy")} className="hover:text-blue-400 transition-colors">Privacy</button>
             </nav>
             <ConnectButton />
           </div>
@@ -153,20 +153,20 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground">
       <GeoBlockModal open={blocked} country={country} />
       
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/60 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <button
             onClick={() => setCurrentPage("home")}
-            className="text-lg font-semibold hover:text-primary transition-colors"
+            className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hover:from-blue-500 hover:to-cyan-500 transition-all"
           >
             DECAFLOW
           </button>
-          <nav className="hidden gap-6 sm:flex text-sm">
-            <a href="#swap" className="hover:text-primary">Swap</a>
-            <a href="#pools" className="hover:text-primary">Pools</a>
-            <a href="#create" className="hover:text-primary">Create Pool</a>
-            <a href="#bridge" className="hover:text-primary">Bridge</a>
-            <a href="#analytics" className="hover:text-primary">Analytics</a>
+          <nav className="hidden gap-8 sm:flex text-sm font-medium">
+            <a href="#swap" className="hover:text-blue-400 transition-colors">Swap</a>
+            <a href="#pools" className="hover:text-blue-400 transition-colors">Pools</a>
+            <a href="#create" className="hover:text-blue-400 transition-colors">Create Pool</a>
+            <a href="#bridge" className="hover:text-blue-400 transition-colors">Bridge</a>
+            <a href="#analytics" className="hover:text-blue-400 transition-colors">Analytics</a>
           </nav>
           <ConnectButton />
         </div>
