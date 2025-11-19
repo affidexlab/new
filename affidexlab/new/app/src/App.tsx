@@ -39,7 +39,7 @@ export default function App() {
               onClick={() => setCurrentPage("home")}
               className="text-lg font-semibold hover:text-primary transition-colors"
             >
-              DeFiSwap
+              DECAFLOW
             </button>
             <nav className="hidden gap-6 sm:flex text-sm">
               <button onClick={() => setCurrentPage("terms")} className="text-primary">Terms</button>
@@ -76,7 +76,7 @@ export default function App() {
               onClick={() => setCurrentPage("home")}
               className="text-lg font-semibold hover:text-primary transition-colors"
             >
-              DeFiSwap
+              DECAFLOW
             </button>
             <nav className="hidden gap-6 sm:flex text-sm">
               <button onClick={() => setCurrentPage("terms")} className="hover:text-primary">Terms</button>
@@ -115,7 +115,7 @@ export default function App() {
               onClick={() => setCurrentPage("home")}
               className="text-lg font-semibold hover:text-primary transition-colors"
             >
-              DeFiSwap
+              DECAFLOW
             </button>
             <nav className="hidden gap-6 sm:flex text-sm">
               <button onClick={() => setCurrentPage("app")} className="hover:text-primary">App</button>
@@ -159,7 +159,7 @@ export default function App() {
             onClick={() => setCurrentPage("home")}
             className="text-lg font-semibold hover:text-primary transition-colors"
           >
-            DeFiSwap
+            DECAFLOW
           </button>
           <nav className="hidden gap-6 sm:flex text-sm">
             <a href="#swap" className="hover:text-primary">Swap</a>
