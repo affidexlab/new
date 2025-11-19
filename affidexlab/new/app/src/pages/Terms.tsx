@@ -13,7 +13,7 @@ export default function Terms() {
 
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing or using DeFiSwap ("the Protocol"), you agree to be bound by these Terms of Service.
+            By accessing or using DECAFLOW ("the Protocol"), you agree to be bound by these Terms of Service.
             If you do not agree to these terms, do not use the Protocol.
           </p>
 
@@ -39,7 +39,7 @@ export default function Terms() {
 
           <h2>4. Non-Custodial Protocol</h2>
           <p>
-            DeFiSwap is a non-custodial protocol. We do not have access to, custody, or control over your funds at any time.
+            DECAFLOW is a non-custodial protocol. We do not have access to, custody, or control over your funds at any time.
             You are solely responsible for:
           </p>
           <ul>
