@@ -1,4 +1,4 @@
-# Investor One‑Pager — Cross-Chain Swap Aggregator (DeFiSwap)
+# Investor One‑Pager — Cross-Chain Swap Aggregator (DECAFLOW)
 
 Audience: Retail traders via direct web app + wallet/exchange integrations
 Scope: Arbitrum first, expanding to Base/Optimism/Polygon
