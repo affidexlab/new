@@ -80,7 +80,7 @@ vercel --prod
 
 In Vercel dashboard:
 1. Go to project settings → Domains
-2. Add your custom domain (e.g., `defiswap.xyz`)
+2. Add your custom domain (e.g., `decaflow.xyz`)
 3. Update DNS records as instructed
 4. Wait for SSL certificate
 
