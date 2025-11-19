@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary font-sans antialiased;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Button Components */
+  .btn-primary {
+    @apply bg-gradient-primary text-white font-bold px-8 py-3.5 rounded-md 
+           transition-all duration-150 hover:scale-105 hover:shadow-glow
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-accent bg-transparent text-accent font-bold px-8 py-3 rounded-md
+           transition-all duration-150 hover:bg-gradient-primary hover:text-white hover:border-transparent;
+  }
+
+  .btn-tertiary {
+    @apply bg-transparent text-text-secondary font-medium px-4 py-2 rounded-md
+           transition-all duration-150 hover:text-white hover:bg-white/5;
+  }
+
+  /* Card Components */
+  .card {
+    @apply bg-gradient-card border border-accent/15 rounded-lg p-6 
+           shadow-low transition-all duration-300;
+  }
+
+  .card-hover {
+    @apply card hover:border-accent/30 hover:-translate-y-0.5 hover:shadow-medium;
+  }
+
+  /* Input Components */
+  .input {
+    @apply bg-background-input text-white border border-white/10 rounded-md px-4 py-3.5
+           transition-all duration-150 placeholder:text-text-tertiary
+           focus:border-accent/50 focus:outline-none focus:ring-4 focus:ring-accent/10;
+  }
+
+  /* Badge/Pill Components */
+  .badge {
+    @apply bg-accent/15 text-accent border border-accent/30 
+           font-bold text-xs px-3 py-1.5 rounded-full;
+  }
+
+  /* Section Spacing */
+  .section {
+    @apply py-20 px-4;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 20px rgba(71, 161, 255, 0.5);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+}
