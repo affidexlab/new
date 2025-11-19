@@ -1,4 +1,4 @@
-# DeFiSwap Pitch Deck
+# DECAFLOW Pitch Deck
 ## Cross-Chain Swap Aggregator with Privacy & Custom Pools
 
 **Raising:** $1,000,000 Pre-Seed  
@@ -21,7 +21,7 @@
 
 ## 2. Solution
 
-**DeFiSwap** is a cross-chain swap aggregator that delivers:
+**DECAFLOW** is a cross-chain swap aggregator that delivers:
 
 ✅ **Best Execution** – Aggregates 0x, CoW Protocol, and native pools for optimal pricing  
 ✅ **MEV Protection** – Optional privacy mode routes trades through CoW intents + Flashbots Protect  
@@ -78,7 +78,7 @@
 - **Socket, Bungee** – Bridges, no swap aggregation
 - **Uniswap** – Dominant liquidity, no privacy, no bridging
 
-**DeFiSwap Differentiation:**
+**DECAFLOW Differentiation:**
 1. **Privacy-first** – Only aggregator with native MEV protection
 2. **Cross-chain native** – Unified swap + bridge UX
 3. **L2-focused** – Built for Arbitrum's low fees and speed
@@ -244,7 +244,7 @@
 
 ## 12. Competitive Analysis
 
-| Feature | DeFiSwap | 1inch | CoW Swap | Uniswap | Socket |
+| Feature | DECAFLOW | 1inch | CoW Swap | Uniswap | Socket |
 |---------|----------|-------|----------|---------|--------|
 | **Swap Aggregation** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **MEV Protection** | ✅ | ❌ | ✅ | ❌ | ❌ |
@@ -279,7 +279,7 @@
 4. **Token Launches** – 1000s of new tokens need liquidity; existing DEXs don't cater to campaigns
 5. **Privacy Demand** – Post-regulation, users seek non-custodial, privacy-first tools
 
-**DeFiSwap is the first aggregator built for the L2 + privacy era.**
+**DECAFLOW is the first aggregator built for the L2 + privacy era.**
 
 ---
 
@@ -335,6 +335,6 @@
 
 ---
 
-**Thank you for considering DeFiSwap.**
+**Thank you for considering DECAFLOW.**
 
 Let's build the future of cross-chain, privacy-first DeFi trading.
