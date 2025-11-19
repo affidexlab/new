@@ -12,7 +12,7 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <div className="text-lg font-semibold">DeFiSwap</div>
+          <div className="text-lg font-semibold">DECAFLOW</div>
           <nav className="hidden gap-6 sm:flex text-sm">
             <a href="#swap" className="hover:text-primary">Swap</a>
             <a href="#pools" className="hover:text-primary">Pools</a>
