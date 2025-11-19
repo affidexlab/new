@@ -4,12 +4,12 @@ Use this prompt when starting a new Capy session with the affidexlab/new repo:
 
 ---
 
-I'm continuing development on my DeFi protocol (cross-chain swap aggregator). 
+I'm continuing development on my DeFi protocol (cross-chain swap aggregator - DECAFLOW). 
 
 **Context:**
 - Repo: affidexlab/new (main branch)
 - Live site: decaflow.vercel.app
-- Product: DeFiSwap-style aggregator on Arbitrum with Swap (0x + CoW routing), Bridge (CCTP/CCIP/Socket), and Privacy mode (MEV protection)
+- Product: DECAFLOW aggregator on Arbitrum with Swap (0x + CoW routing), Bridge (CCTP/CCIP/Socket), and Privacy mode (MEV protection)
 - Status: Phase 1-3 complete (wallet integration, swap execution, bridge routing all coded and merged to main)
 - Tech stack: React + wagmi + RainbowKit, deployed on Vercel
 - Docs: Check docs/ folder for MVP plans, roadmap, and investor one-pager
@@ -28,7 +28,7 @@ I'm continuing development on my DeFi protocol (cross-chain swap aggregator).
 
 **What I need next:**
 [Specify your priority, for example:]
-- Polish the UI with a hero landing page like the DeFiSwap reference
+- Polish the UI with a hero landing page
 - Add analytics indexing to track swap volume, unique wallets, and top pairs
 - Add legal compliance layer (ToS, US IP blocking, disclaimers)
 - Build Phase 4 (minimal AMM pools for campaigns)
