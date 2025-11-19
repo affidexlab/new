@@ -1,4 +1,4 @@
-# DeFiSwap - Cross-Chain Swap Aggregator
+# DECAFLOW - Cross-Chain Swap Aggregator
 
 A production-ready DeFi protocol on Arbitrum with swap aggregation, cross-chain bridging, and MEV protection.
 

@@ -66,7 +66,7 @@ export default function Home({ onLaunchApp }: HomeProps) {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold sm:text-4xl">Why DeFiSwap?</h2>
+            <h2 className="mb-4 text-3xl font-bold sm:text-4xl">Why DecaFlow?</h2>
             <p className="text-lg text-muted-foreground">
               Built for traders who demand the best execution and privacy
             </p>
@@ -178,7 +178,7 @@ export default function Home({ onLaunchApp }: HomeProps) {
               Join traders who choose privacy, speed, and best execution
             </p>
             <Button size="lg" onClick={onLaunchApp} className="text-lg">
-              Launch DeFiSwap
+              Launch DecaFlow
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>

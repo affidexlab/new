@@ -2,15 +2,15 @@
 
 ## Template 1: Cold Outreach (Warm Intro Preferred)
 
-**Subject:** DeFiSwap – Privacy-first swap aggregator on Arbitrum ($1M pre-seed)
+**Subject:** DECAFLOW – Privacy-first swap aggregator on Arbitrum ($1M pre-seed)
 
 Hi [Investor Name],
 
-I'm [Your Name], founder of **DeFiSwap** – a cross-chain swap aggregator with MEV protection and custom liquidity pools, live on Arbitrum.
+I'm [Your Name], founder of **DECAFLOW** – a cross-chain swap aggregator with MEV protection and custom liquidity pools, live on Arbitrum.
 
 **Problem:** DeFi traders lose millions to MEV front-running and waste time comparing bridge routes. Existing aggregators (1inch, Matcha) don't prioritize privacy; privacy tools (CoW Swap) don't aggregate cross-chain.
 
-**Solution:** DeFiSwap combines best-price routing (0x + CoW) with optional privacy mode (Flashbots) and smart bridging (CCTP/CCIP/Socket) in one UX. Plus: custom AMM pools for token campaigns.
+**Solution:** DECAFLOW combines best-price routing (0x + CoW) with optional privacy mode (Flashbots) and smart bridging (CCTP/CCIP/Socket) in one UX. Plus: custom AMM pools for token campaigns.
 
 **Traction:** Live on Arbitrum mainnet at decaflow.vercel.app. Phase 1-3 shipped (swap, bridge, wallet). Preparing pool contracts for audit and first 2-3 token campaign partnerships.
 
@@ -27,11 +27,11 @@ decaflow.vercel.app
 
 ## Template 2: Follow-Up (After No Response)
 
-**Subject:** Re: DeFiSwap – Quick demo?
+**Subject:** Re: DECAFLOW – Quick demo?
 
 Hi [Investor Name],
 
-Following up on my note about **DeFiSwap** – the privacy-first swap aggregator on Arbitrum.
+Following up on my note about **DECAFLOW** – the privacy-first swap aggregator on Arbitrum.
 
 Since I last reached out:
 - Deployed mainnet aggregator with 0x + CoW routing
@@ -54,7 +54,7 @@ Hi [Mutual Connection],
 
 Hope you're doing well! Quick favor:
 
-I'm raising a $1M pre-seed for **DeFiSwap**, a cross-chain swap aggregator with MEV protection on Arbitrum (live at decaflow.vercel.app). We're focused on privacy-first trading and custom pools for token campaigns.
+I'm raising a $1M pre-seed for **DECAFLOW**, a cross-chain swap aggregator with MEV protection on Arbitrum (live at decaflow.vercel.app). We're focused on privacy-first trading and custom pools for token campaigns.
 
 I saw [Investor Name] at [Fund] invested in [Similar Portfolio Company] – seems like a great fit. Would you be open to making an intro if you think it makes sense?
 
@@ -67,7 +67,7 @@ Best,
 
 ## Template 4: Post-Demo Follow-Up
 
-**Subject:** DeFiSwap deck + next steps
+**Subject:** DECAFLOW deck + next steps
 
 Hi [Investor Name],
 
@@ -97,11 +97,11 @@ Best,
 
 ## Template 5: Closing Update (Creating FOMO)
 
-**Subject:** DeFiSwap pre-seed – closing soon
+**Subject:** DECAFLOW pre-seed – closing soon
 
 Hi [Investor Name],
 
-Quick update on **DeFiSwap**'s $1M pre-seed:
+Quick update on **DECAFLOW**'s $1M pre-seed:
 
 We're nearly oversubscribed with commitments from [Name 1-2 investors if possible, or "strategic angels in DeFi"]. Planning to close by [Date] and kick off audits + first token campaigns.
 
@@ -116,11 +116,11 @@ Best,
 
 ## Template 6: Partner/Token Community Outreach
 
-**Subject:** Partner opportunity – Custom liquidity pools on DeFiSwap
+**Subject:** Partner opportunity – Custom liquidity pools on DECAFLOW
 
 Hi [Token Project Name] team,
 
-I'm [Your Name], founder of **DeFiSwap** – a cross-chain swap aggregator on Arbitrum (decaflow.vercel.app).
+I'm [Your Name], founder of **DECAFLOW** – a cross-chain swap aggregator on Arbitrum (decaflow.vercel.app).
 
 We're launching **custom liquidity pools** designed for token campaigns:
 - Minimal constant-product AMM (x*y=k)

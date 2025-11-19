@@ -25,7 +25,7 @@ interface BridgeEvent {
 
 type AnalyticsEvent = SwapEvent | BridgeEvent;
 
-const STORAGE_KEY = "defiswap_analytics";
+const STORAGE_KEY = "decaflow_analytics";
 const MAX_EVENTS = 1000;
 
 class AnalyticsService {

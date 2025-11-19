@@ -28,7 +28,7 @@ export function GeoBlockModal({ open, country }: GeoBlockModalProps) {
           <AlertDialogDescription className="text-center">
             {country ? (
               <>
-                DeFiSwap is not available in your region ({country}).
+                DECAFLOW is not available in your region ({country}).
                 <br />
                 <br />
                 The protocol is currently restricted for users in the United States
@@ -36,7 +36,7 @@ export function GeoBlockModal({ open, country }: GeoBlockModalProps) {
               </>
             ) : (
               <>
-                DeFiSwap is not available in your region.
+                DECAFLOW is not available in your region.
                 <br />
                 <br />
                 The protocol is restricted in certain jurisdictions due to regulatory
