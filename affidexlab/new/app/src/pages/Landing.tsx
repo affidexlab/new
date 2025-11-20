@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -66,11 +67,12 @@ export default function Landing() {
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27] via-[#141B3D] to-[#0A0E27]">
           <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#3396FF] rounded-full filter blur-[100px] animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#47A1FF] rounded-full filter blur-[120px] animate-pulse delay-1000"></div>
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#3396FF] rounded-full filter blur-[100px] animate-pulse-glow"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#47A1FF] rounded-full filter blur-[120px] animate-pulse-glow delay-1000"></div>
+            <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-[#2080FF] rounded-full filter blur-[90px] animate-pulse-glow delay-300"></div>
           </div>
           {/* Grid Pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] animate-pulse"></div>
         </div>
 
         <div className="relative z-10 container mx-auto px-4 sm:px-6">
@@ -121,10 +123,11 @@ export default function Landing() {
             {/* Right Column - Hero Device */}
             <div className="hidden lg:flex items-center justify-center animate-fade-in-up delay-300">
               <div className="relative w-full max-w-2xl">
-                <img 
+                <OptimizedImage 
                   src="/images/illustrations/hero-device.png" 
                   alt="DecaFlow App Interface" 
                   className="w-full h-auto object-contain drop-shadow-[0_0_60px_rgba(51,150,255,0.4)] hover:scale-105 transition-transform duration-500"
+                  lazy={false}
                 />
               </div>
             </div>
@@ -225,7 +228,7 @@ export default function Landing() {
                       Embrace interoperability and unlock the full potential of DeFi with DecaFlow's Cross Chain Swap utilizing Arbitrum's infrastructure and bridging protocols to trade any token effortlessly between various leading blockchains, all within a single platform.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <img src="/images/illustrations/cross-chain-swap.png" alt="Cross Chain Swap" className="w-full h-full object-cover" />
+                      <OptimizedImage src="/images/illustrations/cross-chain-swap.png" alt="Cross Chain Swap" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -236,7 +239,7 @@ export default function Landing() {
                       DecaFlow prioritizes user efficiency by incorporating technology built upon next-generation infrastructure into our Telegram Bot.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <img src="/images/illustrations/telegram-bot.png" alt="Telegram Bot" className="w-full h-full object-cover" />
+                      <OptimizedImage src="/images/illustrations/telegram-bot.png" alt="Telegram Bot" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -247,7 +250,7 @@ export default function Landing() {
                       Unlike traditional swaps that leave visibility to all, DecaFlow utilizes advanced techniques to ensure Privacy and complete anonymity throughout the entire Swap process.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <img src="/images/illustrations/privacy-swap.png" alt="Privacy Swap" className="w-full h-full object-cover" />
+                      <OptimizedImage src="/images/illustrations/privacy-swap.png" alt="Privacy Swap" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -258,7 +261,7 @@ export default function Landing() {
                       Ditch the limitations of single-chain DEXs. DecaFlow shatters the walls, allowing you to trade tokens, protocols, and manage liquidity freely across multiple blockchains for unparalleled access and opportunity.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <img src="/images/illustrations/multichain-dex.png" alt="Multichain DEX" className="w-full h-full object-cover" />
+                      <OptimizedImage src="/images/illustrations/multichain-dex.png" alt="Multichain DEX" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -274,7 +277,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
               <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <img src="/images/illustrations/arbitrum-network.png" alt="Arbitrum Layer 2 Network" className="w-full h-full object-cover" />
+                <OptimizedImage src="/images/illustrations/arbitrum-network.png" alt="Arbitrum Layer 2 Network" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="order-1 lg:order-2 space-y-6">
@@ -303,7 +306,7 @@ export default function Landing() {
             </div>
             <div>
               <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <img src="/images/illustrations/bridge-protocols.png" alt="Multi-Protocol Bridge" className="w-full h-full object-cover" />
+                <OptimizedImage src="/images/illustrations/bridge-protocols.png" alt="Multi-Protocol Bridge" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -320,7 +323,7 @@ export default function Landing() {
             Swap tokens directly on any of the supported blockchains that DecaFlow integrates including Arbitrum, Ethereum, Avalanche, Binance Smart Chain, Optimism, Polygon, and Base.
           </p>
           <div className="flex items-center justify-center mb-12">
-            <img src="/images/illustrations/intrachain-network.png" alt="Blockchain Network" className="max-w-md w-full h-auto" />
+            <OptimizedImage src="/images/illustrations/intrachain-network.png" alt="Blockchain Network" className="max-w-md w-full h-auto" />
           </div>
           <Button 
             variant="outline"
@@ -446,10 +449,11 @@ function LogoCard({ name }: { name: string }) {
   
   return (
     <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group p-4">
-      <img 
+      <OptimizedImage 
         src={logoMap[name]} 
         alt={name} 
         className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition"
+        lazy={false}
       />
     </div>
   );
@@ -465,7 +469,7 @@ function FeatureCard({ icon, title, description }: { icon: string; title: string
   return (
     <div className="p-8 rounded-2xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition-all group hover:scale-105 duration-300">
       <div className="w-32 h-32 mb-6 mx-auto">
-        <img 
+        <OptimizedImage 
           src={iconMap[icon]} 
           alt={title} 
           className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
@@ -490,7 +494,7 @@ function SocialIcon({ icon }: { icon: string }) {
       href="#" 
       className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
     >
-      <img src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" />
+      <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
     </a>
   );
 }
@@ -502,6 +506,7 @@ function SocialIcon({ icon }: { icon: string }) {
   }
   .animate-scroll {
     animation: scroll 30s linear infinite;
+    will-change: transform;
   }
   @keyframes fade-in-up {
     from {
