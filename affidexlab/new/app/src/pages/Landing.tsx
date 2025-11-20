@@ -67,11 +67,12 @@ export default function Landing() {
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27] via-[#141B3D] to-[#0A0E27]">
           <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#3396FF] rounded-full filter blur-[100px] animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#47A1FF] rounded-full filter blur-[120px] animate-pulse delay-1000"></div>
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#3396FF] rounded-full filter blur-[100px] animate-pulse-glow"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#47A1FF] rounded-full filter blur-[120px] animate-pulse-glow delay-1000"></div>
+            <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-[#2080FF] rounded-full filter blur-[90px] animate-pulse-glow delay-300"></div>
           </div>
           {/* Grid Pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] animate-pulse"></div>
         </div>
 
         <div className="relative z-10 container mx-auto px-4 sm:px-6">

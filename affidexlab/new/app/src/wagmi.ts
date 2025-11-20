@@ -3,7 +3,7 @@ import { arbitrum, base, optimism, polygon } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'DeFiSwap',
-  projectId: 'YOUR_PROJECT_ID', // Get from WalletConnect Cloud
+  projectId: 'bb466d3ee706ec7ccd389d161d64005a',
   chains: [arbitrum, base, optimism, polygon],
   ssr: false,
 });
