@@ -80,7 +80,7 @@ export default function App() {
             <section className="mb-8 rounded-2xl bg-gradient-to-r from-[#3396FF]/10 via-[#47A1FF]/10 to-[#3396FF]/10 p-8 border border-[#47A1FF]/20">
               <div className="flex items-center gap-2 mb-3">
                 <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3396FF]/20 border border-[#3396FF]/30 text-xs font-medium">
-                  Powered by Chainlink CCIP
+                  Powered by Arbitrum
                 </span>
               </div>
               <h1 className="text-3xl font-bold mb-2">Defy Limits<br />Embrace Anonymity</h1>
