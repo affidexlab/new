@@ -7,6 +7,7 @@ export type QuoteParams = {
   fromAddress?: string;
   chain: "arbitrum";
   privacy?: boolean;
+  slippagePercentage?: number;
 };
 
 export type QuoteResponse = {
@@ -46,10 +47,13 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
   const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
   const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
   
+  const slippageDecimal = (params.slippagePercentage || 0.5) / 100;
+  
   const url = `${ZERO_X_API_BASE}/swap/v1/quote?` + new URLSearchParams({
     sellToken,
     buyToken,
     sellAmount: amountAfterFee,
+    slippagePercentage: slippageDecimal.toString(),
     ...(params.fromAddress && { takerAddress: params.fromAddress }),
   });
 
