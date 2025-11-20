@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
+import { OptimizedImage } from "@/components/OptimizedImage";
 
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,45 +74,62 @@ export default function Landing() {
           <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition cursor-pointer group">
-            <span className="text-xs sm:text-sm font-medium text-white">DECAFLOW</span>
-            <span className="text-gray-500">|</span>
-            <span className="text-xs sm:text-sm text-[#47A1FF]">Powered by Arbitrum</span>
-            <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
-          </div>
+        <div className="relative z-10 container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Column - Text Content */}
+            <div className="text-center lg:text-left">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition cursor-pointer group">
+                <span className="text-xs sm:text-sm font-medium text-white">DECAFLOW</span>
+                <span className="text-gray-500">|</span>
+                <span className="text-xs sm:text-sm text-[#47A1FF]">Powered by Arbitrum</span>
+                <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
+              </div>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-6 leading-tight">
-            <span className="block animate-fade-in-up">Defy Limits</span>
-            <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
-              Embrace Anonymity
-            </span>
-          </h1>
+              {/* Main Headline */}
+              <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+                <span className="block animate-fade-in-up">Defy Limits</span>
+                <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
+                  Embrace Anonymity
+                </span>
+              </h1>
 
-          {/* Subheadline */}
-          <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-12 max-w-3xl mx-auto animate-fade-in-up delay-200">
-            Where Privacy Meets Secure Cross-Chain Swaps
-          </p>
+              {/* Subheadline */}
+              <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-12 max-w-3xl lg:max-w-none animate-fade-in-up delay-200">
+                Where Privacy Meets Secure Cross-Chain Swaps
+              </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up delay-300">
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
-              onClick={() => window.location.href = '/app'}
-            >
-              Access Platform
-            </Button>
-            <Button 
-              size="lg"
-              variant="outline"
-              className="border-2 border-[#3396FF] text-white hover:bg-[#3396FF]/10 font-semibold px-8 py-6 text-lg rounded-xl transition-all"
-              onClick={() => window.location.href = '/app/privacy'}
-            >
-              🔒 Privacy Swap
-            </Button>
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 animate-fade-in-up delay-300">
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
+                  onClick={() => window.location.href = '/app'}
+                >
+                  Access Platform
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-[#3396FF] text-white hover:bg-[#3396FF]/10 font-semibold px-8 py-6 text-lg rounded-xl transition-all"
+                  onClick={() => window.location.href = '/app/privacy'}
+                >
+                  🔒 Privacy Swap
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column - Hero Device */}
+            <div className="hidden lg:flex items-center justify-center animate-fade-in-up delay-300">
+              <div className="relative w-full max-w-2xl">
+                <OptimizedImage 
+                  src="/images/illustrations/hero-device.png" 
+                  alt="DecaFlow App Interface" 
+                  className="w-full h-auto object-contain drop-shadow-[0_0_60px_rgba(51,150,255,0.4)] hover:scale-105 transition-transform duration-500"
+                  lazy={false}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -208,8 +226,8 @@ export default function Landing() {
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
                       Embrace interoperability and unlock the full potential of DeFi with DecaFlow's Cross Chain Swap utilizing Arbitrum's infrastructure and bridging protocols to trade any token effortlessly between various leading blockchains, all within a single platform.
                     </p>
-                    <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 rounded-2xl flex items-center justify-center border border-[#47A1FF]/20">
-                      <span className="text-6xl sm:text-8xl">🌉</span>
+                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
+                      <OptimizedImage src="/images/illustrations/cross-chain-swap.png" alt="Cross Chain Swap" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -219,8 +237,8 @@ export default function Landing() {
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
                       DecaFlow prioritizes user efficiency by incorporating technology built upon next-generation infrastructure into our Telegram Bot.
                     </p>
-                    <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 rounded-2xl flex items-center justify-center border border-[#47A1FF]/20">
-                      <span className="text-6xl sm:text-8xl">💬</span>
+                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
+                      <OptimizedImage src="/images/illustrations/telegram-bot.png" alt="Telegram Bot" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -230,8 +248,8 @@ export default function Landing() {
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
                       Unlike traditional swaps that leave visibility to all, DecaFlow utilizes advanced techniques to ensure Privacy and complete anonymity throughout the entire Swap process.
                     </p>
-                    <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 rounded-2xl flex items-center justify-center border border-[#47A1FF]/20">
-                      <span className="text-6xl sm:text-8xl">🔐</span>
+                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
+                      <OptimizedImage src="/images/illustrations/privacy-swap.png" alt="Privacy Swap" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -241,8 +259,8 @@ export default function Landing() {
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
                       Ditch the limitations of single-chain DEXs. DecaFlow shatters the walls, allowing you to trade tokens, protocols, and manage liquidity freely across multiple blockchains for unparalleled access and opportunity.
                     </p>
-                    <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 rounded-2xl flex items-center justify-center border border-[#47A1FF]/20">
-                      <span className="text-6xl sm:text-8xl">🌐</span>
+                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
+                      <OptimizedImage src="/images/illustrations/multichain-dex.png" alt="Multichain DEX" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -257,8 +275,8 @@ export default function Landing() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <div className="w-full h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-[#3396FF]/30 to-[#47A1FF]/20 rounded-3xl flex items-center justify-center border border-[#47A1FF]/30">
-                <span className="text-[120px] sm:text-[160px]">⚡</span>
+              <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
+                <OptimizedImage src="/images/illustrations/arbitrum-network.png" alt="Arbitrum Layer 2 Network" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="order-1 lg:order-2 space-y-6">
@@ -286,8 +304,8 @@ export default function Landing() {
               </p>
             </div>
             <div>
-              <div className="w-full h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-[#47A1FF]/30 to-[#3396FF]/20 rounded-3xl flex items-center justify-center border border-[#47A1FF]/30">
-                <span className="text-[120px] sm:text-[160px]">🌉</span>
+              <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
+                <OptimizedImage src="/images/illustrations/bridge-protocols.png" alt="Multi-Protocol Bridge" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -303,6 +321,9 @@ export default function Landing() {
           <p className="text-xl text-gray-400 mb-12 max-w-4xl mx-auto">
             Swap tokens directly on any of the supported blockchains that DecaFlow integrates including Arbitrum, Ethereum, Avalanche, Binance Smart Chain, Optimism, Polygon, and Base.
           </p>
+          <div className="flex items-center justify-center mb-12">
+            <OptimizedImage src="/images/illustrations/intrachain-network.png" alt="Blockchain Network" className="max-w-md w-full h-auto" />
+          </div>
           <Button 
             variant="outline"
             className="border-2 border-[#3396FF] text-white hover:bg-[#3396FF] hover:text-white transition-all px-8 py-6 text-lg rounded-xl"
@@ -312,10 +333,24 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* CTA Section */}
+      <section className="relative py-20 bg-gradient-to-r from-[#3396FF]/20 via-[#47A1FF]/20 to-[#3396FF]/20 border-y border-[#47A1FF]/20">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-6">Start using DecaFlow today</h2>
+          <Button 
+            size="lg"
+            className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
+            onClick={() => window.location.href = '/app'}
+          >
+            Open DApp
+          </Button>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="relative bg-[#0A0E1F] border-t border-[#47A1FF]/10 py-16">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
             {/* Brand Column */}
             <div className="space-y-6">
               <div className="flex items-center gap-2">
@@ -328,10 +363,10 @@ export default function Landing() {
                 Where Privacy Meets Secure Cross Chain Swaps
               </p>
               <div className="flex gap-4">
-                <SocialIcon>𝕏</SocialIcon>
-                <SocialIcon>TG</SocialIcon>
-                <SocialIcon>DC</SocialIcon>
-                <SocialIcon>M</SocialIcon>
+                <SocialIcon icon="twitter" />
+                <SocialIcon icon="telegram" />
+                <SocialIcon icon="discord" />
+                <SocialIcon icon="medium" />
               </div>
             </div>
 
@@ -367,6 +402,17 @@ export default function Landing() {
                 <li><a href="/app" className="hover:text-[#47A1FF] transition">DApp</a></li>
               </ul>
             </div>
+
+            {/* Developers */}
+            <div>
+              <h3 className="font-semibold mb-4">Developers</h3>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li><a href="#" className="hover:text-[#47A1FF] transition">Gitbook</a></li>
+                <li><a href="#" className="hover:text-[#47A1FF] transition">Audit</a></li>
+                <li><a href="#" className="hover:text-[#47A1FF] transition">Report Bug</a></li>
+                <li><a href="#" className="hover:text-[#47A1FF] transition">Support</a></li>
+              </ul>
+            </div>
           </div>
 
           {/* Copyright */}
@@ -391,32 +437,63 @@ function StatsCard({ number, label }: { number: string; label: string }) {
 }
 
 function LogoCard({ name }: { name: string }) {
+  const logoMap: Record<string, string> = {
+    'Arbitrum': '/images/chains/arbitrum.png',
+    'Base': '/images/chains/base.png',
+    'Optimism': '/images/chains/optimism.png',
+    'Polygon': '/images/chains/polygon.png',
+    'Ethereum': '/images/chains/ethereum.png',
+    'Avalanche': '/images/chains/avalanche.png'
+  };
+  
   return (
-    <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group">
-      <span className="text-xs sm:text-sm font-semibold text-gray-400 group-hover:text-[#47A1FF] transition">
-        {name}
-      </span>
+    <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group p-4">
+      <OptimizedImage 
+        src={logoMap[name]} 
+        alt={name} 
+        className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition"
+        lazy={false}
+      />
     </div>
   );
 }
 
 function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+  const iconMap: Record<string, string> = {
+    '🔗': '/images/illustrations/intro-challenges.png',
+    '🛡️': '/images/illustrations/intro-solution.png',
+    '⚡': '/images/illustrations/intro-simplified.png'
+  };
+  
   return (
     <div className="p-8 rounded-2xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition-all group hover:scale-105 duration-300">
-      <div className="text-6xl mb-6">{icon}</div>
+      <div className="w-32 h-32 mb-6 mx-auto">
+        <OptimizedImage 
+          src={iconMap[icon]} 
+          alt={title} 
+          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+        />
+      </div>
       <h3 className="text-2xl font-bold mb-4 group-hover:text-[#47A1FF] transition">{title}</h3>
       <p className="text-gray-400 leading-relaxed">{description}</p>
     </div>
   );
 }
 
-function SocialIcon({ children }: { children: React.ReactNode }) {
+function SocialIcon({ icon }: { icon: string }) {
+  const iconMap: Record<string, string> = {
+    'twitter': '/images/social/twitter.png',
+    'telegram': '/images/social/telegram.png',
+    'discord': '/images/social/discord.png',
+    'medium': '/images/social/medium.png'
+  };
+  
   return (
     <a 
       href="#" 
-      className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all text-sm font-bold"
+      className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
     >
-      {children}
+      <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
     </a>
   );
 }
@@ -428,6 +505,7 @@ function SocialIcon({ children }: { children: React.ReactNode }) {
   }
   .animate-scroll {
     animation: scroll 30s linear infinite;
+    will-change: transform;
   }
   @keyframes fade-in-up {
     from {
