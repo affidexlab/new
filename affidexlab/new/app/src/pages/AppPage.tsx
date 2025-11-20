@@ -62,13 +62,13 @@ export default function AppPage() {
                 <OptimizedImage src="/images/social/discord.png" alt="Discord" className="w-6 h-6" />
               </a>
               <a 
-                href="https://chain.link/cross-chain" 
+                href="https://arbitrum.io/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1E2940] hover:border-[#47A1FF]/50 transition bg-[#0D1624]"
               >
-                <img src="https://chain.link/favicon.ico" alt="Chainlink" className="w-4 h-4" />
-                <span className="text-[10px] text-gray-400">Cross Chain with Chainlink</span>
+                <img src="https://arbitrum.io/favicon.ico" alt="Arbitrum" className="w-4 h-4" />
+                <span className="text-[10px] text-gray-400">Powered by Arbitrum</span>
               </a>
             </div>
 
