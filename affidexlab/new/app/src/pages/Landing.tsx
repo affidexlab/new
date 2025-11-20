@@ -140,6 +140,7 @@ export default function Landing() {
                   src="/images/chainswap/ipad-pro.svg" 
                   alt="DecaFlow App Interface" 
                   className="w-full h-auto object-contain drop-shadow-[0_0_60px_rgba(51,150,255,0.4)] hover:scale-105 transition-transform duration-500"
+                  lazy={false}
                 />
               </div>
             </div>

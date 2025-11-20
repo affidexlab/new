@@ -1,4 +1,4 @@
-import { ZERO_X_API_BASE, COW_API_BASE } from "./constants";
+import { ZERO_X_API_BASE, COW_API_BASE, SWAP_FEE_BPS, TREASURY_WALLET } from "./constants";
 
 export type QuoteParams = {
   fromToken: string;
@@ -17,9 +17,33 @@ export type QuoteResponse = {
   estimatedGas: string;
   route: string;
   data: any;
+  feeAmount: string;
+  amountAfterFee: string;
+  feePercentage: string;
 };
 
+export function calculateSwapFee(amount: string): { feeAmount: string; amountAfterFee: string } {
+  const amountBigInt = BigInt(amount);
+  const feeAmount = (amountBigInt * BigInt(SWAP_FEE_BPS)) / BigInt(10000);
+  const amountAfterFee = amountBigInt - feeAmount;
+  
+  return {
+    feeAmount: feeAmount.toString(),
+    amountAfterFee: amountAfterFee.toString(),
+  };
+}
+
+export function getSwapFeeInfo() {
+  return {
+    treasuryWallet: TREASURY_WALLET,
+    feeBps: SWAP_FEE_BPS,
+    feePercentage: (SWAP_FEE_BPS / 100).toFixed(2) + "%",
+  };
+}
+
 export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
+  const { feeAmount, amountAfterFee } = calculateSwapFee(params.amount);
+  
   const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
   const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
   
@@ -47,6 +71,9 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
       estimatedGas: data.estimatedGas || "0",
       route: data.sources?.map((s: any) => s.name).join(" → ") || "Unknown",
       data,
+      feeAmount,
+      amountAfterFee,
+      feePercentage: (SWAP_FEE_BPS / 100).toFixed(2) + "%",
     };
   } catch (error) {
     console.error("0x quote error:", error);
@@ -90,6 +117,9 @@ export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
       estimatedGas: "0",
       route: "CoW Intent Settlement (Private)",
       data,
+      feeAmount,
+      amountAfterFee,
+      feePercentage: (SWAP_FEE_BPS / 100).toFixed(2) + "%",
     };
   } catch (error) {
     console.error("CoW quote error:", error);

@@ -1,5 +1,5 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { arbitrum, base, optimism, polygon } from 'wagmi/chains';
+import { arbitrum, avalanche, base, bsc, optimism, polygon } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'DecaFlow',

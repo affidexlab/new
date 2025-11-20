@@ -1,4 +1,4 @@
-import { SOCKET_API_BASE, CHAIN_IDS } from "./constants";
+import { SOCKET_API_BASE, CHAIN_IDS, BRIDGE_FEE_BPS, TREASURY_WALLET } from "./constants";
 
 export type BridgeParams = {
   fromChain: keyof typeof CHAIN_IDS;
@@ -14,14 +14,38 @@ export type BridgeQuote = {
   eta: string;
   feeEstimate: string;
   data?: any;
+  platformFeeAmount?: string;
+  amountAfterFee?: string;
+  platformFeePercentage?: string;
 };
+
+export function calculateBridgeFee(amount: string): { feeAmount: string; amountAfterFee: string } {
+  const amountBigInt = BigInt(amount);
+  const feeAmount = (amountBigInt * BigInt(BRIDGE_FEE_BPS)) / BigInt(10000);
+  const amountAfterFee = amountBigInt - feeAmount;
+  
+  return {
+    feeAmount: feeAmount.toString(),
+    amountAfterFee: amountAfterFee.toString(),
+  };
+}
+
+export function getBridgeFeeInfo() {
+  return {
+    treasuryWallet: TREASURY_WALLET,
+    feeBps: BRIDGE_FEE_BPS,
+    feePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
+  };
+}
 
 // CCTP: Circle's native USDC bridge
 export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
   // CCTP only supports USDC
   const usdcAddresses: Record<string, string> = {
     ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    AVALANCHE: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
     BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    BSC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
     OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     POLYGON: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
   };
@@ -33,11 +57,15 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
   // CCTP contract addresses per chain
   const cctpBridges: Record<string, string> = {
     ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
+    AVALANCHE: "0x6b25532e1060ce10cc3b0a99e5683b91bfde6982",
     BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
+    BSC: "0x0000000000000000000000000000000000000000",
     OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
     POLYGON: "0x9daF8c91AEFAE50b9c0E69629D3F6Ca40cA3B3FE",
   };
 
+  const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
+  
   return {
     provider: "cctp",
     path: "CCTP Native USDC",
@@ -47,6 +75,9 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
       sourceContract: cctpBridges[params.fromChain],
       destinationDomain: CHAIN_IDS[params.toChain],
     },
+    platformFeeAmount: feeAmount,
+    amountAfterFee: amountAfterFee,
+    platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
   };
 }
 
@@ -55,11 +86,15 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
   // CCIP router addresses
   const ccipRouters: Record<string, string> = {
     ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
+    AVALANCHE: "0xF4c7E640EdA248ef95972845a62bdC74237805dB",
     BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
+    BSC: "0x34B03Cb9086d7D758AC55af71584F81A598759FE",
     OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
     POLYGON: "0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe",
   };
 
+  const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
+  
   return {
     provider: "ccip",
     path: `CCIP ${params.fromChain} → ${params.toChain}`,
@@ -69,6 +104,9 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
       router: ccipRouters[params.fromChain],
       destinationChainSelector: CHAIN_IDS[params.toChain],
     },
+    platformFeeAmount: feeAmount,
+    amountAfterFee: amountAfterFee,
+    platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
   };
 }
 
@@ -110,12 +148,17 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       throw new Error("No routes found");
     }
 
+    const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
+    
     return {
       provider: "socket",
       path: `Socket (${bestRoute.usedBridgeNames?.join(", ") || "Multi-bridge"})`,
       eta: `${Math.ceil(bestRoute.serviceTime / 60)} min`,
       feeEstimate: `$${(Number(bestRoute.totalGasFeesInUsd) || 0).toFixed(2)}`,
       data: bestRoute,
+      platformFeeAmount: feeAmount,
+      amountAfterFee: amountAfterFee,
+      platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
     };
   } catch (error) {
     console.error("Socket quote error:", error);

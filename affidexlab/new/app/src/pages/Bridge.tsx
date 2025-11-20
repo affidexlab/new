@@ -140,7 +140,9 @@ export default function Bridge() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
+                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
+                <SelectItem value="BSC">BNB Smart Chain</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
               </SelectContent>
@@ -154,10 +156,12 @@ export default function Bridge() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
+                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
+                <SelectItem value="BSC">BNB Smart Chain</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
-                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -228,9 +232,15 @@ export default function Bridge() {
                 <span>{quote.eta}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fee:</span>
+                <span className="text-muted-foreground">Bridge Fee:</span>
                 <span>{quote.feeEstimate}</span>
               </div>
+              {quote.platformFeePercentage && (
+                <div className="flex justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Platform Fee:</span>
+                  <span className="font-medium text-primary">{quote.platformFeePercentage}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -253,7 +263,10 @@ export default function Bridge() {
                 </div>
                 <div className="text-xs space-y-1">
                   <div className="text-muted-foreground">{q.path}</div>
-                  <div>Fee: {q.feeEstimate}</div>
+                  <div>Bridge Fee: {q.feeEstimate}</div>
+                  {q.platformFeePercentage && (
+                    <div>Platform Fee: <span className="text-primary">{q.platformFeePercentage}</span></div>
+                  )}
                 </div>
               </button>
             ))}

@@ -330,6 +330,16 @@ export default function Swap() {
               <span className="text-gray-400">Minimum Received</span>
               <span className="font-medium text-green-400">{calculateMinimumReceived()} {toToken.symbol}</span>
             </div>
+            <div className="border-t border-white/10 my-2 pt-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">Platform Fee</span>
+                <span className="font-medium text-[#47A1FF]">{quote.feePercentage}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs mt-1">
+                <span className="text-gray-500">Fee Amount</span>
+                <span className="text-gray-500">{formatUnits(BigInt(quote.feeAmount), fromToken.decimals)} {fromToken.symbol}</span>
+              </div>
+            </div>
           </div>
         )}
 
