@@ -7,6 +7,7 @@ export type QuoteParams = {
   fromAddress?: string;
   chain: "arbitrum";
   privacy?: boolean;
+  slippagePercentage?: number;
 };
 
 export type QuoteResponse = {
@@ -22,10 +23,13 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
   const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
   const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
   
+  const slippageDecimal = (params.slippagePercentage || 0.5) / 100;
+  
   const url = `${ZERO_X_API_BASE}/swap/v1/quote?` + new URLSearchParams({
     sellToken,
     buyToken,
     sellAmount: params.amount,
+    slippagePercentage: slippageDecimal.toString(),
     ...(params.fromAddress && { takerAddress: params.fromAddress }),
   });
 
@@ -51,17 +55,21 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
-  // CoW Protocol is primarily on Ethereum mainnet and Gnosis Chain
-  // Arbitrum support may be limited - this is a stub for now
-  console.warn("CoW Protocol may have limited Arbitrum support");
-  
   try {
-    const response = await fetch(`${COW_API_BASE}/quote`, {
+    const apiBase = params.chain === "arbitrum" 
+      ? "https://api.cow.fi/arbitrum/api/v1"
+      : COW_API_BASE;
+    
+    const response = await fetch(`${apiBase}/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sellToken: params.fromToken,
-        buyToken: params.toToken,
+        sellToken: params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+          : params.fromToken,
+        buyToken: params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" 
+          : params.toToken,
         sellAmountBeforeFee: params.amount,
         kind: "sell",
         partiallyFillable: false,
@@ -80,7 +88,7 @@ export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
       price: data.quote?.price || "0",
       estimatedOutput: data.quote?.buyAmount || "0",
       estimatedGas: "0",
-      route: "CoW Intent Settlement",
+      route: "CoW Intent Settlement (Private)",
       data,
     };
   } catch (error) {

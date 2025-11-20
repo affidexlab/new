@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TokenSelector } from "@/components/TokenSelector";
 import { ARBITRUM_TOKENS, CHAIN_IDS } from "@/lib/constants";
 import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
-import { Loader2, ArrowRight, Info } from "lucide-react";
+import { Loader2, ArrowRight, Info, ExternalLink } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
@@ -23,7 +24,21 @@ export default function Bridge() {
   const [showComparison, setShowComparison] = useState(false);
 
   const { writeContract, data: txHash, isPending: isBridging } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess: isBridgeSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+
+  useEffect(() => {
+    if (isBridgeSuccess && txHash) {
+      toast.success("Bridge successful!", {
+        description: `Bridged ${amount} ${token.symbol} from ${fromChain} to ${toChain}`,
+        action: {
+          label: "View on Arbiscan",
+          onClick: () => window.open(`https://arbiscan.io/tx/${txHash}`, '_blank'),
+        },
+      });
+      setAmount("");
+      setQuote(null);
+    }
+  }, [isBridgeSuccess, txHash, amount, token.symbol, fromChain, toChain]);
 
   // Fetch quotes when params change
   useEffect(() => {
@@ -72,11 +87,16 @@ export default function Bridge() {
 
   const handleBridge = async () => {
     if (!quote?.data || !address) {
-      alert("Quote data not available. Please try again.");
+      toast.error("Quote not available", {
+        description: "Please wait for quote to load and try again",
+      });
       return;
     }
 
     try {
+      toast.info("Bridge requested", {
+        description: "Please confirm in your wallet",
+      });
       await executeBridge({
         quote,
         token,
@@ -86,9 +106,14 @@ export default function Bridge() {
         fromAddress: address,
         writeContract,
       });
+      toast.success("Bridge initiated!", {
+        description: `Bridging ${amount} ${token.symbol} from ${fromChain} to ${toChain}`,
+      });
     } catch (error) {
       console.error("Bridge execution error:", error);
-      alert(`Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error("Bridge failed", {
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+      });
     }
   };
 

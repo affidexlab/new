@@ -86,14 +86,21 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       sort: "output",
     })}`;
 
+    const apiKey = import.meta.env.VITE_SOCKET_API_KEY;
+    if (!apiKey) {
+      throw new Error("Socket API key not configured. Please add VITE_SOCKET_API_KEY to your .env file.");
+    }
+
     const response = await fetch(url, {
       headers: {
-        "API-KEY": import.meta.env.VITE_SOCKET_API_KEY || "",
+        "API-KEY": apiKey,
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Socket API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Socket API error: ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
