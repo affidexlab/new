@@ -52,7 +52,7 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
   const url = `${ZERO_X_API_BASE}/swap/v1/quote?` + new URLSearchParams({
     sellToken,
     buyToken,
-    sellAmount: amountAfterFee,
+    sellAmount: params.amount,
     slippagePercentage: slippageDecimal.toString(),
     ...(params.fromAddress && { takerAddress: params.fromAddress }),
   });
@@ -82,18 +82,22 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
-  const { feeAmount, amountAfterFee } = calculateSwapFee(params.amount);
-  
-  console.warn("CoW Protocol may have limited Arbitrum support");
-  
   try {
-    const response = await fetch(`${COW_API_BASE}/quote`, {
+    const apiBase = params.chain === "arbitrum" 
+      ? "https://api.cow.fi/arbitrum/api/v1"
+      : COW_API_BASE;
+    
+    const response = await fetch(`${apiBase}/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sellToken: params.fromToken,
-        buyToken: params.toToken,
-        sellAmountBeforeFee: amountAfterFee,
+        sellToken: params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+          : params.fromToken,
+        buyToken: params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" 
+          : params.toToken,
+        sellAmountBeforeFee: params.amount,
         kind: "sell",
         partiallyFillable: false,
         from: params.fromAddress || "0x0000000000000000000000000000000000000000",
@@ -111,7 +115,7 @@ export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
       price: data.quote?.price || "0",
       estimatedOutput: data.quote?.buyAmount || "0",
       estimatedGas: "0",
-      route: "CoW Intent Settlement",
+      route: "CoW Intent Settlement (Private)",
       data,
       feeAmount,
       amountAfterFee,

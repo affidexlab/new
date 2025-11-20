@@ -124,14 +124,21 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       sort: "output",
     })}`;
 
+    const apiKey = import.meta.env.VITE_SOCKET_API_KEY;
+    if (!apiKey) {
+      throw new Error("Socket API key not configured. Please add VITE_SOCKET_API_KEY to your .env file.");
+    }
+
     const response = await fetch(url, {
       headers: {
-        "API-KEY": import.meta.env.VITE_SOCKET_API_KEY || "",
+        "API-KEY": apiKey,
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Socket API error: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Socket API error: ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -242,18 +249,14 @@ export async function executeBridge({
     // Execute CCTP bridge
     const cctpBridges: Record<string, string> = {
       ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
-      AVALANCHE: "0x6b25532e1060ce10cc3b0a99e5683b91bfde6982",
       BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
-      BSC: "0x0000000000000000000000000000000000000000",
       OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
       POLYGON: "0x9daF8c91AEFAE50b9c0E69629D3F6Ca40cA3B3FE",
     };
 
     const destinationDomain = {
       ARBITRUM: 3,
-      AVALANCHE: 1,
       BASE: 6,
-      BSC: 0,
       OPTIMISM: 2,
       POLYGON: 7,
     }[toChain];
@@ -292,18 +295,14 @@ export async function executeBridge({
     // Execute CCIP bridge
     const ccipRouters: Record<string, string> = {
       ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
-      AVALANCHE: "0xF4c7E640EdA248ef95972845a62bdC74237805dB",
       BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
-      BSC: "0x34B03Cb9086d7D758AC55af71584F81A598759FE",
       OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
       POLYGON: "0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe",
     };
 
     const chainSelectors = {
       ARBITRUM: "4949039107694359620",
-      AVALANCHE: "6433500567565415381",
       BASE: "15971525489660198786",
-      BSC: "11344663589394136015",
       OPTIMISM: "3734403246176062136",
       POLYGON: "4051577828743386545",
     }[toChain];

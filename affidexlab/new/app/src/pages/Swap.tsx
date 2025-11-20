@@ -1,42 +1,84 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TokenSelector } from "@/components/TokenSelector";
+import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
 import { ARBITRUM_TOKENS } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
-import { ArrowDownUp, Loader2, Settings, Info } from "lucide-react";
+import { ArrowDownUp, Loader2, Info, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
-  const [fromToken, setFromToken] = useState(ARBITRUM_TOKENS[0]); // ETH
-  const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]); // USDC
+  const [fromToken, setFromToken] = useState(ARBITRUM_TOKENS[0]);
+  const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]);
   const [amount, setAmount] = useState("");
   const [privacy, setPrivacy] = useState(false);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
-  const [allowance, setAllowance] = useState("0");
+  const [slippageConfig, setSlippageConfig] = useState<SlippageConfig>({ mode: "smart", customValue: 0.5 });
 
   const { data: balance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
   });
 
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address && quote?.data?.allowanceTarget ? [address, quote.data.allowanceTarget as `0x${string}`] : undefined,
+    query: {
+      enabled: !!address && !!quote?.data?.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    },
+  });
+
   const { data: approvalHash, writeContract: approve } = useWriteContract();
   const { data: swapHash, sendTransaction } = useSendTransaction();
   
-  const { isLoading: isApproving } = useWaitForTransactionReceipt({ hash: approvalHash });
-  const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
 
-  // Fetch quote when amount or tokens change
   useEffect(() => {
-    if (!amount || !fromToken || !toToken || !address) return;
+    if (isApprovalSuccess) {
+      toast.success("Approval successful!", {
+        description: "You can now proceed with the swap",
+        action: {
+          label: "View on Arbiscan",
+          onClick: () => window.open(`https://arbiscan.io/tx/${approvalHash}`, '_blank'),
+        },
+      });
+      refetchAllowance();
+    }
+  }, [isApprovalSuccess, approvalHash, refetchAllowance]);
+
+  useEffect(() => {
+    if (isSwapSuccess) {
+      toast.success("Swap successful!", {
+        description: `Swapped ${amount} ${fromToken.symbol} for ${toToken.symbol}`,
+        action: {
+          label: "View on Arbiscan",
+          onClick: () => window.open(`https://arbiscan.io/tx/${swapHash}`, '_blank'),
+        },
+      });
+      setAmount("");
+      setQuote(null);
+    }
+  }, [isSwapSuccess, swapHash, amount, fromToken.symbol, toToken.symbol]);
+
+  useEffect(() => {
+    if (!amount || !fromToken || !toToken || !address) {
+      setQuote(null);
+      return;
+    }
     
     const fetchQuote = async () => {
       setIsQuoting(true);
       try {
         const amountWei = parseUnits(amount, fromToken.decimals).toString();
+        const slippagePercentage = getSlippagePercentage(slippageConfig);
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
@@ -44,10 +86,14 @@ export default function Swap() {
           fromAddress: address,
           chain: "arbitrum",
           privacy,
+          slippagePercentage,
         });
         setQuote(quoteResult);
       } catch (error) {
         console.error("Quote error:", error);
+        toast.error("Failed to get quote", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
         setQuote(null);
       } finally {
         setIsQuoting(false);
@@ -56,75 +102,93 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [amount, fromToken, toToken, address, privacy]);
-
-  // Check allowance for ERC20 tokens
-  useEffect(() => {
-    if (!address || fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      setAllowance("0");
-      return;
-    }
-
-    const checkAllowance = async () => {
-      try {
-        const response = await fetch(
-          `https://arbitrum.api.0x.org/swap/v1/quote?${new URLSearchParams({
-            sellToken: fromToken.address,
-            buyToken: toToken.address,
-            sellAmount: "1",
-          })}`
-        );
-        const data = await response.json();
-        const spender = data.allowanceTarget;
-        setAllowance("0");
-      } catch (error) {
-        console.error("Allowance check error:", error);
-      }
-    };
-
-    checkAllowance();
-  }, [address, fromToken, toToken]);
+  }, [amount, fromToken, toToken, address, privacy, slippageConfig]);
 
   const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
-                       BigInt(allowance) < parseUnits(amount || "0", fromToken.decimals);
+                       quote?.data?.allowanceTarget &&
+                       (!allowance || BigInt(allowance.toString()) < parseUnits(amount || "0", fromToken.decimals));
 
   const handleApprove = () => {
-    if (!quote?.data.allowanceTarget) return;
+    if (!quote?.data?.allowanceTarget) {
+      toast.error("Missing approval target");
+      return;
+    }
     
-    approve({
-      address: fromToken.address as `0x${string}`,
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [quote.data.allowanceTarget, BigInt(quote.data.sellAmount)],
-    });
+    try {
+      approve({
+        address: fromToken.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [quote.data.allowanceTarget, parseUnits(amount, fromToken.decimals)],
+      });
+      toast.info("Approval requested", {
+        description: "Please confirm in your wallet",
+      });
+    } catch (error) {
+      toast.error("Approval failed", {
+        description: error instanceof Error ? error.message : "Please try again",
+      });
+    }
   };
 
   const handleSwap = () => {
-    if (!quote?.data) return;
+    if (!quote?.data) {
+      toast.error("No quote available");
+      return;
+    }
 
-    if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      sendTransaction({
-        to: quote.data.to,
-        data: quote.data.data,
-        value: BigInt(quote.data.value || "0"),
+    try {
+      if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+        sendTransaction({
+          to: quote.data.to,
+          data: quote.data.data,
+          value: BigInt(quote.data.value || "0"),
+        });
+      } else {
+        sendTransaction({
+          to: quote.data.to,
+          data: quote.data.data,
+        });
+      }
+      toast.info("Swap requested", {
+        description: "Please confirm in your wallet",
       });
-    } else {
-      sendTransaction({
-        to: quote.data.to,
-        data: quote.data.data,
+    } catch (error) {
+      toast.error("Swap failed", {
+        description: error instanceof Error ? error.message : "Please try again",
       });
     }
   };
 
   const handleMaxClick = () => {
     if (balance) {
-      setAmount(balance.formatted);
+      const maxAmount = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+        ? Math.max(0, parseFloat(balance.formatted) - 0.001).toString()
+        : balance.formatted;
+      setAmount(maxAmount);
     }
   };
 
   const switchTokens = () => {
     setFromToken(toToken);
     setToToken(fromToken);
+  };
+
+  const calculateFeeUSD = () => {
+    if (!quote?.data?.estimatedGas) return "0.00";
+    const gasPrice = quote.data.gasPrice || "50000000000";
+    const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
+    const gasCostEth = parseFloat(formatUnits(gasCostWei, 18));
+    const ethPriceUSD = 3500;
+    return (gasCostEth * ethPriceUSD).toFixed(2);
+  };
+
+  const calculateMinimumReceived = () => {
+    if (!quote) return "0";
+    const outputAmount = parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals));
+    const slippagePercent = getSlippagePercentage(slippageConfig);
+    const minReceived = outputAmount * (1 - slippagePercent / 100);
+    return minReceived.toFixed(6);
   };
 
   if (!isConnected) {
@@ -153,17 +217,12 @@ export default function Swap() {
 
   return (
     <div className="mx-auto max-w-xl">
-      {/* Swap Card */}
       <div className="rounded-3xl bg-gradient-to-b from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-8 shadow-2xl">
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Swap</h2>
-          <button className="rounded-xl p-2 hover:bg-white/5 transition">
-            <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
-          </button>
+          <SlippageSettings value={slippageConfig} onChange={setSlippageConfig} />
         </div>
 
-        {/* FROM Section */}
         <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-gray-400">From</span>
@@ -192,11 +251,10 @@ export default function Swap() {
             />
           </div>
           <div className="mt-2 text-right text-xs text-gray-500">
-            {amount && parseFloat(amount) > 0 ? `≈ $${(parseFloat(amount) * 2000).toFixed(2)}` : "$0.00"}
+            {amount && parseFloat(amount) > 0 ? `${parseFloat(amount).toFixed(4)} ${fromToken.symbol}` : "$0.00"}
           </div>
         </div>
 
-        {/* Swap Direction Button */}
         <div className="relative flex justify-center -my-2">
           <button
             onClick={switchTokens}
@@ -206,7 +264,6 @@ export default function Swap() {
           </button>
         </div>
 
-        {/* TO Section */}
         <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-gray-400">To</span>
@@ -221,11 +278,10 @@ export default function Swap() {
             />
           </div>
           <div className="mt-2 text-right text-xs text-gray-500">
-            {quote ? `≈ $${(parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals)) * 1).toFixed(2)}` : "$0.00"}
+            {quote ? `${parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals)).toFixed(4)} ${toToken.symbol}` : "$0.00"}
           </div>
         </div>
 
-        {/* Privacy Mode Toggle */}
         <div className="mb-4 flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
           <label className="flex items-center gap-3 text-sm cursor-pointer">
             <div className="relative">
@@ -242,7 +298,6 @@ export default function Swap() {
           <span className="text-xs text-gray-500">MEV Protection</span>
         </div>
 
-        {/* Quote Details */}
         {isQuoting && (
           <div className="mb-4 rounded-xl bg-[#3396FF]/10 border border-[#3396FF]/30 p-4 flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-[#47A1FF]" />
@@ -265,7 +320,15 @@ export default function Swap() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Est. Gas</span>
-              <span className="font-medium">{Number(quote.estimatedGas).toLocaleString()}</span>
+              <span className="font-medium">${calculateFeeUSD()}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Max Slippage</span>
+              <span className="font-medium">{getSlippagePercentage(slippageConfig)}%</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Minimum Received</span>
+              <span className="font-medium text-green-400">{calculateMinimumReceived()} {toToken.symbol}</span>
             </div>
             <div className="border-t border-white/10 my-2 pt-2">
               <div className="flex items-center justify-between text-sm">
@@ -280,7 +343,6 @@ export default function Swap() {
           </div>
         )}
 
-        {/* Action Button */}
         {needsApproval ? (
           <Button 
             onClick={handleApprove} 
@@ -317,7 +379,6 @@ export default function Swap() {
           </Button>
         )}
 
-        {/* Transaction Links */}
         {(approvalHash || swapHash) && (
           <div className="mt-4 space-y-2 text-sm">
             {approvalHash && (
@@ -328,7 +389,7 @@ export default function Swap() {
                 className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"
               >
                 <span>Approval transaction</span>
-                <span>View →</span>
+                <ExternalLink size={16} />
               </a>
             )}
             {swapHash && (
@@ -339,14 +400,13 @@ export default function Swap() {
                 className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"
               >
                 <span>Swap transaction</span>
-                <span>View →</span>
+                <ExternalLink size={16} />
               </a>
             )}
           </div>
         )}
       </div>
 
-      {/* Info Cards */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">✨</div>
@@ -358,7 +418,7 @@ export default function Swap() {
         </div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">⚡</div>
-          <div className="text-xs font-semibold text-gray-400">Smart Routing</div>
+          <div className="text-xs font-semibold text-gray-400">Low Fees</div>
         </div>
       </div>
     </div>
