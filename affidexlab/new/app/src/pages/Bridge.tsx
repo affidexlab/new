@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { parseUnits } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TokenSelector } from "@/components/TokenSelector";
 import { ARBITRUM_TOKENS, CHAIN_IDS } from "@/lib/constants";
-import { bestBridgeRoute, compareAllRoutes, BridgeQuote } from "@/lib/bridge";
+import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
 import { Loader2, ArrowRight, Info } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -21,8 +22,8 @@ export default function Bridge() {
   const [isQuoting, setIsQuoting] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
-  const { data: txHash, sendTransaction } = useSendTransaction();
-  const { isLoading: isBridging } = useWaitForTransactionReceipt({ hash: txHash });
+  const { writeContract, data: txHash, isPending: isBridging } = useWriteContract();
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Fetch quotes when params change
   useEffect(() => {
@@ -69,15 +70,26 @@ export default function Bridge() {
     return () => clearTimeout(debounce);
   }, [amount, token, fromChain, toChain, address, showComparison]);
 
-  const handleBridge = () => {
-    if (!quote?.data) {
+  const handleBridge = async () => {
+    if (!quote?.data || !address) {
       alert("Quote data not available. Please try again.");
       return;
     }
 
-    // In production, build actual tx from quote data
-    // For now, show placeholder
-    alert(`Bridge transaction would be sent here.\nProvider: ${quote.provider}\nAmount: ${amount} ${token.symbol}\n${fromChain} → ${toChain}`);
+    try {
+      await executeBridge({
+        quote,
+        token,
+        amount,
+        fromChain,
+        toChain,
+        fromAddress: address,
+        writeContract,
+      });
+    } catch (error) {
+      console.error("Bridge execution error:", error);
+      alert(`Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   if (!isConnected) {
@@ -226,13 +238,13 @@ export default function Bridge() {
         {/* Action Button */}
         <Button
           onClick={handleBridge}
-          disabled={!quote || isBridging || !amount}
+          disabled={!quote || isBridging || isConfirming || !amount}
           className="w-full"
         >
-          {isBridging ? (
+          {isBridging || isConfirming ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Bridging...
+              {isConfirming ? 'Confirming...' : 'Bridging...'}
             </>
           ) : (
             <>
