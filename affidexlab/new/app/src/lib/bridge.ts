@@ -88,7 +88,7 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
 
     const response = await fetch(url, {
       headers: {
-        "API-KEY": "YOUR_SOCKET_API_KEY", // Replace with actual key
+        "API-KEY": import.meta.env.VITE_SOCKET_API_KEY || "",
       },
     });
 
@@ -175,4 +175,147 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
   }
 
   return quotes;
+}
+
+// Execute bridge transaction
+export async function executeBridge({
+  quote,
+  token,
+  amount,
+  fromChain,
+  toChain,
+  fromAddress,
+  writeContract,
+}: {
+  quote: BridgeQuote;
+  token: any;
+  amount: string;
+  fromChain: keyof typeof CHAIN_IDS;
+  toChain: keyof typeof CHAIN_IDS;
+  fromAddress: string;
+  writeContract: any;
+}): Promise<void> {
+  if (quote.provider === "cctp") {
+    // Execute CCTP bridge
+    const cctpBridges: Record<string, string> = {
+      ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
+      BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
+      OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
+      POLYGON: "0x9daF8c91AEFAE50b9c0E69629D3F6Ca40cA3B3FE",
+    };
+
+    const destinationDomain = {
+      ARBITRUM: 3,
+      BASE: 6,
+      OPTIMISM: 2,
+      POLYGON: 7,
+    }[toChain];
+
+    // CCTP Token Messenger ABI (simplified)
+    const cctpAbi = [
+      {
+        name: "depositForBurn",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+          { name: "amount", type: "uint256" },
+          { name: "destinationDomain", type: "uint32" },
+          { name: "mintRecipient", type: "bytes32" },
+          { name: "burnToken", type: "address" }
+        ],
+        outputs: [{ name: "nonce", type: "uint64" }]
+      }
+    ] as const;
+
+    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
+    const mintRecipient = `0x000000000000000000000000${fromAddress.slice(2)}`;
+
+    await writeContract({
+      address: cctpBridges[fromChain] as `0x${string}`,
+      abi: cctpAbi,
+      functionName: "depositForBurn",
+      args: [
+        amountWei,
+        destinationDomain,
+        mintRecipient as `0x${string}`,
+        token.address as `0x${string}`
+      ],
+    });
+  } else if (quote.provider === "ccip") {
+    // Execute CCIP bridge
+    const ccipRouters: Record<string, string> = {
+      ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
+      BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
+      OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
+      POLYGON: "0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe",
+    };
+
+    const chainSelectors = {
+      ARBITRUM: "4949039107694359620",
+      BASE: "15971525489660198786",
+      OPTIMISM: "3734403246176062136",
+      POLYGON: "4051577828743386545",
+    }[toChain];
+
+    // CCIP Router ABI (simplified)
+    const ccipAbi = [
+      {
+        name: "ccipSend",
+        type: "function",
+        stateMutability: "payable",
+        inputs: [
+          { name: "destinationChainSelector", type: "uint64" },
+          { name: "message", type: "tuple", components: [
+            { name: "receiver", type: "bytes" },
+            { name: "data", type: "bytes" },
+            { name: "tokenAmounts", type: "tuple[]", components: [
+              { name: "token", type: "address" },
+              { name: "amount", type: "uint256" }
+            ]},
+            { name: "feeToken", type: "address" },
+            { name: "extraArgs", type: "bytes" }
+          ]}
+        ],
+        outputs: [{ name: "messageId", type: "bytes32" }]
+      }
+    ] as const;
+
+    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
+
+    await writeContract({
+      address: ccipRouters[fromChain] as `0x${string}`,
+      abi: ccipAbi,
+      functionName: "ccipSend",
+      args: [
+        BigInt(chainSelectors),
+        {
+          receiver: fromAddress as `0x${string}`,
+          data: "0x" as `0x${string}`,
+          tokenAmounts: [{
+            token: token.address as `0x${string}`,
+            amount: amountWei
+          }],
+          feeToken: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+          extraArgs: "0x" as `0x${string}`
+        }
+      ],
+    });
+  } else if (quote.provider === "socket") {
+    // Execute Socket bridge using their API route data
+    if (!quote.data?.approvalData && !quote.data?.txData) {
+      throw new Error("Socket route data incomplete");
+    }
+
+    // Socket provides ready-to-use transaction data
+    const txData = quote.data.txData;
+    
+    await writeContract({
+      address: txData.to as `0x${string}`,
+      abi: [{ name: "execute", type: "function", inputs: [], outputs: [] }] as const,
+      functionName: "execute",
+      value: BigInt(txData.value || 0),
+    });
+  } else {
+    throw new Error(`Unsupported bridge provider: ${quote.provider}`);
+  }
 }

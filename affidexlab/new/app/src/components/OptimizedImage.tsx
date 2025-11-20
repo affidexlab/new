@@ -7,19 +7,14 @@ interface OptimizedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 
 }
 
 export function OptimizedImage({ src, alt, lazy = true, className, ...props }: OptimizedImageProps) {
-  const webpSrc = src.replace(/\.png$/, '.webp');
-  
   return (
-    <picture>
-      <source srcSet={webpSrc} type="image/webp" />
-      <img
-        src={src}
-        alt={alt}
-        loading={lazy ? 'lazy' : 'eager'}
-        decoding="async"
-        className={className}
-        {...props}
-      />
-    </picture>
+    <img
+      src={src}
+      alt={alt}
+      loading={lazy ? 'lazy' : 'eager'}
+      decoding="async"
+      className={className}
+      {...props}
+    />
   );
 }
