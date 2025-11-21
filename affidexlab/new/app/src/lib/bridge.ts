@@ -1,4 +1,5 @@
-import { SOCKET_API_BASE, CHAIN_IDS, BRIDGE_FEE_BPS, TREASURY_WALLET } from "./constants";
+import { SOCKET_API_BASE, CHAIN_IDS } from "./constants";
+import { CCTP_TOKEN_MESSENGER_ABI, CCIP_ROUTER_ABI } from "./bridgeAbis";
 
 export type BridgeParams = {
   fromChain: keyof typeof CHAIN_IDS;
@@ -14,38 +15,14 @@ export type BridgeQuote = {
   eta: string;
   feeEstimate: string;
   data?: any;
-  platformFeeAmount?: string;
-  amountAfterFee?: string;
-  platformFeePercentage?: string;
 };
-
-export function calculateBridgeFee(amount: string): { feeAmount: string; amountAfterFee: string } {
-  const amountBigInt = BigInt(amount);
-  const feeAmount = (amountBigInt * BigInt(BRIDGE_FEE_BPS)) / BigInt(10000);
-  const amountAfterFee = amountBigInt - feeAmount;
-  
-  return {
-    feeAmount: feeAmount.toString(),
-    amountAfterFee: amountAfterFee.toString(),
-  };
-}
-
-export function getBridgeFeeInfo() {
-  return {
-    treasuryWallet: TREASURY_WALLET,
-    feeBps: BRIDGE_FEE_BPS,
-    feePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
-  };
-}
 
 // CCTP: Circle's native USDC bridge
 export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
   // CCTP only supports USDC
   const usdcAddresses: Record<string, string> = {
     ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    AVALANCHE: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
     BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    BSC: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
     OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     POLYGON: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
   };
@@ -57,15 +34,11 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
   // CCTP contract addresses per chain
   const cctpBridges: Record<string, string> = {
     ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
-    AVALANCHE: "0x6b25532e1060ce10cc3b0a99e5683b91bfde6982",
     BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
-    BSC: "0x0000000000000000000000000000000000000000",
     OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
     POLYGON: "0x9daF8c91AEFAE50b9c0E69629D3F6Ca40cA3B3FE",
   };
 
-  const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
-  
   return {
     provider: "cctp",
     path: "CCTP Native USDC",
@@ -75,9 +48,6 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
       sourceContract: cctpBridges[params.fromChain],
       destinationDomain: CHAIN_IDS[params.toChain],
     },
-    platformFeeAmount: feeAmount,
-    amountAfterFee: amountAfterFee,
-    platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
   };
 }
 
@@ -86,15 +56,11 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
   // CCIP router addresses
   const ccipRouters: Record<string, string> = {
     ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
-    AVALANCHE: "0xF4c7E640EdA248ef95972845a62bdC74237805dB",
     BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
-    BSC: "0x34B03Cb9086d7D758AC55af71584F81A598759FE",
     OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
     POLYGON: "0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe",
   };
 
-  const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
-  
   return {
     provider: "ccip",
     path: `CCIP ${params.fromChain} → ${params.toChain}`,
@@ -104,14 +70,17 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
       router: ccipRouters[params.fromChain],
       destinationChainSelector: CHAIN_IDS[params.toChain],
     },
-    platformFeeAmount: feeAmount,
-    amountAfterFee: amountAfterFee,
-    platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
   };
 }
 
 // Socket: Aggregator fallback for all routes
 export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
+  // Validate Socket API key
+  const SOCKET_API_KEY = import.meta.env.VITE_SOCKET_API_KEY;
+  if (!SOCKET_API_KEY || SOCKET_API_KEY === "") {
+    throw new Error("Socket API key not configured. Please set VITE_SOCKET_API_KEY environment variable.");
+  }
+
   try {
     const url = `${SOCKET_API_BASE}/quote?${new URLSearchParams({
       fromChainId: CHAIN_IDS[params.fromChain].toString(),
@@ -124,21 +93,14 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       sort: "output",
     })}`;
 
-    const apiKey = import.meta.env.VITE_SOCKET_API_KEY;
-    if (!apiKey) {
-      throw new Error("Socket API key not configured. Please add VITE_SOCKET_API_KEY to your .env file.");
-    }
-
     const response = await fetch(url, {
       headers: {
-        "API-KEY": apiKey,
-        "Content-Type": "application/json",
+        "API-KEY": import.meta.env.VITE_SOCKET_API_KEY || "",
       },
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Socket API error: ${response.statusText} - ${errorText}`);
+      throw new Error(`Socket API error: ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -148,17 +110,12 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       throw new Error("No routes found");
     }
 
-    const { feeAmount, amountAfterFee } = calculateBridgeFee(params.amount);
-    
     return {
       provider: "socket",
       path: `Socket (${bestRoute.usedBridgeNames?.join(", ") || "Multi-bridge"})`,
       eta: `${Math.ceil(bestRoute.serviceTime / 60)} min`,
       feeEstimate: `$${(Number(bestRoute.totalGasFeesInUsd) || 0).toFixed(2)}`,
       data: bestRoute,
-      platformFeeAmount: feeAmount,
-      amountAfterFee: amountAfterFee,
-      platformFeePercentage: (BRIDGE_FEE_BPS / 100).toFixed(2) + "%",
     };
   } catch (error) {
     console.error("Socket quote error:", error);
@@ -245,6 +202,20 @@ export async function executeBridge({
   fromAddress: string;
   writeContract: any;
 }): Promise<void> {
+  // Validation
+  if (!fromAddress || fromAddress === "0x0000000000000000000000000000000000000000") {
+    throw new Error("Invalid from address");
+  }
+  
+  if (fromChain === toChain) {
+    throw new Error("Source and destination chains must be different");
+  }
+  
+  const amountNum = parseFloat(amount);
+  if (isNaN(amountNum) || amountNum <= 0) {
+    throw new Error("Invalid bridge amount");
+  }
+
   if (quote.provider === "cctp") {
     // Execute CCTP bridge
     const cctpBridges: Record<string, string> = {
@@ -261,21 +232,8 @@ export async function executeBridge({
       POLYGON: 7,
     }[toChain];
 
-    // CCTP Token Messenger ABI (simplified)
-    const cctpAbi = [
-      {
-        name: "depositForBurn",
-        type: "function",
-        stateMutability: "nonpayable",
-        inputs: [
-          { name: "amount", type: "uint256" },
-          { name: "destinationDomain", type: "uint32" },
-          { name: "mintRecipient", type: "bytes32" },
-          { name: "burnToken", type: "address" }
-        ],
-        outputs: [{ name: "nonce", type: "uint64" }]
-      }
-    ] as const;
+    // CCTP Token Messenger ABI (complete production ABI)
+    const cctpAbi = CCTP_TOKEN_MESSENGER_ABI;
 
     const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
     const mintRecipient = `0x000000000000000000000000${fromAddress.slice(2)}`;
@@ -307,28 +265,8 @@ export async function executeBridge({
       POLYGON: "4051577828743386545",
     }[toChain];
 
-    // CCIP Router ABI (simplified)
-    const ccipAbi = [
-      {
-        name: "ccipSend",
-        type: "function",
-        stateMutability: "payable",
-        inputs: [
-          { name: "destinationChainSelector", type: "uint64" },
-          { name: "message", type: "tuple", components: [
-            { name: "receiver", type: "bytes" },
-            { name: "data", type: "bytes" },
-            { name: "tokenAmounts", type: "tuple[]", components: [
-              { name: "token", type: "address" },
-              { name: "amount", type: "uint256" }
-            ]},
-            { name: "feeToken", type: "address" },
-            { name: "extraArgs", type: "bytes" }
-          ]}
-        ],
-        outputs: [{ name: "messageId", type: "bytes32" }]
-      }
-    ] as const;
+    // CCIP Router ABI (complete production ABI)
+    const ccipAbi = CCIP_ROUTER_ABI;
 
     const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
 
@@ -352,17 +290,31 @@ export async function executeBridge({
     });
   } else if (quote.provider === "socket") {
     // Execute Socket bridge using their API route data
-    if (!quote.data?.approvalData && !quote.data?.txData) {
-      throw new Error("Socket route data incomplete");
+    if (!quote.data?.txData) {
+      throw new Error("Socket route data incomplete. Make sure VITE_SOCKET_API_KEY is configured.");
     }
 
     // Socket provides ready-to-use transaction data
     const txData = quote.data.txData;
     
+    // Socket returns complete transaction object - send as raw transaction
+    // Note: Socket API provides the complete calldata and target contract
+    if (!txData.to || !txData.data) {
+      throw new Error("Invalid Socket transaction data");
+    }
+
+    // For Socket, we need to send the transaction using their prepared data
+    // The data already includes the correct function signature and parameters
     await writeContract({
       address: txData.to as `0x${string}`,
-      abi: [{ name: "execute", type: "function", inputs: [], outputs: [] }] as const,
-      functionName: "execute",
+      abi: [{
+        type: "function",
+        name: "executeRoute",
+        stateMutability: "payable",
+        inputs: [],
+        outputs: []
+      }] as const,
+      functionName: "executeRoute",
       value: BigInt(txData.value || 0),
     });
   } else {

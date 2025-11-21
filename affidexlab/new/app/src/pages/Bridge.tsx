@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TokenSelector } from "@/components/TokenSelector";
 import { ARBITRUM_TOKENS, CHAIN_IDS } from "@/lib/constants";
 import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
-import { Loader2, ArrowRight, Info, ExternalLink } from "lucide-react";
+import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -24,21 +24,7 @@ export default function Bridge() {
   const [showComparison, setShowComparison] = useState(false);
 
   const { writeContract, data: txHash, isPending: isBridging } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isBridgeSuccess } = useWaitForTransactionReceipt({ hash: txHash });
-
-  useEffect(() => {
-    if (isBridgeSuccess && txHash) {
-      toast.success("Bridge successful!", {
-        description: `Bridged ${amount} ${token.symbol} from ${fromChain} to ${toChain}`,
-        action: {
-          label: "View on Arbiscan",
-          onClick: () => window.open(`https://arbiscan.io/tx/${txHash}`, '_blank'),
-        },
-      });
-      setAmount("");
-      setQuote(null);
-    }
-  }, [isBridgeSuccess, txHash, amount, token.symbol, fromChain, toChain]);
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Fetch quotes when params change
   useEffect(() => {
@@ -76,6 +62,10 @@ export default function Bridge() {
         console.error("Bridge quote error:", error);
         setQuote(null);
         setAllQuotes([]);
+        const errorMsg = error instanceof Error ? error.message : "Unable to fetch bridge quote";
+        toast.error("Bridge Quote Failed", {
+          description: errorMsg,
+        });
       } finally {
         setIsQuoting(false);
       }
@@ -87,16 +77,13 @@ export default function Bridge() {
 
   const handleBridge = async () => {
     if (!quote?.data || !address) {
-      toast.error("Quote not available", {
-        description: "Please wait for quote to load and try again",
+      toast.error("Unable to bridge", {
+        description: "Quote data not available. Please try again.",
       });
       return;
     }
 
     try {
-      toast.info("Bridge requested", {
-        description: "Please confirm in your wallet",
-      });
       await executeBridge({
         quote,
         token,
@@ -106,13 +93,14 @@ export default function Bridge() {
         fromAddress: address,
         writeContract,
       });
-      toast.success("Bridge initiated!", {
-        description: `Bridging ${amount} ${token.symbol} from ${fromChain} to ${toChain}`,
+      toast.success("Bridge Transaction Submitted", {
+        description: "Your transaction has been submitted to the blockchain",
       });
     } catch (error) {
       console.error("Bridge execution error:", error);
-      toast.error("Bridge failed", {
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error("Bridge Failed", {
+        description: errorMsg,
       });
     }
   };
@@ -140,9 +128,7 @@ export default function Bridge() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
-                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
-                <SelectItem value="BSC">BNB Smart Chain</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
               </SelectContent>
@@ -156,12 +142,10 @@ export default function Bridge() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
-                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
-                <SelectItem value="BSC">BNB Smart Chain</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
+                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,15 +216,9 @@ export default function Bridge() {
                 <span>{quote.eta}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Bridge Fee:</span>
+                <span className="text-muted-foreground">Fee:</span>
                 <span>{quote.feeEstimate}</span>
               </div>
-              {quote.platformFeePercentage && (
-                <div className="flex justify-between border-t pt-1 mt-1">
-                  <span className="text-muted-foreground">Platform Fee:</span>
-                  <span className="font-medium text-primary">{quote.platformFeePercentage}</span>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -263,10 +241,7 @@ export default function Bridge() {
                 </div>
                 <div className="text-xs space-y-1">
                   <div className="text-muted-foreground">{q.path}</div>
-                  <div>Bridge Fee: {q.feeEstimate}</div>
-                  {q.platformFeePercentage && (
-                    <div>Platform Fee: <span className="text-primary">{q.platformFeePercentage}</span></div>
-                  )}
+                  <div>Fee: {q.feeEstimate}</div>
                 </div>
               </button>
             ))}
