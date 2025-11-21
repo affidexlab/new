@@ -3,20 +3,34 @@ import Landing from "./pages/Landing";
 import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
 
+function getPageFromLocation(): string {
+  const path = window.location.pathname;
+  const hash = window.location.hash;
+  
+  if (path.startsWith("/app/privacy") || hash === "#privacy") {
+    return "privacy";
+  }
+  if (path.startsWith("/app") || hash === "#app") {
+    return "app";
+  }
+  return "home";
+}
+
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<string>("home");
+  const [currentPage, setCurrentPage] = useState<string>(() => getPageFromLocation());
 
   useEffect(() => {
-    const path = window.location.pathname;
-    const hash = window.location.hash;
+    const handleLocationChange = () => {
+      setCurrentPage(getPageFromLocation());
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
     
-    if (path === "/" && !hash) {
-      setCurrentPage("home");
-    } else if (path === "/app" || hash === "#app") {
-      setCurrentPage("app");
-    } else if (path === "/app/privacy" || hash === "#privacy") {
-      setCurrentPage("privacy");
-    }
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   if (currentPage === "home") {
