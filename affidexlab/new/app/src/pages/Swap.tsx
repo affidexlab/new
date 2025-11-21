@@ -1,60 +1,67 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignTypedData } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TokenSelector } from "@/components/TokenSelector";
-import { ARBITRUM_TOKENS } from "@/lib/constants";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, CHAIN_METADATA, type Token, type ChainKey } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getCowDomain, getCowOrderTypes, submitCowOrder, createCowOrder } from "@/lib/privacy";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
-  const [fromToken, setFromToken] = useState(ARBITRUM_TOKENS[0]); // ETH
-  const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]); // USDC
+  const { switchChain } = useSwitchChain();
+  
+  const [fromChain, setFromChain] = useState<ChainKey>("ARBITRUM");
+  const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
+  const [fromToken, setFromToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][0]);
+  const [toToken, setToToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][2]);
   const [amount, setAmount] = useState("");
-  const [slippage, setSlippage] = useState("0.5"); // Default 0.5% slippage
-  const [privacy, setPrivacy] = useState(false); // Privacy mode with CoW Protocol
+  const [privacy, setPrivacy] = useState(false);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
+  const [needsChainSwitch, setNeedsChainSwitch] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const { data: balance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
+    chainId: CHAIN_IDS[fromChain],
   });
 
-  const { data: approvalHash, writeContract: approve, error: approvalError } = useWriteContract();
-  const { data: swapHash, sendTransaction, error: swapError } = useSendTransaction();
-  const { signTypedDataAsync } = useSignTypedData();
+  const { data: approvalHash, writeContract: approve } = useWriteContract();
+  const { data: swapHash, sendTransaction } = useSendTransaction();
   
-  const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
-  const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
-  
-  const [isCowSubmitting, setIsCowSubmitting] = useState(false);
-  const [cowOrderUid, setCowOrderUid] = useState<string | null>(null);
+  const { isLoading: isApproving } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
 
-  // Read allowance for ERC20 tokens
-  // CoW Protocol VaultRelayer address on Arbitrum: 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110
-  const cowVaultRelayer = "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110" as `0x${string}`;
-  const approvalTarget = quote?.provider === "cow" ? cowVaultRelayer : (quote?.data.allowanceTarget as `0x${string}`);
-  
-  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
-    address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: address && approvalTarget ? [address, approvalTarget] : undefined,
-    query: {
-      enabled: !!address && !!approvalTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-    },
-  });
+  const isCrossChainSwap = fromChain !== toChain;
 
-  // Fetch quote when amount or tokens change
+  // Check if user is on the correct chain
   useEffect(() => {
-    if (!amount || !fromToken || !toToken || !address) {
+    if (isConnected && chain) {
+      const expectedChainId = CHAIN_IDS[fromChain];
+      setNeedsChainSwitch(chain.id !== expectedChainId);
+    }
+  }, [chain, fromChain, isConnected]);
+
+  // Update token when chain changes
+  useEffect(() => {
+    const fromChainTokens = TOKENS_BY_CHAIN[CHAIN_IDS[fromChain]];
+    const toChainTokens = TOKENS_BY_CHAIN[CHAIN_IDS[toChain]];
+    
+    if (fromChainTokens && fromChainTokens.length > 0) setFromToken(fromChainTokens[0]);
+    if (toChainTokens && toChainTokens.length > 0) {
+      const usdcToken = toChainTokens.find(t => t.symbol === "USDC");
+      setToToken(usdcToken || toChainTokens[0]);
+    }
+  }, [fromChain, toChain]);
+
+  // Fetch quote when amount or tokens change (same-chain only)
+  useEffect(() => {
+    if (!amount || !fromToken || !toToken || !address || isCrossChainSwap) {
       setQuote(null);
       setQuoteError(null);
       return;
@@ -70,18 +77,14 @@ export default function Swap() {
           toToken: toToken.address,
           amount: amountWei,
           fromAddress: address,
-          chain: "arbitrum",
+          chainId: CHAIN_IDS[fromChain],
           privacy,
         });
         setQuote(quoteResult);
       } catch (error) {
         console.error("Quote error:", error);
-        setQuote(null);
         const errorMsg = error instanceof Error ? error.message : "Unable to fetch quote. Please try again.";
         setQuoteError(errorMsg);
-        toast.error("Quote Failed", {
-          description: errorMsg,
-        });
       } finally {
         setIsQuoting(false);
       }
@@ -89,158 +92,54 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [amount, fromToken, toToken, address, privacy]);
+  }, [amount, fromToken, toToken, address, privacy, fromChain, isCrossChainSwap]);
 
-  // Refetch allowance after successful approval
-  useEffect(() => {
-    if (isApprovalSuccess) {
-      refetchAllowance();
-      toast.success("Approval Successful", {
-        description: `${fromToken.symbol} approved for swapping`,
-      });
-    }
-  }, [isApprovalSuccess, refetchAllowance, fromToken.symbol]);
-
-  // Show swap success notification
-  useEffect(() => {
-    if (isSwapSuccess) {
-      toast.success("Swap Successful!", {
-        description: "Your transaction has been confirmed",
-      });
-    }
-  }, [isSwapSuccess]);
-
-  // Show error notifications
-  useEffect(() => {
-    if (approvalError) {
-      toast.error("Approval Failed", {
-        description: approvalError.message || "Transaction was rejected",
-      });
-    }
-  }, [approvalError]);
-
-  useEffect(() => {
-    if (swapError) {
-      toast.error("Swap Failed", {
-        description: swapError.message || "Transaction was rejected",
-      });
-    }
-  }, [swapError]);
-
-  const allowance = allowanceData as bigint | undefined;
-  const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
-                       amount && 
-                       (!allowance || allowance < parseUnits(amount, fromToken.decimals));
+  const needsApproval = !isCrossChainSwap && 
+    fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
+    amount && BigInt(0) < parseUnits(amount || "0", fromToken.decimals); // conservative; allowance checked during 0x quote
 
   const handleApprove = () => {
-    if (!approvalTarget) {
-      toast.error("Unable to approve", {
-        description: "Quote data is missing",
-      });
+    if (!quote?.data?.allowanceTarget) {
+      toast.error("Unable to approve", { description: "Quote data is missing" });
       return;
     }
-    
-    // Use max uint256 for approval to avoid frequent approvals
-    const maxApproval = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     approve({
       address: fromToken.address as `0x${string}`,
       abi: erc20Abi,
       functionName: "approve",
-      args: [approvalTarget, maxApproval],
+      args: [quote.data.allowanceTarget, BigInt(quote.data.sellAmount || parseUnits(amount, fromToken.decimals).toString())],
     });
   };
 
-  const handleSwap = async () => {
-    if (!quote?.data || !address) {
-      toast.error("Unable to swap", {
-        description: "Quote data is missing",
-      });
-      return;
-    }
+  const handleSwap = () => {
+    if (!quote?.data) return;
 
-    // Validate slippage
-    const expectedOutput = BigInt(quote.estimatedOutput);
-    const slippagePercent = parseFloat(slippage);
-    const minOutput = expectedOutput * BigInt(Math.floor((100 - slippagePercent) * 100)) / BigInt(10000);
-    
-    console.log("Expected output:", expectedOutput.toString());
-    console.log("Min output with slippage:", minOutput.toString());
-
-    // Handle CoW Protocol privacy mode swaps
-    if (quote.provider === "cow" && privacy) {
-      setIsCowSubmitting(true);
-      try {
-        // Convert ETH to WETH for CoW Protocol
-        const sellToken = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // WETH
-          : fromToken.address;
-        const buyToken = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // WETH
-          : toToken.address;
-
-        // Create CoW order
-        const cowOrder = createCowOrder({
-          sellToken,
-          buyToken,
-          sellAmount: parseUnits(amount, fromToken.decimals).toString(),
-          buyAmount: minOutput.toString(),
-          userAddress: address,
-        });
-
-        // Sign order with EIP-712
-        const signature = await signTypedDataAsync({
-          domain: getCowDomain(),
-          types: getCowOrderTypes(),
-          primaryType: "Order",
-          message: cowOrder as any,
-        });
-
-        // Submit signed order to CoW Protocol
-        const orderUid = await submitCowOrder({
-          order: cowOrder,
-          signature,
-          signingScheme: "eip712",
-        });
-
-        setCowOrderUid(orderUid);
-        toast.success("CoW Order Submitted!", {
-          description: "Your order is being processed by CoW solvers with MEV protection",
-        });
-      } catch (error) {
-        console.error("CoW order submission error:", error);
-        toast.error("Privacy Swap Failed", {
-          description: error instanceof Error ? error.message : "Order submission failed",
-        });
-      } finally {
-        setIsCowSubmitting(false);
-      }
-      return;
-    }
-
-    // Handle regular 0x swaps
     if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      sendTransaction({
-        to: quote.data.to as `0x${string}`,
-        data: quote.data.data as `0x${string}`,
-        value: BigInt(quote.data.value || "0"),
-      });
+      sendTransaction({ to: quote.data.to, data: quote.data.data, value: BigInt(quote.data.value || "0") });
     } else {
-      sendTransaction({
-        to: quote.data.to as `0x${string}`,
-        data: quote.data.data as `0x${string}`,
-      });
+      sendTransaction({ to: quote.data.to, data: quote.data.data });
     }
   };
 
-  const handleMaxClick = () => {
-    if (balance) {
-      setAmount(balance.formatted);
-    }
-  };
+  const handleMaxClick = () => { if (balance) setAmount(balance.formatted); };
 
   const switchTokens = () => {
     setFromToken(toToken);
     setToToken(fromToken);
+    setFromChain(toChain);
+    setToChain(fromChain);
+  };
+
+  const handleChainSwitch = async () => {
+    try { await switchChain({ chainId: CHAIN_IDS[fromChain] }); } catch (e) { console.error(e); }
+  };
+
+  const explorers: Record<ChainKey, string> = {
+    ARBITRUM: "https://arbiscan.io",
+    AVALANCHE: "https://snowtrace.io",
+    BASE: "https://basescan.org",
+    OPTIMISM: "https://optimistic.etherscan.io",
+    POLYGON: "https://polygonscan.com",
   };
 
   if (!isConnected) {
@@ -255,301 +154,192 @@ export default function Swap() {
     );
   }
 
-  if (chain?.id !== 42161) {
-    return (
-      <div className="mx-auto max-w-xl">
-        <div className="rounded-3xl bg-gradient-to-b from-[#1A1F2E] to-[#141824] border border-red-500/30 p-8 text-center shadow-2xl">
-          <div className="mb-4 text-5xl">⚠️</div>
-          <h3 className="mb-2 text-xl font-bold text-red-400">Wrong Network</h3>
-          <p className="text-sm text-gray-400">Please switch to Arbitrum network in your wallet</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-xl">
-      {/* Swap Card */}
-      <div className="rounded-3xl bg-gradient-to-b from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-8 shadow-2xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Swap</h2>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="rounded-xl p-2 hover:bg-white/5 transition">
-                <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 bg-[#1A1F2E] border-[#47A1FF]/20">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-sm">Transaction Settings</h3>
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Slippage Tolerance</label>
-                  <div className="flex gap-2">
-                    {["0.1", "0.5", "1.0"].map((val) => (
-                      <button
-                        key={val}
-                        onClick={() => setSlippage(val)}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          slippage === val
-                            ? "bg-[#47A1FF] text-white"
-                            : "bg-[#1E2433] text-gray-400 hover:bg-[#2A3141]"
-                        }`}
-                      >
-                        {val}%
-                      </button>
-                    ))}
-                    <Input
-                      type="number"
-                      value={slippage}
-                      onChange={(e) => setSlippage(e.target.value)}
-                      placeholder="Custom"
-                      className="w-20 bg-[#1E2433] border-[#47A1FF]/20 text-sm"
-                      step="0.1"
-                      min="0.1"
-                      max="50"
-                    />
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Swap</h2>
+        <button className="rounded-xl p-2 hover:bg-white/5 transition">
+          <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
+        </button>
+      </div>
+
+      {/* Wrong Network Warning */}
+      {needsChainSwitch && (
+        <div className="mb-4 rounded-xl bg-orange-500/10 border border-orange-500/30 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={20} className="text-orange-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-orange-300 mb-2">Please switch to <strong>{CHAIN_METADATA[fromChain].name}</strong></p>
+              <Button onClick={handleChainSwitch} size="sm" className="bg-orange-500 hover:bg-orange-600 text-white">Switch Network</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FROM */}
+      <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <Select value={fromChain} onValueChange={(v: any) => setFromChain(v)}>
+            <SelectTrigger className="bg-[#0F1419] border-white/10">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <img src={CHAIN_METADATA[fromChain].logo} alt={CHAIN_METADATA[fromChain].name} className="w-5 h-5 rounded-full" />
+                  <span>{CHAIN_METADATA[fromChain].name}</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CHAIN_IDS) as ChainKey[]).map((ck) => (
+                <SelectItem key={ck} value={ck}>
+                  <div className="flex items-center gap-2">
+                    <img src={CHAIN_METADATA[ck].logo} alt={CHAIN_METADATA[ck].name} className="w-5 h-5 rounded-full" />
+                    <span>{CHAIN_METADATA[ck].name}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Your transaction will revert if the price changes unfavorably by more than this percentage.
-                  </p>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* FROM Section */}
-        <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-400">From</span>
-            {balance && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">
-                  Balance: {Number(balance.formatted).toFixed(4)}
-                </span>
-                <button 
-                  onClick={handleMaxClick}
-                  className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition"
-                >
-                  MAX
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <TokenSelector selectedToken={fromToken} onSelect={setFromToken} />
-            <Input
-              type="number"
-              placeholder="0.0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="flex-1 border-0 bg-transparent text-right text-3xl font-bold focus-visible:ring-0"
-            />
-          </div>
-          <div className="mt-2 text-right text-xs text-gray-500">
-            {amount && parseFloat(amount) > 0 ? `≈ $${(parseFloat(amount) * 2000).toFixed(2)}` : "$0.00"}
-          </div>
-        </div>
-
-        {/* Swap Direction Button */}
-        <div className="relative flex justify-center -my-2">
-          <button
-            onClick={switchTokens}
-            className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#2A3141] to-[#1E2433] border-2 border-[#47A1FF]/30 hover:border-[#47A1FF] hover:scale-110 transition-all duration-300 group"
-          >
-            <ArrowDownUp size={20} className="text-[#47A1FF] group-hover:rotate-180 transition-transform duration-300" />
-          </button>
-        </div>
-
-        {/* TO Section */}
-        <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-400">To</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <TokenSelector selectedToken={toToken} onSelect={setToToken} />
-            <Input
-              type="text"
-              value={quote ? formatUnits(BigInt(quote.estimatedOutput), toToken.decimals) : "0.0"}
-              readOnly
-              className="flex-1 border-0 bg-transparent text-right text-3xl font-bold text-gray-400 focus-visible:ring-0"
-            />
-          </div>
-          <div className="mt-2 text-right text-xs text-gray-500">
-            {quote ? `≈ $${(parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals)) * 1).toFixed(2)}` : "$0.00"}
-          </div>
-        </div>
-
-        {/* Privacy Mode Toggle */}
-        <div className="mb-4 space-y-2">
-          <div className="flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
-            <label className="flex items-center gap-3 text-sm cursor-pointer">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={privacy}
-                  onChange={(e) => setPrivacy(e.target.checked)}
-                />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#47A1FF] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#3396FF] peer-checked:to-[#47A1FF]"></div>
-              </div>
-              <span className="font-medium">🔒 Privacy Mode</span>
-            </label>
-            <span className="text-xs text-gray-500">CoW Protocol MEV Protection</span>
-          </div>
-          {privacy && (
-            <div className="rounded-lg bg-purple-500/10 border border-purple-500/30 p-3 text-xs text-purple-300">
-              <strong>🛡️ MEV Protection Active:</strong> Your swap will be submitted as a CoW Protocol intent, protecting against front-running and sandwich attacks through batch auction settlement.
-              {fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && (
-                <div className="mt-2 text-yellow-300">
-                  <strong>Note:</strong> ETH will be automatically wrapped to WETH for CoW Protocol compatibility.
-                </div>
-              )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {balance && (
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-xs text-gray-500">Balance: {Number(balance.formatted).toFixed(4)}</span>
+              <button onClick={handleMaxClick} className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition">MAX</button>
             </div>
           )}
         </div>
-
-        {/* Quote Error */}
-        {quoteError && !isQuoting && (
-          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <div className="text-sm text-red-400">
-              <div className="font-medium">Unable to fetch quote</div>
-              <div className="text-xs text-red-300 mt-1">{quoteError}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Quote Details */}
-        {isQuoting && (
-          <div className="mb-4 rounded-xl bg-[#3396FF]/10 border border-[#3396FF]/30 p-4 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-[#47A1FF]" />
-            <span className="text-sm text-gray-300">Fetching best price...</span>
-          </div>
-        )}
-        
-        {quote && !isQuoting && (
-          <div className="mb-4 space-y-2 rounded-xl bg-[#1E2433]/50 p-4 border border-white/5">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2 text-gray-400">
-                <Info size={14} />
-                <span>Route</span>
-              </div>
-              <span className="font-medium text-[#47A1FF]">{quote.route}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Provider</span>
-              <span className="font-medium">{quote.provider}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Est. Gas</span>
-              <span className="font-medium">{Number(quote.estimatedGas).toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Slippage Tolerance</span>
-              <span className="font-medium">{slippage}%</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Min. Received</span>
-              <span className="font-medium">
-                {(parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals)) * (1 - parseFloat(slippage) / 100)).toFixed(6)} {toToken.symbol}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Action Button */}
-        {needsApproval ? (
-          <Button 
-            onClick={handleApprove} 
-            disabled={isApproving || !quote}
-            className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] text-white font-bold text-lg rounded-xl transition-all shadow-lg"
-          >
-            {isApproving ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Approving {fromToken.symbol}...
-              </>
-            ) : (
-              `Approve ${fromToken.symbol}`
-            )}
-          </Button>
-        ) : (
-          <Button 
-            onClick={handleSwap} 
-            disabled={!quote || isSwapping || isCowSubmitting || !amount}
-            className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg"
-          >
-            {(isSwapping || isCowSubmitting) ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                {privacy ? "Submitting Private Order..." : "Swapping..."}
-              </>
-            ) : !amount ? (
-              "Enter an amount"
-            ) : !quote ? (
-              "Select tokens"
-            ) : (
-              privacy ? "🔒 Private Swap" : "Swap"
-            )}
-          </Button>
-        )}
-
-        {/* Transaction Links */}
-        {(approvalHash || swapHash || cowOrderUid) && (
-          <div className="mt-4 space-y-2 text-sm">
-            {approvalHash && (
-              <a
-                href={`https://arbiscan.io/tx/${approvalHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"
-              >
-                <span>Approval transaction</span>
-                <span>View →</span>
-              </a>
-            )}
-            {swapHash && (
-              <a
-                href={`https://arbiscan.io/tx/${swapHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"
-              >
-                <span>Swap transaction</span>
-                <span>View →</span>
-              </a>
-            )}
-            {cowOrderUid && (
-              <a
-                href={`https://explorer.cow.fi/arbitrum/orders/${cowOrderUid}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between rounded-lg bg-purple-500/10 border border-purple-500/30 p-3 text-purple-400 hover:bg-purple-500/20 transition"
-              >
-                <span>🔒 CoW Private Order</span>
-                <span>View →</span>
-              </a>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <TokenSelector selectedToken={fromToken} onSelect={setFromToken} tokens={TOKENS_BY_CHAIN[CHAIN_IDS[fromChain]]} />
+          <Input type="number" placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} className="flex-1 border-0 bg-transparent text-right text-3xl font-bold focus-visible:ring-0" />
+        </div>
       </div>
+
+      {/* Swap Direction */}
+      <div className="relative flex justify-center -my-2">
+        <button onClick={switchTokens} className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#2A3141] to-[#1E2433] border-2 border-[#47A1FF]/30 hover:border-[#47A1FF] hover:scale-110 transition-all duration-300 group">
+          <ArrowDownUp size={20} className="text-[#47A1FF] group-hover:rotate-180 transition-transform duration-300" />
+        </button>
+      </div>
+
+      {/* TO */}
+      <div className="mb-4 rounded-2xl bg-[#1E2433] p-4 border border-white/5">
+        <div className="mb-3">
+          <Select value={toChain} onValueChange={(v: any) => setToChain(v)}>
+            <SelectTrigger className="bg-[#0F1419] border-white/10">
+              <SelectValue>
+                <div className="flex items-center gap-2">
+                  <img src={CHAIN_METADATA[toChain].logo} alt={CHAIN_METADATA[toChain].name} className="w-5 h-5 rounded-full" />
+                  <span>{CHAIN_METADATA[toChain].name}</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(CHAIN_IDS) as ChainKey[]).map((ck) => (
+                <SelectItem key={ck} value={ck}>
+                  <div className="flex items-center gap-2">
+                    <img src={CHAIN_METADATA[ck].logo} alt={CHAIN_METADATA[ck].name} className="w-5 h-5 rounded-full" />
+                    <span>{CHAIN_METADATA[ck].name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-3">
+          <TokenSelector selectedToken={toToken} onSelect={setToToken} tokens={TOKENS_BY_CHAIN[CHAIN_IDS[toChain]]} />
+          <Input type="text" value={quote && !isCrossChainSwap ? formatUnits(BigInt(quote.estimatedOutput), toToken.decimals) : "0.0"} readOnly className="flex-1 border-0 bg-transparent text-right text-3xl font-bold text-gray-400 focus-visible:ring-0" />
+        </div>
+      </div>
+
+      {/* Cross-Chain Notice */}
+      {isCrossChainSwap && (
+        <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/30 p-4 flex gap-3">
+          <Info size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-300">
+            <p className="font-medium mb-1">Cross-Chain Swap Detected</p>
+            <p className="text-xs">For cross-chain transfers, use the Bridge tab (CCTP/CCIP/Socket).</p>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Toggle */}
+      {!isCrossChainSwap && (
+        <div className="mb-4 flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
+          <label className="flex items-center gap-3 text-sm cursor-pointer">
+            <div className="relative">
+              <input type="checkbox" className="sr-only peer" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#47A1FF] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#3396FF] peer-checked:to-[#47A1FF]"></div>
+            </div>
+            <span className="font-medium">🔒 Privacy Mode</span>
+          </label>
+          <span className="text-xs text-gray-500">MEV Protection</span>
+        </div>
+      )}
+
+      {/* Quote Error */}
+      {quoteError && !isQuoting && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <div className="text-sm text-red-400">
+            <div className="font-medium">Unable to fetch quote</div>
+            <div className="text-xs text-red-300 mt-1">{quoteError}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Quote Details */}
+      {isQuoting && !isCrossChainSwap && (
+        <div className="mb-4 rounded-xl bg-[#3396FF]/10 border border-[#3396FF]/30 p-4 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-[#47A1FF]" />
+          <span className="text-sm text-gray-300">Fetching best price...</span>
+        </div>
+      )}
+      
+      {quote && !isQuoting && !isCrossChainSwap && (
+        <div className="mb-4 space-y-2 rounded-xl bg-[#1E2433]/50 p-4 border border-white/5">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-gray-400">
+              <Info size={14} />
+              <span>Route</span>
+            </div>
+            <span className="font-medium text-[#47A1FF]">{quote.route}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Provider</span>
+            <span className="font-medium">{quote.provider}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Est. Gas</span>
+            <span className="font-medium">{Number(quote.estimatedGas).toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Action Button */}
+      {isCrossChainSwap ? (
+        <Button disabled className="w-full h-14 bg-gray-600 text-white font-bold text-lg rounded-xl cursor-not-allowed">Use Bridge Tab for Cross-Chain</Button>
+      ) : (
+        <Button onClick={handleSwap} disabled={!quote || isSwapping || !amount || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
+          {isSwapping ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Swapping...</>) : (!amount ? "Enter an amount" : (!quote ? "Select tokens" : "Swap"))}
+        </Button>
+      )}
+
+      {/* Transaction Links */}
+      {(approvalHash || swapHash) && (
+        <div className="mt-4 space-y-2 text-sm">
+          {approvalHash && (
+            <a href={`${explorers[fromChain]}/tx/${approvalHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Approval transaction</span><span>View →</span></a>
+          )}
+          {swapHash && (
+            <a href={`${explorers[fromChain]}/tx/${swapHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Swap transaction</span><span>View →</span></a>
+          )}
+        </div>
+      )}
 
       {/* Info Cards */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
-          <div className="text-2xl mb-2">✨</div>
-          <div className="text-xs font-semibold text-gray-400">Best Pricing</div>
-        </div>
-        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
-          <div className="text-2xl mb-2">🛡️</div>
-          <div className="text-xs font-semibold text-gray-400">{privacy ? "MEV Protection" : "Secure Swaps"}</div>
-        </div>
-        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
-          <div className="text-2xl mb-2">⚡</div>
-          <div className="text-xs font-semibold text-gray-400">Smart Routing</div>
-        </div>
+        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">🌐</div><div className="text-xs font-semibold text-gray-400">Multi-Chain</div></div>
+        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">✨</div><div className="text-xs font-semibold text-gray-400">Best Pricing</div></div>
+        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">🛡️</div><div className="text-xs font-semibold text-gray-400">MEV Protection</div></div>
       </div>
     </div>
   );
