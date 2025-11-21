@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TokenSelector } from "@/components/TokenSelector";
-import { ARBITRUM_TOKENS, CHAIN_IDS } from "@/lib/constants";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, type ChainKey } from "@/lib/constants";
 import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
 import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,9 +13,9 @@ import { toast } from "sonner";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
-  const [fromChain, setFromChain] = useState<keyof typeof CHAIN_IDS>("ARBITRUM");
-  const [toChain, setToChain] = useState<keyof typeof CHAIN_IDS>("BASE");
-  const [token, setToken] = useState(ARBITRUM_TOKENS[2]); // USDC
+  const [fromChain, setFromChain] = useState<ChainKey>("ARBITRUM");
+  const [toChain, setToChain] = useState<ChainKey>("BASE");
+  const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][2]); // USDC
   const [amount, setAmount] = useState("");
   const [selectedRoute, setSelectedRoute] = useState<"auto" | "cctp" | "ccip" | "socket">("auto");
   const [quote, setQuote] = useState<BridgeQuote | null>(null);
@@ -128,6 +128,7 @@ export default function Bridge() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
+                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
@@ -142,10 +143,11 @@ export default function Bridge() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
+                <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
                 <SelectItem value="OPTIMISM">Optimism</SelectItem>
                 <SelectItem value="POLYGON">Polygon</SelectItem>
-                <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -156,7 +158,7 @@ export default function Bridge() {
           <label className="text-xs text-muted-foreground">Token & Amount</label>
           <div className="grid grid-cols-5 gap-2">
             <div className="col-span-2">
-              <TokenSelector selectedToken={token} onSelect={setToken} />
+              <TokenSelector selectedToken={token} onSelect={setToken} tokens={TOKENS_BY_CHAIN[CHAIN_IDS[fromChain]]} />
             </div>
             <div className="col-span-3">
               <Input
