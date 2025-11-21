@@ -11,31 +11,31 @@ import Landing from "./pages/Landing";
 import { Menu, Settings } from "lucide-react";
 
 export default function App() {
+  const path = window.location.pathname;
+  const hash = window.location.hash;
+  
   const [currentPage, setCurrentPage] = useState<string>(() => {
-    const path = window.location.pathname;
-    const hash = window.location.hash;
-    
-    if (path === "/" && !hash) {
-      return "home";
-    } else if (path.startsWith("/app/privacy") || hash === "#privacy") {
+    if (path.startsWith("/app/privacy") || hash === "#privacy") {
       return "privacy";
-    } else if (path.startsWith("/app") || hash === "#app") {
+    } else if (path.startsWith("/app")) {
       return "app";
+    } else if (path === "/" && !hash) {
+      return "home";
     }
     return "home";
   });
 
   useEffect(() => {
     const handleRouteChange = () => {
-      const path = window.location.pathname;
-      const hash = window.location.hash;
+      const newPath = window.location.pathname;
+      const newHash = window.location.hash;
       
-      if (path === "/" && !hash) {
-        setCurrentPage("home");
-      } else if (path.startsWith("/app/privacy") || hash === "#privacy") {
+      if (newPath.startsWith("/app/privacy") || newHash === "#privacy") {
         setCurrentPage("privacy");
-      } else if (path.startsWith("/app") || hash === "#app") {
+      } else if (newPath.startsWith("/app")) {
         setCurrentPage("app");
+      } else if (newPath === "/" && !newHash) {
+        setCurrentPage("home");
       }
     };
 
