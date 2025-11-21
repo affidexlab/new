@@ -3,5 +3,11 @@
   "outputDirectory": "app/dist",
   "installCommand": "cd app && bun install",
   "framework": "vite",
-  "devCommand": "cd app && bun run dev"
+  "devCommand": "cd app && bun run dev",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

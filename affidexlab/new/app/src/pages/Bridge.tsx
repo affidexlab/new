@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TokenSelector } from "@/components/TokenSelector";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, type ChainKey } from "@/lib/constants";
 import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
-import { Loader2, ArrowRight, Info } from "lucide-react";
+import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
@@ -61,6 +62,10 @@ export default function Bridge() {
         console.error("Bridge quote error:", error);
         setQuote(null);
         setAllQuotes([]);
+        const errorMsg = error instanceof Error ? error.message : "Unable to fetch bridge quote";
+        toast.error("Bridge Quote Failed", {
+          description: errorMsg,
+        });
       } finally {
         setIsQuoting(false);
       }
@@ -72,7 +77,9 @@ export default function Bridge() {
 
   const handleBridge = async () => {
     if (!quote?.data || !address) {
-      alert("Quote data not available. Please try again.");
+      toast.error("Unable to bridge", {
+        description: "Quote data not available. Please try again.",
+      });
       return;
     }
 
@@ -86,9 +93,15 @@ export default function Bridge() {
         fromAddress: address,
         writeContract,
       });
+      toast.success("Bridge Transaction Submitted", {
+        description: "Your transaction has been submitted to the blockchain",
+      });
     } catch (error) {
       console.error("Bridge execution error:", error);
-      alert(`Bridge failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error("Bridge Failed", {
+        description: errorMsg,
+      });
     }
   };
 

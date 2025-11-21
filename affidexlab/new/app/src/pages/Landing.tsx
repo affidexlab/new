@@ -6,6 +6,7 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [enterDappOpen, setEnterDappOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#0A0E27] text-white overflow-x-hidden">
@@ -24,14 +25,22 @@ export default function Landing() {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
               <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
-              <a href="#CardArbitrum" className="text-gray-400 hover:text-[#47A1FF] transition">Arbitrum</a>
-              <a href="#CardBridge" className="text-gray-400 hover:text-[#47A1FF] transition">Bridge</a>
-              <Button 
-                className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
-                onClick={() => window.location.href = '/app'}
-              >
-                ENTER DAPP
-              </Button>
+              <a href="#CardCCIP" className="text-gray-400 hover:text-[#47A1FF] transition">CCIP</a>
+              <a href="#CardCCTP" className="text-gray-400 hover:text-[#47A1FF] transition">CCTP</a>
+              <div className="relative">
+                <Button 
+                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
+                  onClick={() => setEnterDappOpen(!enterDappOpen)}
+                >
+                  ENTER DAPP
+                </Button>
+                {enterDappOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-[#1A1F2E] border border-[#47A1FF]/20 rounded-lg shadow-xl overflow-hidden z-50">
+                    <a href="/app" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Enter Dapp</a>
+                    <a href="/app/privacy" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Privacy Swap</a>
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* Mobile Menu Button */}
@@ -49,14 +58,23 @@ export default function Landing() {
           <div className="lg:hidden bg-[#0A0E27] border-t border-white/5">
             <div className="container mx-auto px-4 py-6 space-y-4">
               <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
-              <a href="#CardArbitrum" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Arbitrum</a>
-              <a href="#CardBridge" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Bridge</a>
-              <Button 
-                className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"
-                onClick={() => window.location.href = '/app'}
-              >
-                ENTER DAPP
-              </Button>
+              <a href="#CardCCIP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCIP</a>
+              <a href="#CardCCTP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCTP</a>
+              <div className="space-y-2">
+                <Button 
+                  className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"
+                  onClick={() => window.location.href = '/app'}
+                >
+                  Enter Dapp
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full border-[#3396FF] text-white hover:bg-[#3396FF]/10"
+                  onClick={() => window.location.href = '/app/privacy'}
+                >
+                  Privacy Swap
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -64,15 +82,18 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center pt-20 pb-12 sm:pb-20 overflow-hidden">
-        {/* Animated Background */}
+        {/* Video Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27] via-[#141B3D] to-[#0A0E27]">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#3396FF] rounded-full filter blur-[100px] animate-pulse-glow"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#47A1FF] rounded-full filter blur-[120px] animate-pulse-glow delay-1000"></div>
-            <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-[#2080FF] rounded-full filter blur-[90px] animate-pulse-glow delay-300"></div>
-          </div>
-          {/* Grid Pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(71,161,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(71,161,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] animate-pulse"></div>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-30"
+          >
+            <source src="/videos/hero-background.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27]/50 via-transparent to-[#0A0E27]/80"></div>
         </div>
 
         <div className="relative z-10 container mx-auto px-4 sm:px-6">
@@ -100,8 +121,8 @@ export default function Landing() {
                 Where Privacy Meets Secure Cross-Chain Swaps
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4 animate-fade-in-up delay-300">
+              {/* CTA Button */}
+              <div className="flex items-center lg:items-start justify-center lg:justify-start animate-fade-in-up delay-300">
                 <Button 
                   size="lg"
                   className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
@@ -109,22 +130,14 @@ export default function Landing() {
                 >
                   Access Platform
                 </Button>
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-[#3396FF] text-white hover:bg-[#3396FF]/10 font-semibold px-8 py-6 text-lg rounded-xl transition-all"
-                  onClick={() => window.location.href = '/app/privacy'}
-                >
-                  🔒 Privacy Swap
-                </Button>
               </div>
             </div>
 
             {/* Right Column - Hero Device */}
             <div className="hidden lg:flex items-center justify-center animate-fade-in-up delay-300">
               <div className="relative w-full max-w-2xl">
-                <OptimizedImage 
-                  src="/images/illustrations/hero-device.png" 
+                <img 
+                  src="/images/chainswap/ipad-pro.svg" 
                   alt="DecaFlow App Interface" 
                   className="w-full h-auto object-contain drop-shadow-[0_0_60px_rgba(51,150,255,0.4)] hover:scale-105 transition-transform duration-500"
                   lazy={false}
@@ -200,6 +213,17 @@ export default function Landing() {
             </p>
           </div>
 
+          {/* Feature Image */}
+          <div className="mb-12 flex justify-center">
+            <div className="w-full max-w-3xl">
+              <OptimizedImage 
+                src="/images/illustrations/whatwedo.png" 
+                alt="What We Do" 
+                className="w-full h-auto object-contain"
+              />
+            </div>
+          </div>
+
           <div className="bg-[#1A1F2E]/50 rounded-3xl border border-[#47A1FF]/10 overflow-hidden">
             <div className="flex flex-col lg:flex-row">
               {/* Tabs */}
@@ -271,42 +295,42 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Arbitrum Integration Section */}
-      <section id="CardArbitrum" className="relative py-20 sm:py-32">
+      {/* CCIP Integration Section */}
+      <section id="CardCCIP" className="relative py-20 sm:py-32">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="order-2 lg:order-1">
               <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <OptimizedImage src="/images/illustrations/arbitrum-network.png" alt="Arbitrum Layer 2 Network" className="w-full h-full object-cover" />
+                <OptimizedImage src="/images/chainswap/ccip.png" alt="Chainlink CCIP" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="order-1 lg:order-2 space-y-6">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Integrating Arbitrum's Layer 2 Scaling Solution
+                Integrating Chainlink's Cross Chain Interoperability Protocol - CCIP
               </h2>
               <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                DecaFlow leverages Arbitrum's cutting-edge Layer 2 technology for secure and efficient cross-chain swaps. This innovative protocol boasts industry-leading security through its decentralized network and optimistic rollup architecture, allowing for the seamless transfer of both data and tokens between blockchains with minimal fees and maximum speed.
+                DecaFlow unlocks secure and efficient cross-chain swaps through Chainlink's CCIP. This innovative protocol boasts Level 5 Security through its decentralized network with an added "Risk Management Network" allowing for the seamless transfer of both data and tokens between blockchains.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Bridge Protocol Section */}
-      <section id="CardBridge" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
+      {/* CCTP Section */}
+      <section id="CardCCTP" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Multi-Protocol Bridging - CCTP, CCIP & Socket
+                Circle's Cross Chain Transfer Protocol - CCTP
               </h2>
               <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                DecaFlow supports multiple bridging protocols for maximum flexibility. Circle's CCTP eliminates the need for complex conversions by facilitating direct USDC swaps between supported blockchains. Combined with Chainlink's CCIP and Socket aggregator, we offer the most comprehensive bridging solution with a reliable burn and mint mechanism. Our protocol streamlines transactions, minimizing processing times and fees, allowing users to swap assets across chains efficiently and cost-effectively.
+                This protocol eliminates the need for complex conversions by facilitating direct USDC swaps between supported blockchains. CCTP prioritizes security by utilizing a reliable burn and mint mechanism. CCTP streamlines transactions, minimizing processing times and fees, allowing users to swap USDC across chains efficiently and cost-effectively.
               </p>
             </div>
             <div>
               <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <OptimizedImage src="/images/illustrations/bridge-protocols.png" alt="Multi-Protocol Bridge" className="w-full h-full object-cover" />
+                <OptimizedImage src="/images/chainswap/cctp.png" alt="Circle CCTP" className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -320,10 +344,10 @@ export default function Landing() {
             Intra-Chain Swaps and Future Multi-Chain DEX
           </h2>
           <p className="text-xl text-gray-400 mb-12 max-w-4xl mx-auto">
-            Swap tokens directly on any of the supported blockchains that DecaFlow integrates including Arbitrum, Ethereum, Avalanche, Binance Smart Chain, Optimism, Polygon, and Base.
+            Swap tokens directly on any of the CCIP enabled blockchains that DecaFlow supports including Ethereum, Avalanche, Binance Smart Chain Arbitrum, Optimism, Polygon, or Base.
           </p>
           <div className="flex items-center justify-center mb-12">
-            <OptimizedImage src="/images/illustrations/intrachain-network.png" alt="Blockchain Network" className="max-w-md w-full h-auto" />
+            <OptimizedImage src="/images/chainswap/same-chain-swaps-graphic.png" alt="Blockchain Network" className="max-w-4xl w-full h-auto" />
           </div>
           <Button 
             variant="outline"
@@ -398,8 +422,8 @@ export default function Landing() {
               <h3 className="font-semibold mb-4">Website</h3>
               <ul className="space-y-3 text-sm text-gray-400">
                 <li><a href="/" className="hover:text-[#47A1FF] transition">Home</a></li>
-                <li><a href="#CardArbitrum" className="hover:text-[#47A1FF] transition">Arbitrum</a></li>
-                <li><a href="#CardBridge" className="hover:text-[#47A1FF] transition">Bridge</a></li>
+                <li><a href="#CardCCIP" className="hover:text-[#47A1FF] transition">CCIP</a></li>
+                <li><a href="#CardCCTP" className="hover:text-[#47A1FF] transition">CCTP</a></li>
                 <li><a href="/app" className="hover:text-[#47A1FF] transition">DApp</a></li>
               </ul>
             </div>
@@ -461,9 +485,9 @@ function LogoCard({ name }: { name: string }) {
 
 function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
   const iconMap: Record<string, string> = {
-    '🔗': '/images/illustrations/intro-challenges.png',
-    '🛡️': '/images/illustrations/intro-solution.png',
-    '⚡': '/images/illustrations/intro-simplified.png'
+    '🔗': '/images/chainswap/introducing_1.png',
+    '🛡️': '/images/chainswap/introducing_2.png',
+    '⚡': '/images/chainswap/introducing_3.png'
   };
   
   return (

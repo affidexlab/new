@@ -25,7 +25,7 @@ export default function CreatePool(){
             </SelectContent>
           </Select>
         </div>
-        <Input placeholder="Fee (e.g., 0.3%)" />
+        <Input placeholder="Fee (e.g., 0.5%)" />
         <Input placeholder="TVL Cap (USD)" />
         <Button>Create</Button>
       </div>
