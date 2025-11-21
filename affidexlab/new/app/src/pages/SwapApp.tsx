@@ -3,32 +3,59 @@ import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitFo
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TokenSelector } from "@/components/TokenSelector";
+import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
+import { ChainSelector } from "@/components/ChainSelector";
 import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
-import { ARBITRUM_TOKENS } from "@/lib/constants";
+import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
-import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink } from "lucide-react";
+import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
-  const [fromToken, setFromToken] = useState(ARBITRUM_TOKENS[0]);
-  const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]);
+  const [selectedChainId, setSelectedChainId] = useState(CHAIN_IDS.ARBITRUM);
+  const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[selectedChainId][0]);
+  const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[selectedChainId][2]);
   const [fromAmount, setFromAmount] = useState("");
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
   const [slippageConfig, setSlippageConfig] = useState<SlippageConfig>({ mode: "smart", customValue: 0.5 });
   const [showFeeDetails, setShowFeeDetails] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [timeoutMinutes, setTimeoutMinutes] = useState(20);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
+
+  useEffect(() => {
+    const tokens = TOKENS_BY_CHAIN[selectedChainId];
+    if (tokens) {
+      setFromToken(tokens[0]);
+      setToToken(tokens[2] || tokens[1]);
+      setFromAmount("");
+      setQuote(null);
+    }
+  }, [selectedChainId]);
 
   const { data: fromBalance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
+    chainId: selectedChainId,
   });
 
   const { data: toBalance } = useBalance({
     address,
     token: toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : toToken.address as `0x${string}`,
+    chainId: selectedChainId,
   });
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -50,10 +77,6 @@ export default function SwapApp() {
     if (isApprovalSuccess) {
       toast.success("Approval successful!", {
         description: "You can now proceed with the swap",
-        action: {
-          label: "View on Arbiscan",
-          onClick: () => window.open(`https://arbiscan.io/tx/${approvalHash}`, '_blank'),
-        },
       });
       refetchAllowance();
     }
@@ -63,10 +86,6 @@ export default function SwapApp() {
     if (isSwapSuccess) {
       toast.success("Swap successful!", {
         description: `Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`,
-        action: {
-          label: "View on Arbiscan",
-          onClick: () => window.open(`https://arbiscan.io/tx/${swapHash}`, '_blank'),
-        },
       });
       setFromAmount("");
       setQuote(null);
@@ -89,16 +108,23 @@ export default function SwapApp() {
           toToken: toToken.address,
           amount: amountWei,
           fromAddress: address,
-          chain: "arbitrum",
-          privacy: false,
+          chainId: selectedChainId,
+          privacy: privacyMode && cowSupported,
           slippagePercentage,
+          timeoutMs: timeoutMinutes * 60 * 1000,
         });
         setQuote(quoteResult);
       } catch (error) {
         console.error("Quote error:", error);
-        toast.error("Failed to get quote", {
-          description: error instanceof Error ? error.message : "Please try again",
-        });
+        if (error instanceof Error && error.name === "AbortError") {
+          toast.error("Request timed out", {
+            description: `Quote request exceeded ${timeoutMinutes} minute timeout`,
+          });
+        } else {
+          toast.error("Failed to get quote", {
+            description: error instanceof Error ? error.message : "Please try again",
+          });
+        }
         setQuote(null);
       } finally {
         setIsQuoting(false);
@@ -107,7 +133,7 @@ export default function SwapApp() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [fromAmount, fromToken, toToken, address, slippageConfig]);
+  }, [fromAmount, fromToken, toToken, address, slippageConfig, selectedChainId, privacyMode, cowSupported, timeoutMinutes]);
 
   const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
                        quote?.data?.allowanceTarget &&
@@ -189,7 +215,13 @@ export default function SwapApp() {
     const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
     const gasCostEth = parseFloat(formatUnits(gasCostWei, 18));
     const ethPriceUSD = 3500;
-    return (gasCostEth * ethPriceUSD).toFixed(2);
+    return gasCostEth * ethPriceUSD;
+  };
+
+  const calculateValueUSD = () => {
+    const amount = parseFloat(fromAmount || "0");
+    const tokenPriceUSD = 1;
+    return amount * tokenPriceUSD;
   };
 
   const calculateSlippageAmount = () => {
@@ -200,24 +232,69 @@ export default function SwapApp() {
     return slippageAmount.toFixed(6);
   };
 
+  const getExplorerUrl = (hash: string) => {
+    const explorers: Record<number, string> = {
+      [CHAIN_IDS.ARBITRUM]: "https://arbiscan.io/tx/",
+      [CHAIN_IDS.AVALANCHE]: "https://snowtrace.io/tx/",
+      [CHAIN_IDS.BASE]: "https://basescan.org/tx/",
+      [CHAIN_IDS.OPTIMISM]: "https://optimistic.etherscan.io/tx/",
+      [CHAIN_IDS.POLYGON]: "https://polygonscan.com/tx/",
+    };
+    return explorers[selectedChainId] + hash;
+  };
+
   return (
     <div className="mx-auto max-w-[500px] px-4">
       <div className="rounded-3xl bg-[#0B1221]/80 backdrop-blur-sm border border-[#1E2940] p-6 shadow-2xl">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Swap</h2>
-          <SlippageSettings value={slippageConfig} onChange={setSlippageConfig} />
+          <div className="flex items-center gap-2">
+            {cowSupported && (
+              <button
+                onClick={() => setPrivacyMode(!privacyMode)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition ${
+                  privacyMode
+                    ? "bg-green-500/20 border-green-500/50 text-green-400"
+                    : "bg-gray-500/20 border-gray-500/50 text-gray-400"
+                }`}
+              >
+                <Shield size={14} />
+                <span className="text-xs font-medium">Privacy</span>
+              </button>
+            )}
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <button className="p-2 hover:bg-white/5 rounded-lg transition">
+                  <Settings2 size={18} className="text-gray-400" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="bg-[#0B1221] border border-[#1E2940] text-white max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Transaction Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-3">Slippage Tolerance</h3>
+                    <SlippageSettings value={slippageConfig} onChange={setSlippageConfig} />
+                  </div>
+                  <div className="border-t border-[#1E2940] pt-6">
+                    <TransactionTimeoutSettings
+                      timeoutMinutes={timeoutMinutes}
+                      onChange={setTimeoutMinutes}
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="mb-2 rounded-2xl bg-[#0D1624] border border-[#1E2940] p-4">
           <div className="mb-4 flex items-center justify-between">
-            <Select value="arbitrum" disabled>
-              <SelectTrigger className="w-[140px] border-0 bg-[#1A2332] h-9 hover:bg-[#1E2940]">
-                <div className="flex items-center gap-2">
-                  <img src="/images/chains/arbitrum.png" alt="Arbitrum" className="w-5 h-5 rounded-full" />
-                  <span className="text-sm">Arbitrum</span>
-                </div>
-              </SelectTrigger>
-            </Select>
+            <ChainSelector 
+              selectedChainId={selectedChainId} 
+              onChainChange={setSelectedChainId}
+            />
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">
                 Balance: {fromBalance ? Number(fromBalance.formatted).toFixed(4) : '0'}
@@ -241,12 +318,13 @@ export default function SwapApp() {
               className="flex-1 border-0 bg-transparent text-5xl font-medium placeholder:text-gray-700 focus-visible:ring-0 px-0 h-auto"
             />
             <div className="flex-shrink-0">
-              <TokenSelector selectedToken={fromToken} onSelect={setFromToken} />
+              <EnhancedTokenSelector 
+                selectedToken={fromToken} 
+                onSelect={setFromToken} 
+                tokens={TOKENS_BY_CHAIN[selectedChainId] || []}
+                chainId={selectedChainId}
+              />
             </div>
-          </div>
-          
-          <div className="mt-3 text-right text-xs text-gray-600">
-            Price: {fromAmount && parseFloat(fromAmount) > 0 ? `${parseFloat(fromAmount).toFixed(4)} ${fromToken.symbol}` : '0'}
           </div>
         </div>
 
@@ -261,14 +339,10 @@ export default function SwapApp() {
 
         <div className="mb-4 rounded-2xl bg-[#0D1624] border border-[#1E2940] p-4">
           <div className="mb-4 flex items-center justify-between">
-            <Select value="arbitrum" disabled>
-              <SelectTrigger className="w-[140px] border-0 bg-[#1A2332] h-9 hover:bg-[#1E2940]">
-                <div className="flex items-center gap-2">
-                  <img src="/images/chains/arbitrum.png" alt="Arbitrum" className="w-5 h-5 rounded-full" />
-                  <span className="text-sm">Arbitrum</span>
-                </div>
-              </SelectTrigger>
-            </Select>
+            <ChainSelector 
+              selectedChainId={selectedChainId} 
+              onChainChange={setSelectedChainId}
+            />
             <span className="text-xs text-gray-500">
               Balance: {toBalance ? Number(toBalance.formatted).toFixed(4) : '0'}
             </span>
@@ -283,14 +357,24 @@ export default function SwapApp() {
               className="flex-1 border-0 bg-transparent text-5xl font-medium text-gray-500 placeholder:text-gray-700 focus-visible:ring-0 px-0 h-auto cursor-default"
             />
             <div className="flex-shrink-0">
-              <TokenSelector selectedToken={toToken} onSelect={setToToken} />
+              <EnhancedTokenSelector 
+                selectedToken={toToken} 
+                onSelect={setToToken} 
+                tokens={TOKENS_BY_CHAIN[selectedChainId] || []}
+                chainId={selectedChainId}
+              />
             </div>
           </div>
-          
-          <div className="mt-3 text-right text-xs text-gray-600">
-            Price: {toAmountDisplay && parseFloat(toAmountDisplay) > 0 ? `${parseFloat(toAmountDisplay).toFixed(4)} ${toToken.symbol}` : '0'}
-          </div>
         </div>
+
+        {fromAmount && parseFloat(fromAmount) > 0 && quote && (
+          <div className="mb-4">
+            <DustWarning
+              valueUSD={calculateValueUSD()}
+              estimatedGasCostUSD={calculateFeeUSD()}
+            />
+          </div>
+        )}
 
         <div 
           className="mb-4 rounded-xl bg-[#0D1624] border border-[#1E2940] p-3 cursor-pointer hover:bg-[#0D1624]/80 transition"
@@ -299,13 +383,13 @@ export default function SwapApp() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
               <FileText size={16} className="text-[#47A1FF]" />
-              <span className="text-gray-400">Fees & Slippage</span>
-              <span className="text-green-400 font-medium">~${calculateFeeUSD()}</span>
+              <span className="text-gray-400">Route</span>
+              <span className="text-green-400 font-medium text-xs">{quote?.provider.toUpperCase() || "0x"}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Fuel size={16} className="text-[#47A1FF]" />
               <span className="text-gray-400">Gas</span>
-              <span className="text-gray-300">~${calculateFeeUSD()}</span>
+              <span className="text-gray-300">~${calculateFeeUSD().toFixed(2)}</span>
               <ChevronDown size={14} className={`text-gray-500 transition-transform ${showFeeDetails ? 'rotate-180' : ''}`} />
             </div>
           </div>
@@ -314,15 +398,15 @@ export default function SwapApp() {
             <div className="mt-4 pt-4 border-t border-[#1E2940] space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500">Network Fee</span>
-                <span className="text-gray-300">${calculateFeeUSD()}</span>
+                <span className="text-gray-300">${calculateFeeUSD().toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Max Slippage</span>
                 <span className="text-gray-300">{getSlippagePercentage(slippageConfig)}%</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Slippage Amount</span>
-                <span className="text-gray-300">~{calculateSlippageAmount()} {toToken.symbol}</span>
+                <span className="text-gray-500">Timeout</span>
+                <span className="text-gray-300">{timeoutMinutes} minutes</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Minimum Received</span>
@@ -345,12 +429,16 @@ export default function SwapApp() {
             <Wallet size={20} />
             Connect Wallet
           </Button>
-        ) : chain?.id !== 42161 ? (
+        ) : chain?.id !== selectedChainId ? (
           <Button 
-            className="w-full h-14 bg-red-500/20 border border-red-500/50 text-red-400 font-semibold text-base rounded-xl cursor-not-allowed"
-            disabled
+            className="w-full h-14 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-semibold text-base rounded-xl"
+            onClick={() => {
+              toast.info("Please switch network", {
+                description: "Switch to the selected network in your wallet",
+              });
+            }}
           >
-            Switch to Arbitrum
+            Wrong Network - Switch Required
           </Button>
         ) : needsApproval ? (
           <Button 
@@ -400,23 +488,23 @@ export default function SwapApp() {
           <div className="mt-4 space-y-2">
             {approvalHash && (
               <a 
-                href={`https://arbiscan.io/tx/${approvalHash}`}
+                href={getExplorerUrl(approvalHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-[#47A1FF] transition"
               >
-                View approval on Arbiscan
+                View approval transaction
                 <ExternalLink size={12} />
               </a>
             )}
             {swapHash && (
               <a 
-                href={`https://arbiscan.io/tx/${swapHash}`}
+                href={getExplorerUrl(swapHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-[#47A1FF] transition"
               >
-                View swap on Arbiscan
+                View swap transaction
                 <ExternalLink size={12} />
               </a>
             )}

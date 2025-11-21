@@ -94,10 +94,22 @@ export const TOKENS_BY_CHAIN: Record<number, Token[]> = {
 export const API_ENDPOINTS: Record<number, { zeroX?: string; cow?: string }> = {
   [CHAIN_IDS.ARBITRUM]: { zeroX: "https://arbitrum.api.0x.org", cow: "https://api.cow.fi/arbitrum/api/v1" },
   [CHAIN_IDS.AVALANCHE]: { zeroX: "https://avalanche.api.0x.org" },
-  [CHAIN_IDS.BASE]: { zeroX: "https://base.api.0x.org" },
-  [CHAIN_IDS.OPTIMISM]: { zeroX: "https://optimism.api.0x.org" },
+  [CHAIN_IDS.BASE]: { zeroX: "https://base.api.0x.org", cow: "https://api.cow.fi/base/api/v1" },
+  [CHAIN_IDS.OPTIMISM]: { zeroX: "https://optimism.api.0x.org", cow: "https://api.cow.fi/optimism/api/v1" },
   [CHAIN_IDS.POLYGON]: { zeroX: "https://polygon.api.0x.org" },
 };
+
+// Security constants
+export const SECURITY_SETTINGS = {
+  MAX_SLIPPAGE_PERCENT: 50,
+  DEFAULT_SLIPPAGE_PERCENT: 0.5,
+  HIGH_SLIPPAGE_WARNING_THRESHOLD: 5,
+  LOW_SLIPPAGE_WARNING_THRESHOLD: 0.1,
+  DEFAULT_TIMEOUT_MS: 1200000, // 20 minutes
+  MIN_TIMEOUT_MS: 60000, // 1 minute
+  MAX_TIMEOUT_MS: 3600000, // 60 minutes
+  DUST_THRESHOLD_USD: 0.01,
+} as const;
 
 // Legacy exports (for existing imports)
 export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
