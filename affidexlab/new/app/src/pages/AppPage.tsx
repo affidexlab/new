@@ -11,12 +11,17 @@ export default function AppPage() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3396FF] to-[#47A1FF] flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
-              </div>
-              <span className="hidden sm:block text-xl font-bold tracking-tight">DECAFLOW</span>
-            </div>
+            <a href="/" className="header-logo-link block" aria-label="DecaFlow home">
+              <img
+                className="header-logo block w-full h-auto"
+                src="/images/branding/wordmark-1120.png"
+                srcSet="/images/branding/wordmark-500.png 500w, /images/branding/wordmark-800.png 800w, /images/branding/wordmark-1080.png 1080w, /images/branding/wordmark-1120.png 1120w"
+                sizes="(max-width: 160px) 100vw, 160px"
+                width={1120}
+                height={631}
+                alt="DecaFlow"
+              />
+            </a>
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium">

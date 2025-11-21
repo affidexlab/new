@@ -190,6 +190,17 @@ html {
   }
 }
 
+/* Header logo constraints per spec */
+.header-logo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.header-logo-link {
+  max-width: 160px;
+  display: block;
+}
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
