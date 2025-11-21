@@ -7,7 +7,7 @@ import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
 import { ChainSelector } from "@/components/ChainSelector";
 import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
-import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS } from "@/lib/constants";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS } from "@/lib/constants";
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
@@ -36,6 +36,8 @@ export default function SwapApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [nativePriceUSD, setNativePriceUSD] = useState<number>(0);
   const [fromTokenPriceUSD, setFromTokenPriceUSD] = useState<number>(0);
+  const [feeAmountWei, setFeeAmountWei] = useState<bigint>(0n);
+  const [netAmountWei, setNetAmountWei] = useState<bigint>(0n);
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
@@ -113,12 +115,16 @@ export default function SwapApp() {
     const fetchQuote = async () => {
       setIsQuoting(true);
       try {
-        const amountWei = parseUnits(fromAmount, fromToken.decimals).toString();
+        const grossWei = parseUnits(fromAmount, fromToken.decimals);
+        const fee = (grossWei * BigInt(SWAP_FEE_BPS)) / 10000n;
+        const net = grossWei - fee;
+        setFeeAmountWei(fee);
+        setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
-          amount: amountWei,
+          amount: net.toString(),
           fromAddress: address,
           chainId: selectedChainId,
           privacy: privacyMode && cowSupported,
@@ -149,7 +155,7 @@ export default function SwapApp() {
 
   const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
                        quote?.data?.allowanceTarget &&
-                       (!allowance || BigInt(allowance.toString()) < parseUnits(fromAmount || "0", fromToken.decimals));
+                       (!allowance || BigInt(allowance.toString()) < (netAmountWei || 0n));
 
   const handleApprove = () => {
     if (!quote?.data?.allowanceTarget) {
@@ -200,7 +206,7 @@ export default function SwapApp() {
         }
 
         // Build CoW order
-        const sellAmount = parseUnits(fromAmount, fromToken.decimals);
+        const sellAmount = netAmountWei; // swap only net amount
         const estOut = BigInt(quote.estimatedOutput);
         const slippagePercent = getSlippagePercentage(slippageConfig);
         const minBuy = estOut - (estOut * BigInt(Math.floor(slippagePercent * 1000)) / BigInt(1000 * 100));
@@ -266,7 +272,7 @@ export default function SwapApp() {
       }
     }
 
-    // Regular 0x path
+    // Regular 0x path with input split
     try {
       if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
         sendTransaction({
@@ -514,6 +520,14 @@ export default function SwapApp() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Network Fee</span>
                 <span className="text-gray-300">${calculateFeeUSD().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Platform Fee</span>
+                <span className="text-gray-300">{fromAmount ? (Number(formatUnits(feeAmountWei, fromToken.decimals)).toFixed(6) + ' ' + fromToken.symbol) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount Swapped</span>
+                <span className="text-gray-300">{fromAmount ? (Number(formatUnits(netAmountWei, fromToken.decimals)).toFixed(6) + ' ' + fromToken.symbol) : '0'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Max Slippage</span>
