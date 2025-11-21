@@ -74,6 +74,12 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
 
 // Socket: Aggregator fallback for all routes
 export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
+  // Validate Socket API key
+  const SOCKET_API_KEY = import.meta.env.VITE_SOCKET_API_KEY;
+  if (!SOCKET_API_KEY || SOCKET_API_KEY === "") {
+    throw new Error("Socket API key not configured. Please set VITE_SOCKET_API_KEY environment variable.");
+  }
+
   try {
     const url = `${SOCKET_API_BASE}/quote?${new URLSearchParams({
       fromChainId: CHAIN_IDS[params.fromChain].toString(),

@@ -1,40 +1,58 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TokenSelector } from "@/components/TokenSelector";
 import { ARBITRUM_TOKENS } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
-import { ArrowDownUp, Loader2, Settings, Info } from "lucide-react";
+import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
   const [fromToken, setFromToken] = useState(ARBITRUM_TOKENS[0]); // ETH
   const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]); // USDC
   const [amount, setAmount] = useState("");
-  const [privacy, setPrivacy] = useState(false);
+  const [slippage, setSlippage] = useState("0.5"); // Default 0.5% slippage
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
-  const [allowance, setAllowance] = useState("0");
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const { data: balance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
   });
 
-  const { data: approvalHash, writeContract: approve } = useWriteContract();
-  const { data: swapHash, sendTransaction } = useSendTransaction();
+  const { data: approvalHash, writeContract: approve, error: approvalError } = useWriteContract();
+  const { data: swapHash, sendTransaction, error: swapError } = useSendTransaction();
   
-  const { isLoading: isApproving } = useWaitForTransactionReceipt({ hash: approvalHash });
-  const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+
+  // Read allowance for ERC20 tokens
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
+    address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address && quote?.data.allowanceTarget ? [address, quote.data.allowanceTarget as `0x${string}`] : undefined,
+    query: {
+      enabled: !!address && !!quote?.data.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    },
+  });
 
   // Fetch quote when amount or tokens change
   useEffect(() => {
-    if (!amount || !fromToken || !toToken || !address) return;
+    if (!amount || !fromToken || !toToken || !address) {
+      setQuote(null);
+      setQuoteError(null);
+      return;
+    }
     
     const fetchQuote = async () => {
       setIsQuoting(true);
+      setQuoteError(null);
       try {
         const amountWei = parseUnits(amount, fromToken.decimals).toString();
         const quoteResult = await bestRoute({
@@ -43,12 +61,17 @@ export default function Swap() {
           amount: amountWei,
           fromAddress: address,
           chain: "arbitrum",
-          privacy,
+          privacy: false,
         });
         setQuote(quoteResult);
       } catch (error) {
         console.error("Quote error:", error);
         setQuote(null);
+        const errorMsg = error instanceof Error ? error.message : "Unable to fetch quote. Please try again.";
+        setQuoteError(errorMsg);
+        toast.error("Quote Failed", {
+          description: errorMsg,
+        });
       } finally {
         setIsQuoting(false);
       }
@@ -56,62 +79,93 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [amount, fromToken, toToken, address, privacy]);
+  }, [amount, fromToken, toToken, address]);
 
-  // Check allowance for ERC20 tokens
+  // Refetch allowance after successful approval
   useEffect(() => {
-    if (!address || fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      setAllowance("0");
-      return;
+    if (isApprovalSuccess) {
+      refetchAllowance();
+      toast.success("Approval Successful", {
+        description: `${fromToken.symbol} approved for swapping`,
+      });
     }
+  }, [isApprovalSuccess, refetchAllowance, fromToken.symbol]);
 
-    const checkAllowance = async () => {
-      try {
-        const response = await fetch(
-          `https://arbitrum.api.0x.org/swap/v1/quote?${new URLSearchParams({
-            sellToken: fromToken.address,
-            buyToken: toToken.address,
-            sellAmount: "1",
-          })}`
-        );
-        const data = await response.json();
-        const spender = data.allowanceTarget;
-        setAllowance("0");
-      } catch (error) {
-        console.error("Allowance check error:", error);
-      }
-    };
+  // Show swap success notification
+  useEffect(() => {
+    if (isSwapSuccess) {
+      toast.success("Swap Successful!", {
+        description: "Your transaction has been confirmed",
+      });
+    }
+  }, [isSwapSuccess]);
 
-    checkAllowance();
-  }, [address, fromToken, toToken]);
+  // Show error notifications
+  useEffect(() => {
+    if (approvalError) {
+      toast.error("Approval Failed", {
+        description: approvalError.message || "Transaction was rejected",
+      });
+    }
+  }, [approvalError]);
 
+  useEffect(() => {
+    if (swapError) {
+      toast.error("Swap Failed", {
+        description: swapError.message || "Transaction was rejected",
+      });
+    }
+  }, [swapError]);
+
+  const allowance = allowanceData as bigint | undefined;
   const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
-                       BigInt(allowance) < parseUnits(amount || "0", fromToken.decimals);
+                       amount && 
+                       (!allowance || allowance < parseUnits(amount, fromToken.decimals));
 
   const handleApprove = () => {
-    if (!quote?.data.allowanceTarget) return;
+    if (!quote?.data.allowanceTarget) {
+      toast.error("Unable to approve", {
+        description: "Quote data is missing",
+      });
+      return;
+    }
     
+    // Use max uint256 for approval to avoid frequent approvals
+    const maxApproval = BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     approve({
       address: fromToken.address as `0x${string}`,
       abi: erc20Abi,
       functionName: "approve",
-      args: [quote.data.allowanceTarget, BigInt(quote.data.sellAmount)],
+      args: [quote.data.allowanceTarget as `0x${string}`, maxApproval],
     });
   };
 
   const handleSwap = () => {
-    if (!quote?.data) return;
+    if (!quote?.data) {
+      toast.error("Unable to swap", {
+        description: "Quote data is missing",
+      });
+      return;
+    }
+
+    // Validate slippage
+    const expectedOutput = BigInt(quote.estimatedOutput);
+    const slippagePercent = parseFloat(slippage);
+    const minOutput = expectedOutput * BigInt(Math.floor((100 - slippagePercent) * 100)) / BigInt(10000);
+    
+    console.log("Expected output:", expectedOutput.toString());
+    console.log("Min output with slippage:", minOutput.toString());
 
     if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
       sendTransaction({
-        to: quote.data.to,
-        data: quote.data.data,
+        to: quote.data.to as `0x${string}`,
+        data: quote.data.data as `0x${string}`,
         value: BigInt(quote.data.value || "0"),
       });
     } else {
       sendTransaction({
-        to: quote.data.to,
-        data: quote.data.data,
+        to: quote.data.to as `0x${string}`,
+        data: quote.data.data as `0x${string}`,
       });
     }
   };
@@ -158,9 +212,49 @@ export default function Swap() {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold">Swap</h2>
-          <button className="rounded-xl p-2 hover:bg-white/5 transition">
-            <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
-          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="rounded-xl p-2 hover:bg-white/5 transition">
+                <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 bg-[#1A1F2E] border-[#47A1FF]/20">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Transaction Settings</h3>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Slippage Tolerance</label>
+                  <div className="flex gap-2">
+                    {["0.1", "0.5", "1.0"].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => setSlippage(val)}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                          slippage === val
+                            ? "bg-[#47A1FF] text-white"
+                            : "bg-[#1E2433] text-gray-400 hover:bg-[#2A3141]"
+                        }`}
+                      >
+                        {val}%
+                      </button>
+                    ))}
+                    <Input
+                      type="number"
+                      value={slippage}
+                      onChange={(e) => setSlippage(e.target.value)}
+                      placeholder="Custom"
+                      className="w-20 bg-[#1E2433] border-[#47A1FF]/20 text-sm"
+                      step="0.1"
+                      min="0.1"
+                      max="50"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Your transaction will revert if the price changes unfavorably by more than this percentage.
+                  </p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* FROM Section */}
@@ -225,22 +319,16 @@ export default function Swap() {
           </div>
         </div>
 
-        {/* Privacy Mode Toggle */}
-        <div className="mb-4 flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
-          <label className="flex items-center gap-3 text-sm cursor-pointer">
-            <div className="relative">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={privacy}
-                onChange={(e) => setPrivacy(e.target.checked)}
-              />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#47A1FF] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#3396FF] peer-checked:to-[#47A1FF]"></div>
+        {/* Quote Error */}
+        {quoteError && !isQuoting && (
+          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div className="text-sm text-red-400">
+              <div className="font-medium">Unable to fetch quote</div>
+              <div className="text-xs text-red-300 mt-1">{quoteError}</div>
             </div>
-            <span className="font-medium">🔒 Privacy Mode</span>
-          </label>
-          <span className="text-xs text-gray-500">MEV Protection</span>
-        </div>
+          </div>
+        )}
 
         {/* Quote Details */}
         {isQuoting && (
@@ -266,6 +354,16 @@ export default function Swap() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Est. Gas</span>
               <span className="font-medium">{Number(quote.estimatedGas).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Slippage Tolerance</span>
+              <span className="font-medium">{slippage}%</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Min. Received</span>
+              <span className="font-medium">
+                {(parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals)) * (1 - parseFloat(slippage) / 100)).toFixed(6)} {toToken.symbol}
+              </span>
             </div>
           </div>
         )}
@@ -344,7 +442,7 @@ export default function Swap() {
         </div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">🛡️</div>
-          <div className="text-xs font-semibold text-gray-400">MEV Protection</div>
+          <div className="text-xs font-semibold text-gray-400">Secure Swaps</div>
         </div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">⚡</div>

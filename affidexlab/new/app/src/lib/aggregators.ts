@@ -52,41 +52,8 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
 
 export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
   // CoW Protocol is primarily on Ethereum mainnet and Gnosis Chain
-  // Arbitrum support may be limited - this is a stub for now
-  console.warn("CoW Protocol may have limited Arbitrum support");
-  
-  try {
-    const response = await fetch(`${COW_API_BASE}/quote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sellToken: params.fromToken,
-        buyToken: params.toToken,
-        sellAmountBeforeFee: params.amount,
-        kind: "sell",
-        partiallyFillable: false,
-        from: params.fromAddress || "0x0000000000000000000000000000000000000000",
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`CoW API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    
-    return {
-      provider: "cow",
-      price: data.quote?.price || "0",
-      estimatedOutput: data.quote?.buyAmount || "0",
-      estimatedGas: "0",
-      route: "CoW Intent Settlement",
-      data,
-    };
-  } catch (error) {
-    console.error("CoW quote error:", error);
-    throw error;
-  }
+  // Not currently supported on Arbitrum
+  throw new Error("CoW Protocol is not supported on Arbitrum. Use 0x instead.");
 }
 
 export async function bestRoute(params: QuoteParams): Promise<QuoteResponse> {
