@@ -7,7 +7,7 @@ import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
 import { ChainSelector } from "@/components/ChainSelector";
 import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
-import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS } from "@/lib/constants";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES } from "@/lib/constants";
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
@@ -83,6 +83,7 @@ export default function SwapApp() {
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
   const { data: swapHash, sendTransaction } = useSendTransaction();
+  const { writeContract: writeContractGeneric } = useWriteContract();
   const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
   const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
   const { signTypedDataAsync } = useSignTypedData();
@@ -269,6 +270,79 @@ export default function SwapApp() {
           description: error instanceof Error ? error.message : "Please try again",
         });
         return;
+      }
+    }
+
+    // If Router is configured, use single-tx batching when possible
+    const router = ROUTER_ADDRESSES[selectedChainId];
+    if (router && quote.provider === "0x") {
+      const ZEROX_ALLOWANCE = quote.data.allowanceTarget as `0x${string}`;
+      const ZEROX_TO = quote.data.to as `0x${string}`;
+      const ZEROX_DATA = quote.data.data as `0x${string}`;
+
+      const feeBps = SWAP_FEE_BPS;
+      const grossWei = parseUnits(fromAmount, fromToken.decimals);
+
+      const routerAbi = [
+        { "type":"function","name":"execute0xWithFee","inputs":[
+          {"name":"sellToken","type":"address"},
+          {"name":"grossAmount","type":"uint256"},
+          {"name":"feeBps","type":"uint256"},
+          {"name":"treasury","type":"address"},
+          {"name":"allowanceTarget","type":"address"},
+          {"name":"target","type":"address"},
+          {"name":"data","type":"bytes"}
+        ],"outputs":[],"stateMutability":"nonpayable"},
+        { "type":"function","name":"execute0xWithFeeETH","inputs":[
+          {"name":"feeBps","type":"uint256"},
+          {"name":"treasury","type":"address"},
+          {"name":"target","type":"address"},
+          {"name":"data","type":"bytes"}
+        ],"outputs":[],"stateMutability":"payable"}
+      ] as const;
+
+      try {
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          await writeContractGeneric({
+            abi: routerAbi,
+            address: router as `0x${string}`,
+            functionName: "execute0xWithFeeETH",
+            args: [BigInt(feeBps), TREASURY_WALLET as `0x${string}`, ZEROX_TO, ZEROX_DATA],
+            value: grossWei,
+          });
+        } else {
+          // Ensure user approval to router for gross amount
+          // This uses the existing approval flow if needed
+          if (!allowance || BigInt(allowance.toString()) < grossWei) {
+            await approve({
+              address: fromToken.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [router as `0x${string}`, grossWei],
+            });
+            toast.info("Approved router for token spend. Please confirm swap.");
+            return;
+          }
+
+          await writeContractGeneric({
+            abi: routerAbi,
+            address: router as `0x${string}`,
+            functionName: "execute0xWithFee",
+            args: [
+              fromToken.address as `0x${string}`,
+              grossWei,
+              BigInt(feeBps),
+              TREASURY_WALLET as `0x${string}`,
+              ZEROX_ALLOWANCE,
+              ZEROX_TO,
+              ZEROX_DATA,
+            ],
+          });
+        }
+        toast.info("Swap requested", { description: "Please confirm in your wallet" });
+        return;
+      } catch (e) {
+        // Fallback to legacy split path below
       }
     }
 

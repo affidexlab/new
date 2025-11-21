@@ -116,6 +116,15 @@ export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
 export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
 
+// Optional: FeeRouter addresses per chain (set after deployment)
+export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
+  // 42161: "0x...", // Arbitrum
+  // 8453: "0x...", // Base
+  // 10: "0x...",   // Optimism
+  // 137: "0x...",  // Polygon
+  // 43114: "0x...", // Avalanche
+};
+
 // Coingecko platform IDs for chain token prices
 export const COINGECKO_NATIVE_IDS: Record<number, string> = {
   [CHAIN_IDS.ARBITRUM]: "ethereum",
