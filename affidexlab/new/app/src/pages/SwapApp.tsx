@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignTypedData } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { ChainSelector } from "@/components/ChainSelector";
 import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS } from "@/lib/constants";
+import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +34,8 @@ export default function SwapApp() {
   const [privacyMode, setPrivacyMode] = useState(false);
   const [timeoutMinutes, setTimeoutMinutes] = useState(20);
   const [showSettings, setShowSettings] = useState(false);
+  const [nativePriceUSD, setNativePriceUSD] = useState<number>(0);
+  const [fromTokenPriceUSD, setFromTokenPriceUSD] = useState<number>(0);
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
@@ -44,6 +47,14 @@ export default function SwapApp() {
       setFromAmount("");
       setQuote(null);
     }
+    (async () => {
+      try {
+        const p = await getNativePriceUSD(selectedChainId);
+        setNativePriceUSD(p || 0);
+      } catch {
+        setNativePriceUSD(0);
+      }
+    })();
   }, [selectedChainId]);
 
   const { data: fromBalance } = useBalance({
@@ -72,6 +83,7 @@ export default function SwapApp() {
   const { data: swapHash, sendTransaction } = useSendTransaction();
   const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
   const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { signTypedDataAsync } = useSignTypedData();
 
   useEffect(() => {
     if (isApprovalSuccess) {
@@ -162,12 +174,99 @@ export default function SwapApp() {
     }
   };
 
-  const handleSwap = () => {
+  const handleSwap = async () => {
     if (!quote?.data) {
       toast.error("No quote available");
       return;
     }
 
+    // Privacy mode via CoW Protocol
+    if (privacyMode && quote.provider === "cow") {
+      try {
+        // CoW settlement contract (Arbitrum)
+        const cowSettlement = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41" as `0x${string}`;
+        // Ensure approval for ERC20 sell token to settlement
+        if (fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          if (!allowance || BigInt(allowance.toString()) < parseUnits(fromAmount || "0", fromToken.decimals)) {
+            approve({
+              address: fromToken.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [cowSettlement, parseUnits(fromAmount, fromToken.decimals)],
+            });
+            toast.info("Approval requested for CoW", { description: "Please confirm in your wallet" });
+            return; // wait user to approve then swap again
+          }
+        }
+
+        // Build CoW order
+        const sellAmount = parseUnits(fromAmount, fromToken.decimals);
+        const estOut = BigInt(quote.estimatedOutput);
+        const slippagePercent = getSlippagePercentage(slippageConfig);
+        const minBuy = estOut - (estOut * BigInt(Math.floor(slippagePercent * 1000)) / BigInt(1000 * 100));
+
+        const validTo = Math.floor(Date.now() / 1000) + 10 * 60; // 10 minutes
+        const order = {
+          sellToken: fromToken.address,
+          buyToken: toToken.address,
+          sellAmount: sellAmount.toString(),
+          buyAmount: minBuy.toString(),
+          validTo,
+          appData: "0x" + "0".repeat(64),
+          feeAmount: "0",
+          kind: "sell" as const,
+          partiallyFillable: false,
+          sellTokenBalance: "erc20",
+          buyTokenBalance: "erc20",
+          from: address as `0x${string}`,
+          receiver: address as `0x${string}`,
+        };
+
+        // EIP-712 signing
+        const domain = { name: "Gnosis Protocol", version: "v2", chainId: 42161, verifyingContract: cowSettlement } as const;
+        const types = {
+          Order: [
+            { name: "sellToken", type: "address" },
+            { name: "buyToken", type: "address" },
+            { name: "receiver", type: "address" },
+            { name: "sellAmount", type: "uint256" },
+            { name: "buyAmount", type: "uint256" },
+            { name: "validTo", type: "uint32" },
+            { name: "appData", type: "bytes32" },
+            { name: "feeAmount", type: "uint256" },
+            { name: "kind", type: "string" },
+            { name: "partiallyFillable", type: "bool" },
+            { name: "sellTokenBalance", type: "string" },
+            { name: "buyTokenBalance", type: "string" },
+          ],
+        } as const;
+
+        const signature = await signTypedDataAsync({ domain, types, primaryType: "Order", message: order });
+
+        // Submit to CoW
+        const res = await fetch("https://api.cow.fi/arbitrum/api/v1/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...order, signature, signingScheme: "eip712" }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.description || res.statusText);
+        }
+        const uid = await res.json();
+        toast.success("Privacy order submitted", {
+          description: `Order UID: ${uid}`,
+        });
+        return;
+      } catch (error) {
+        toast.error("Privacy swap failed", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+        return;
+      }
+    }
+
+    // Regular 0x path
     try {
       if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
         sendTransaction({
@@ -209,19 +308,35 @@ export default function SwapApp() {
 
   const toAmountDisplay = quote ? formatUnits(BigInt(quote.estimatedOutput), toToken.decimals) : "0";
 
+  useEffect(() => {
+    (async () => {
+      try {
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          // native token uses native price we already fetched
+          setFromTokenPriceUSD(nativePriceUSD || 0);
+        } else {
+          const p = await getTokenPriceUSD(selectedChainId, fromToken.address);
+          setFromTokenPriceUSD(p || 0);
+        }
+      } catch {
+        setFromTokenPriceUSD(0);
+      }
+    })();
+  }, [fromToken, selectedChainId, nativePriceUSD]);
+
   const calculateFeeUSD = () => {
     if (!quote?.data?.estimatedGas) return 0;
     const gasPrice = quote.data.gasPrice || "50000000000";
     const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
-    const gasCostEth = parseFloat(formatUnits(gasCostWei, 18));
-    const ethPriceUSD = 3500;
-    return gasCostEth * ethPriceUSD;
+    const gasCostNative = parseFloat(formatUnits(gasCostWei, 18));
+    const price = nativePriceUSD || 0;
+    return gasCostNative * price;
   };
 
   const calculateValueUSD = () => {
     const amount = parseFloat(fromAmount || "0");
-    const tokenPriceUSD = 1;
-    return amount * tokenPriceUSD;
+    const price = fromTokenPriceUSD || 0;
+    return amount * price;
   };
 
   const calculateSlippageAmount = () => {
