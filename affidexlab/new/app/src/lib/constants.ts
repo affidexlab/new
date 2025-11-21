@@ -115,3 +115,20 @@ export const SECURITY_SETTINGS = {
 export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
 export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
+
+// Coingecko platform IDs for chain token prices
+export const COINGECKO_NATIVE_IDS: Record<number, string> = {
+  [CHAIN_IDS.ARBITRUM]: "ethereum",
+  [CHAIN_IDS.AVALANCHE]: "avalanche-2",
+  [CHAIN_IDS.BASE]: "ethereum",
+  [CHAIN_IDS.OPTIMISM]: "ethereum",
+  [CHAIN_IDS.POLYGON]: "matic-network",
+};
+
+export const COINGECKO_PLATFORMS: Record<number, string> = {
+  [CHAIN_IDS.ARBITRUM]: "arbitrum-one",
+  [CHAIN_IDS.AVALANCHE]: "avalanche",
+  [CHAIN_IDS.BASE]: "base",
+  [CHAIN_IDS.OPTIMISM]: "optimistic-ethereum",
+  [CHAIN_IDS.POLYGON]: "polygon-pos",
+};
