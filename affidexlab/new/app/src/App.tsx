@@ -11,19 +11,36 @@ import Landing from "./pages/Landing";
 import { Menu, Settings } from "lucide-react";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<string>("home");
-
-  useEffect(() => {
+  const [currentPage, setCurrentPage] = useState<string>(() => {
     const path = window.location.pathname;
     const hash = window.location.hash;
     
     if (path === "/" && !hash) {
-      setCurrentPage("home");
-    } else if (path === "/app" || hash === "#app") {
-      setCurrentPage("app");
-    } else if (path === "/app/privacy" || hash === "#privacy") {
-      setCurrentPage("privacy");
+      return "home";
+    } else if (path.startsWith("/app/privacy") || hash === "#privacy") {
+      return "privacy";
+    } else if (path.startsWith("/app") || hash === "#app") {
+      return "app";
     }
+    return "home";
+  });
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      
+      if (path === "/" && !hash) {
+        setCurrentPage("home");
+      } else if (path.startsWith("/app/privacy") || hash === "#privacy") {
+        setCurrentPage("privacy");
+      } else if (path.startsWith("/app") || hash === "#app") {
+        setCurrentPage("app");
+      }
+    };
+
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
   }, []);
 
   if (currentPage === "home") {
