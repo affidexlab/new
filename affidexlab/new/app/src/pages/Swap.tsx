@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignTypedData } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { getCowDomain, getCowOrderTypes, submitCowOrder, createCowOrder } from "@/lib/privacy";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
@@ -16,6 +17,7 @@ export default function Swap() {
   const [toToken, setToToken] = useState(ARBITRUM_TOKENS[2]); // USDC
   const [amount, setAmount] = useState("");
   const [slippage, setSlippage] = useState("0.5"); // Default 0.5% slippage
+  const [privacy, setPrivacy] = useState(false); // Privacy mode with CoW Protocol
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -27,18 +29,26 @@ export default function Swap() {
 
   const { data: approvalHash, writeContract: approve, error: approvalError } = useWriteContract();
   const { data: swapHash, sendTransaction, error: swapError } = useSendTransaction();
+  const { signTypedDataAsync } = useSignTypedData();
   
   const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
   const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+  
+  const [isCowSubmitting, setIsCowSubmitting] = useState(false);
+  const [cowOrderUid, setCowOrderUid] = useState<string | null>(null);
 
   // Read allowance for ERC20 tokens
+  // CoW Protocol VaultRelayer address on Arbitrum: 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110
+  const cowVaultRelayer = "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110" as `0x${string}`;
+  const approvalTarget = quote?.provider === "cow" ? cowVaultRelayer : (quote?.data.allowanceTarget as `0x${string}`);
+  
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
     address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
     abi: erc20Abi,
     functionName: "allowance",
-    args: address && quote?.data.allowanceTarget ? [address, quote.data.allowanceTarget as `0x${string}`] : undefined,
+    args: address && approvalTarget ? [address, approvalTarget] : undefined,
     query: {
-      enabled: !!address && !!quote?.data.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      enabled: !!address && !!approvalTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     },
   });
 
@@ -61,7 +71,7 @@ export default function Swap() {
           amount: amountWei,
           fromAddress: address,
           chain: "arbitrum",
-          privacy: false,
+          privacy,
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -79,7 +89,7 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [amount, fromToken, toToken, address]);
+  }, [amount, fromToken, toToken, address, privacy]);
 
   // Refetch allowance after successful approval
   useEffect(() => {
@@ -123,7 +133,7 @@ export default function Swap() {
                        (!allowance || allowance < parseUnits(amount, fromToken.decimals));
 
   const handleApprove = () => {
-    if (!quote?.data.allowanceTarget) {
+    if (!approvalTarget) {
       toast.error("Unable to approve", {
         description: "Quote data is missing",
       });
@@ -136,12 +146,12 @@ export default function Swap() {
       address: fromToken.address as `0x${string}`,
       abi: erc20Abi,
       functionName: "approve",
-      args: [quote.data.allowanceTarget as `0x${string}`, maxApproval],
+      args: [approvalTarget, maxApproval],
     });
   };
 
-  const handleSwap = () => {
-    if (!quote?.data) {
+  const handleSwap = async () => {
+    if (!quote?.data || !address) {
       toast.error("Unable to swap", {
         description: "Quote data is missing",
       });
@@ -156,6 +166,58 @@ export default function Swap() {
     console.log("Expected output:", expectedOutput.toString());
     console.log("Min output with slippage:", minOutput.toString());
 
+    // Handle CoW Protocol privacy mode swaps
+    if (quote.provider === "cow" && privacy) {
+      setIsCowSubmitting(true);
+      try {
+        // Convert ETH to WETH for CoW Protocol
+        const sellToken = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // WETH
+          : fromToken.address;
+        const buyToken = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // WETH
+          : toToken.address;
+
+        // Create CoW order
+        const cowOrder = createCowOrder({
+          sellToken,
+          buyToken,
+          sellAmount: parseUnits(amount, fromToken.decimals).toString(),
+          buyAmount: minOutput.toString(),
+          userAddress: address,
+        });
+
+        // Sign order with EIP-712
+        const signature = await signTypedDataAsync({
+          domain: getCowDomain(),
+          types: getCowOrderTypes(),
+          primaryType: "Order",
+          message: cowOrder as any,
+        });
+
+        // Submit signed order to CoW Protocol
+        const orderUid = await submitCowOrder({
+          order: cowOrder,
+          signature,
+          signingScheme: "eip712",
+        });
+
+        setCowOrderUid(orderUid);
+        toast.success("CoW Order Submitted!", {
+          description: "Your order is being processed by CoW solvers with MEV protection",
+        });
+      } catch (error) {
+        console.error("CoW order submission error:", error);
+        toast.error("Privacy Swap Failed", {
+          description: error instanceof Error ? error.message : "Order submission failed",
+        });
+      } finally {
+        setIsCowSubmitting(false);
+      }
+      return;
+    }
+
+    // Handle regular 0x swaps
     if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
       sendTransaction({
         to: quote.data.to as `0x${string}`,
@@ -319,6 +381,35 @@ export default function Swap() {
           </div>
         </div>
 
+        {/* Privacy Mode Toggle */}
+        <div className="mb-4 space-y-2">
+          <div className="flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
+            <label className="flex items-center gap-3 text-sm cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={privacy}
+                  onChange={(e) => setPrivacy(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#47A1FF] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#3396FF] peer-checked:to-[#47A1FF]"></div>
+              </div>
+              <span className="font-medium">🔒 Privacy Mode</span>
+            </label>
+            <span className="text-xs text-gray-500">CoW Protocol MEV Protection</span>
+          </div>
+          {privacy && (
+            <div className="rounded-lg bg-purple-500/10 border border-purple-500/30 p-3 text-xs text-purple-300">
+              <strong>🛡️ MEV Protection Active:</strong> Your swap will be submitted as a CoW Protocol intent, protecting against front-running and sandwich attacks through batch auction settlement.
+              {fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && (
+                <div className="mt-2 text-yellow-300">
+                  <strong>Note:</strong> ETH will be automatically wrapped to WETH for CoW Protocol compatibility.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Quote Error */}
         {quoteError && !isQuoting && (
           <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
@@ -387,26 +478,26 @@ export default function Swap() {
         ) : (
           <Button 
             onClick={handleSwap} 
-            disabled={!quote || isSwapping || !amount}
+            disabled={!quote || isSwapping || isCowSubmitting || !amount}
             className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg"
           >
-            {isSwapping ? (
+            {(isSwapping || isCowSubmitting) ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Swapping...
+                {privacy ? "Submitting Private Order..." : "Swapping..."}
               </>
             ) : !amount ? (
               "Enter an amount"
             ) : !quote ? (
               "Select tokens"
             ) : (
-              "Swap"
+              privacy ? "🔒 Private Swap" : "Swap"
             )}
           </Button>
         )}
 
         {/* Transaction Links */}
-        {(approvalHash || swapHash) && (
+        {(approvalHash || swapHash || cowOrderUid) && (
           <div className="mt-4 space-y-2 text-sm">
             {approvalHash && (
               <a
@@ -430,6 +521,17 @@ export default function Swap() {
                 <span>View →</span>
               </a>
             )}
+            {cowOrderUid && (
+              <a
+                href={`https://explorer.cow.fi/arbitrum/orders/${cowOrderUid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-lg bg-purple-500/10 border border-purple-500/30 p-3 text-purple-400 hover:bg-purple-500/20 transition"
+              >
+                <span>🔒 CoW Private Order</span>
+                <span>View →</span>
+              </a>
+            )}
           </div>
         )}
       </div>
@@ -442,7 +544,7 @@ export default function Swap() {
         </div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">🛡️</div>
-          <div className="text-xs font-semibold text-gray-400">Secure Swaps</div>
+          <div className="text-xs font-semibold text-gray-400">{privacy ? "MEV Protection" : "Secure Swaps"}</div>
         </div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center">
           <div className="text-2xl mb-2">⚡</div>

@@ -80,5 +80,5 @@ export const CHAIN_IDS = {
 } as const;
 
 export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
-export const COW_API_BASE = "https://api.cow.fi/mainnet/api/v1";
+export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1"; // CoW Protocol Arbitrum One
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";

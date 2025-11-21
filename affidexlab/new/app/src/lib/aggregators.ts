@@ -51,23 +51,102 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
-  // CoW Protocol is primarily on Ethereum mainnet and Gnosis Chain
-  // Not currently supported on Arbitrum
-  throw new Error("CoW Protocol is not supported on Arbitrum. Use 0x instead.");
+  // CoW Protocol supports Arbitrum One for intent-based trading with MEV protection
+  const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+    ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // Use WETH for CoW
+    : params.fromToken;
+  const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+    ? "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1" // Use WETH for CoW
+    : params.toToken;
+  
+  try {
+    const response = await fetch(`${COW_API_BASE}/quote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sellToken,
+        buyToken,
+        sellAmountBeforeFee: params.amount,
+        kind: "sell",
+        partiallyFillable: false,
+        from: params.fromAddress || "0x0000000000000000000000000000000000000000",
+        receiver: params.fromAddress || "0x0000000000000000000000000000000000000000",
+        validTo: Math.floor(Date.now() / 1000) + 600, // 10 minutes validity
+        appData: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        signingScheme: "eip712",
+        onchainOrder: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`CoW API error: ${response.statusText} - ${error}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      provider: "cow",
+      price: data.quote?.price || "0",
+      estimatedOutput: data.quote?.buyAmount || "0",
+      estimatedGas: data.quote?.feeAmount || "0",
+      route: "CoW Intent Settlement (MEV Protected)",
+      data,
+    };
+  } catch (error) {
+    console.error("CoW quote error:", error);
+    throw error;
+  }
 }
 
 export async function bestRoute(params: QuoteParams): Promise<QuoteResponse> {
-  // For now, prefer 0x for Arbitrum as CoW support is limited
-  // In production, fetch both in parallel and compare
-  
+  // If privacy mode is enabled, use CoW Protocol for MEV protection
   if (params.privacy) {
-    // Try CoW first for privacy, fallback to 0x
     try {
-      return await quoteCow(params);
-    } catch {
-      return await quote0x(params);
+      // CoW Protocol provides intent-based trading with MEV protection
+      const cowQuote = await quoteCow(params);
+      return cowQuote;
+    } catch (cowError) {
+      console.warn("CoW Protocol unavailable, falling back to 0x:", cowError);
+      // If CoW fails, fallback to 0x (but without MEV protection)
+      const zeroXQuote = await quote0x(params);
+      return {
+        ...zeroXQuote,
+        route: zeroXQuote.route + " (Privacy unavailable)",
+      };
     }
   }
   
-  return await quote0x(params);
+  // For non-privacy mode, try both in parallel and return best price
+  try {
+    const [zeroXQuote, cowQuote] = await Promise.allSettled([
+      quote0x(params),
+      quoteCow(params)
+    ]);
+
+    const validQuotes: QuoteResponse[] = [];
+    
+    if (zeroXQuote.status === "fulfilled") {
+      validQuotes.push(zeroXQuote.value);
+    }
+    
+    if (cowQuote.status === "fulfilled") {
+      validQuotes.push(cowQuote.value);
+    }
+
+    if (validQuotes.length === 0) {
+      throw new Error("All aggregators failed to provide quotes");
+    }
+
+    // Return quote with highest output
+    return validQuotes.reduce((best, current) => {
+      const bestOutput = BigInt(best.estimatedOutput);
+      const currentOutput = BigInt(current.estimatedOutput);
+      return currentOutput > bestOutput ? current : best;
+    });
+  } catch (error) {
+    // If parallel fetch fails, try 0x as final fallback
+    console.warn("Parallel quote fetch failed, using 0x only:", error);
+    return await quote0x(params);
+  }
 }
