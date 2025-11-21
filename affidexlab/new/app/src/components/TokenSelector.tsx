@@ -9,22 +9,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ARBITRUM_TOKENS } from "@/lib/constants";
+import { type Token } from "@/lib/constants";
 import { ChevronDown } from "lucide-react";
-
-type Token = typeof ARBITRUM_TOKENS[0];
 
 interface TokenSelectorProps {
   selectedToken: Token;
   onSelect: (token: Token) => void;
+  tokens?: Token[];
 }
 
-export function TokenSelector({ selectedToken, onSelect }: TokenSelectorProps) {
+export function TokenSelector({ selectedToken, onSelect, tokens }: TokenSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { address } = useAccount();
 
-  const filteredTokens = ARBITRUM_TOKENS.filter((token) =>
+  const tokenList = tokens || [];
+
+  const filteredTokens = tokenList.filter((token) =>
     token.symbol.toLowerCase().includes(search.toLowerCase()) ||
     token.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -72,6 +73,7 @@ function TokenItem({ token, address, onClick }: { token: Token; address?: `0x${s
   const { data: balance } = useBalance({
     address,
     token: token.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : token.address as `0x${string}`,
+    chainId: token.chainId,
   });
 
   return (

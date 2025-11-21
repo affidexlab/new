@@ -1,11 +1,11 @@
-import { ZERO_X_API_BASE, COW_API_BASE } from "./constants";
+import { API_ENDPOINTS, CHAIN_IDS } from "./constants";
 
 export type QuoteParams = {
   fromToken: string;
   toToken: string;
   amount: string;
   fromAddress?: string;
-  chain: "arbitrum";
+  chainId: number;
   privacy?: boolean;
 };
 
@@ -19,10 +19,16 @@ export type QuoteResponse = {
 };
 
 export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
+  const apiEndpoint = API_ENDPOINTS[params.chainId]?.zeroX;
+  
+  if (!apiEndpoint) {
+    throw new Error(`0x API not supported on chain ${params.chainId}`);
+  }
+
   const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
   const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
   
-  const url = `${ZERO_X_API_BASE}/swap/v1/quote?` + new URLSearchParams({
+  const url = `${apiEndpoint}/swap/v1/quote?` + new URLSearchParams({
     sellToken,
     buyToken,
     sellAmount: params.amount,
@@ -51,12 +57,14 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
-  // CoW Protocol is primarily on Ethereum mainnet and Gnosis Chain
-  // Arbitrum support may be limited - this is a stub for now
-  console.warn("CoW Protocol may have limited Arbitrum support");
+  const apiEndpoint = API_ENDPOINTS[params.chainId]?.cow;
   
+  if (!apiEndpoint) {
+    throw new Error(`CoW Protocol not supported on chain ${params.chainId}`);
+  }
+
   try {
-    const response = await fetch(`${COW_API_BASE}/quote`, {
+    const response = await fetch(`${apiEndpoint}/quote`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -90,17 +98,16 @@ export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function bestRoute(params: QuoteParams): Promise<QuoteResponse> {
-  // For now, prefer 0x for Arbitrum as CoW support is limited
-  // In production, fetch both in parallel and compare
-  
-  if (params.privacy) {
-    // Try CoW first for privacy, fallback to 0x
+  // Try CoW first for privacy mode if available, otherwise use 0x
+  if (params.privacy && API_ENDPOINTS[params.chainId]?.cow) {
     try {
       return await quoteCow(params);
     } catch {
+      // Fallback to 0x if CoW fails
       return await quote0x(params);
     }
   }
   
+  // Default to 0x for best pricing
   return await quote0x(params);
 }
