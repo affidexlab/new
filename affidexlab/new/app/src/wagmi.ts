@@ -3,7 +3,7 @@ import { arbitrum, avalanche, base, optimism, polygon } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
   appName: 'DecaFlow',
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'bb466d3ee706ec7ccd389d161d64005a',
+  projectId: (() => { const id = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined; if (!id) { throw new Error('WalletConnect Project ID is required. Set VITE_WALLETCONNECT_PROJECT_ID.'); } return id; })(),
   chains: [arbitrum, avalanche, base, optimism, polygon],
   ssr: false,
 });

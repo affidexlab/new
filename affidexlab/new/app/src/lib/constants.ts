@@ -120,7 +120,7 @@ export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "";
 // Fee configuration
 import { getAddress } from "viem";
 export const SWAP_FEE_BPS = 80; // 0.8% fee (80 basis points)
-export const TREASURY_WALLET = getAddress("0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
+export const TREASURY_WALLET = getAddress((import.meta.env.VITE_TREASURY_WALLET as string) || "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
 
 // FeeRouter addresses per chain (deployed)
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {

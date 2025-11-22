@@ -62,7 +62,9 @@ export async function submitCowOrder(params: {
     const data = await response.json();
     return data; // Returns order UID
   } catch (error) {
-    console.error("CoW order submission failed:", error);
+    // Avoid leaking details in production. Logged only in dev.
+    // eslint-disable-next-line no-console
+    console.error("CoW order submission failed", error);
     throw error;
   }
 }
