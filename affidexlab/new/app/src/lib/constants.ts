@@ -122,13 +122,12 @@ import { getAddress } from "viem";
 export const SWAP_FEE_BPS = 80; // 0.8% fee (80 basis points)
 export const TREASURY_WALLET = getAddress((import.meta.env.VITE_TREASURY_WALLET as string) || "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
 
-// FeeRouter addresses per chain (deployed)
+// FeeRouter addresses per chain (deployed with security hardening)
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
-  42161: "0xd3e6E44a7E85a352987F665E2Ceba1cD364e0519", // Arbitrum
-  8453: "0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89", // Base
-  // 10: "0x...",   // Optimism - TODO: Deploy after funding wallet
-  137: "0x3656a63A2ce3D3df10DADFD8eb87b50B628fd547", // Polygon
-  43114: "0x9543E639A3DF48851d3Baae90754083E8B1A20CC", // Avalanche
+  42161: "0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3", // Arbitrum
+  8453: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Base
+  137: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Polygon
+  43114: "0x41475aDeB1172905Dd1085FBe525e1A79487e49C", // Avalanche
 };
 
 // Coingecko platform IDs for chain token prices
