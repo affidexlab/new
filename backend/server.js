@@ -6,7 +6,22 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+// CORS: restrict to allowed origins (configured via ALLOWED_ORIGINS or defaults)
+const defaultAllowed = [
+  'https://decaflow.xyz',
+  'https://decaflow.vercel.app'
+];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const origins = allowedOrigins.length ? allowedOrigins : defaultAllowed;
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (origins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: false
+}));
 app.use(express.json());
 
 // Health check
