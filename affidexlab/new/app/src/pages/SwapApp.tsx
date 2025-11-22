@@ -12,6 +12,7 @@ import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   Dialog,
   DialogContent,
@@ -164,7 +165,7 @@ export default function SwapApp() {
         });
         setQuote(quoteResult);
       } catch (error) {
-        console.error("Quote error:", error);
+        logger.error("Quote error", error);
         if (error instanceof Error && error.name === "AbortError") {
           toast.error("Request timed out", {
             description: `Quote request exceeded ${timeoutMinutes} minute timeout`,

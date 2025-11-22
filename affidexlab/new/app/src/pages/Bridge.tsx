@@ -10,6 +10,7 @@ import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@
 import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
@@ -59,7 +60,7 @@ export default function Bridge() {
           setAllQuotes([bestQuote]);
         }
       } catch (error) {
-        console.error("Bridge quote error:", error);
+        logger.error("Bridge quote error", error);
         setQuote(null);
         setAllQuotes([]);
         const errorMsg = error instanceof Error ? error.message : "Unable to fetch bridge quote";
@@ -97,7 +98,7 @@ export default function Bridge() {
         description: "Your transaction has been submitted to the blockchain",
       });
     } catch (error) {
-      console.error("Bridge execution error:", error);
+      logger.error("Bridge execution error", error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast.error("Bridge Failed", {
         description: errorMsg,

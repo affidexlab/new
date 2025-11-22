@@ -9,6 +9,7 @@ import { TOKENS_BY_CHAIN, CHAIN_IDS, CHAIN_METADATA, type Token, type ChainKey }
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
@@ -82,7 +83,7 @@ export default function Swap() {
         });
         setQuote(quoteResult);
       } catch (error) {
-        console.error("Quote error:", error);
+        logger.error("Quote error", error);
         const errorMsg = error instanceof Error ? error.message : "Unable to fetch quote. Please try again.";
         setQuoteError(errorMsg);
       } finally {
@@ -131,7 +132,7 @@ export default function Swap() {
   };
 
   const handleChainSwitch = async () => {
-    try { await switchChain({ chainId: CHAIN_IDS[fromChain] }); } catch (e) { console.error(e); }
+    try { await switchChain({ chainId: CHAIN_IDS[fromChain] }); } catch (e) { logger.error("Chain switch error", e); }
   };
 
   const explorers: Record<ChainKey, string> = {

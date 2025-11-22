@@ -1,5 +1,6 @@
 import { erc20Abi } from "viem";
 import { readContract } from "wagmi/actions";
+import { logger } from "./logger";
 
 export async function checkTokenAllowance(
   tokenAddress: string,
@@ -16,7 +17,7 @@ export async function checkTokenAllowance(
     });
     return allowance as bigint;
   } catch (error) {
-    console.error("Allowance check error:", error);
-    return BigInt(0);
+    logger.error("Allowance check error", error);
+    throw new Error("Failed to check token allowance");
   }
 }

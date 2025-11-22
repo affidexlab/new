@@ -1,5 +1,6 @@
 import { SOCKET_API_BASE, CHAIN_IDS, BACKEND_API_BASE } from "./constants";
 import { CCTP_TOKEN_MESSENGER_ABI, CCIP_ROUTER_ABI } from "./bridgeAbis";
+import { logger } from "./logger";
 
 export type BridgeParams = {
   fromChain: keyof typeof CHAIN_IDS;
@@ -77,7 +78,7 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
 export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
   // Use backend proxy to protect API key
   if (!BACKEND_API_BASE) {
-    throw new Error("Backend not configured. Set VITE_BACKEND_URL to enable bridging.");
+    throw new Error("Bridge service unavailable. Please try again later.");
   }
 
   try {
@@ -95,7 +96,7 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Socket API error: ${response.statusText}`);
+      throw new Error("Bridge quote failed");
     }
 
     const data = await response.json();
@@ -113,7 +114,7 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       data: bestRoute,
     };
   } catch (error) {
-    console.error("Socket quote error:", error);
+    logger.error("Socket quote error", error);
     throw error;
   }
 }
@@ -141,7 +142,7 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
     try {
       return await quoteCCIP(params);
     } catch (error) {
-      console.warn("CCIP failed, falling back to Socket:", error);
+      logger.warn("CCIP failed, falling back to Socket", error);
     }
   }
 
@@ -173,7 +174,7 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
   try {
     quotes.push(await quoteSocket(params));
   } catch (e) {
-    console.error("Socket failed:", e);
+    logger.error("Socket failed", e);
   }
 
   return quotes;
@@ -286,7 +287,7 @@ export async function executeBridge({
   } else if (quote.provider === "socket") {
     // Execute Socket bridge using their API route data
     if (!quote.data?.txData) {
-      throw new Error("Socket route data incomplete. Make sure VITE_SOCKET_API_KEY is configured.");
+      throw new Error("Bridge route data incomplete");
     }
 
     // Socket provides ready-to-use transaction data
