@@ -101,9 +101,9 @@ export const API_ENDPOINTS: Record<number, { zeroX?: string; cow?: string }> = {
 
 // Security constants
 export const SECURITY_SETTINGS = {
-  MAX_SLIPPAGE_PERCENT: 50,
+  MAX_SLIPPAGE_PERCENT: 5,
   DEFAULT_SLIPPAGE_PERCENT: 0.5,
-  HIGH_SLIPPAGE_WARNING_THRESHOLD: 5,
+  HIGH_SLIPPAGE_WARNING_THRESHOLD: 1,
   LOW_SLIPPAGE_WARNING_THRESHOLD: 0.1,
   DEFAULT_TIMEOUT_MS: 1200000, // 20 minutes
   MIN_TIMEOUT_MS: 60000, // 1 minute
@@ -115,10 +115,12 @@ export const SECURITY_SETTINGS = {
 export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
 export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
+export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "";
 
 // Fee configuration
+import { getAddress } from "viem";
 export const SWAP_FEE_BPS = 80; // 0.8% fee (80 basis points)
-export const TREASURY_WALLET = "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901" as `0x${string}`;
+export const TREASURY_WALLET = getAddress("0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
 
 // FeeRouter addresses per chain (deployed)
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
@@ -144,4 +146,20 @@ export const COINGECKO_PLATFORMS: Record<number, string> = {
   [CHAIN_IDS.BASE]: "base",
   [CHAIN_IDS.OPTIMISM]: "optimistic-ethereum",
   [CHAIN_IDS.POLYGON]: "polygon-pos",
+};
+
+// Known safe 0x Exchange Proxy contracts (whitelist)
+export const ZEROX_SAFE_TO_ADDRESSES: Record<number, Set<string>> = {
+  [CHAIN_IDS.ARBITRUM]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
+  [CHAIN_IDS.BASE]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
+  [CHAIN_IDS.OPTIMISM]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
+  [CHAIN_IDS.POLYGON]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
+  [CHAIN_IDS.AVALANCHE]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
+};
+
+// CoW Settlement contracts per chain (only where supported)
+export const COW_SETTLEMENTS: Partial<Record<number, `0x${string}`>> = {
+  [CHAIN_IDS.ARBITRUM]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+  [CHAIN_IDS.BASE]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+  [CHAIN_IDS.OPTIMISM]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
 };

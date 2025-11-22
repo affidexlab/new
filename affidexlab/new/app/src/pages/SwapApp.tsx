@@ -107,18 +107,48 @@ export default function SwapApp() {
     }
   }, [isSwapSuccess, swapHash, fromAmount, fromToken.symbol, toToken.symbol]);
 
+  const requestCountRef = { current: 0 } as { current: number };
+  const lastResetRef = { current: Date.now() } as { current: number };
+
   useEffect(() => {
     if (!fromAmount || !fromToken || !toToken || !address) {
       setQuote(null);
       return;
     }
-    
+
     const fetchQuote = async () => {
+      // Rate limit: max 30 requests/min
+      const now = Date.now();
+      if (now - lastResetRef.current > 60000) {
+        lastResetRef.current = now;
+        requestCountRef.current = 0;
+      }
+      if (requestCountRef.current >= 30) {
+        toast.error("Too many requests, please wait");
+        return;
+      }
+      requestCountRef.current++;
+
+      // Validate inputs
+      const amountNum = parseFloat(fromAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        setQuote(null);
+        return;
+      }
+      if (fromToken.decimals < 0 || fromToken.decimals > 18) {
+        toast.error("Invalid token decimals");
+        setQuote(null);
+        return;
+      }
+
       setIsQuoting(true);
       try {
         const grossWei = parseUnits(fromAmount, fromToken.decimals);
+        if (grossWei === 0n) throw new Error("Amount too small");
         const fee = (grossWei * BigInt(SWAP_FEE_BPS)) / 10000n;
+        if (fee === 0n) throw new Error("Amount too small to pay fee");
         const net = grossWei - fee;
+        if (net === 0n) throw new Error("Amount insufficient after fee");
         setFeeAmountWei(fee);
         setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
@@ -130,7 +160,7 @@ export default function SwapApp() {
           chainId: selectedChainId,
           privacy: privacyMode && cowSupported,
           slippagePercentage,
-          timeoutMs: timeoutMinutes * 60 * 1000,
+          timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -141,7 +171,7 @@ export default function SwapApp() {
           });
         } else {
           toast.error("Failed to get quote", {
-            description: error instanceof Error ? error.message : "Please try again",
+            description: "Unable to fetch quote. Please adjust amount or try again.",
           });
         }
         setQuote(null);
@@ -150,7 +180,7 @@ export default function SwapApp() {
       }
     };
 
-    const debounce = setTimeout(fetchQuote, 500);
+    const debounce = setTimeout(fetchQuote, 1000);
     return () => clearTimeout(debounce);
   }, [fromAmount, fromToken, toToken, address, slippageConfig, selectedChainId, privacyMode, cowSupported, timeoutMinutes]);
 
@@ -190,8 +220,12 @@ export default function SwapApp() {
     // Privacy mode via CoW Protocol
     if (privacyMode && quote.provider === "cow") {
       try {
-        // CoW settlement contract (Arbitrum)
-        const cowSettlement = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41" as `0x${string}`;
+        // CoW settlement contract by chain
+        const cowSettlement = (COW_SETTLEMENTS as any)[selectedChainId] as `0x${string}` | undefined;
+        if (!cowSettlement) {
+          toast.error("CoW Protocol not supported on this chain");
+          return;
+        }
         // CoW only supports ERC20
         if (fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
           // Step 1: Transfer fee to treasury (if fee > 0)
@@ -247,7 +281,7 @@ export default function SwapApp() {
         };
 
         // EIP-712 signing
-        const domain = { name: "Gnosis Protocol", version: "v2", chainId: 42161, verifyingContract: cowSettlement } as const;
+        const domain = { name: "Gnosis Protocol", version: "v2", chainId: selectedChainId, verifyingContract: cowSettlement } as const;
         const types = {
           Order: [
             { name: "sellToken", type: "address" },
@@ -296,6 +330,25 @@ export default function SwapApp() {
       const ZEROX_ALLOWANCE = quote.data.allowanceTarget as `0x${string}`;
       const ZEROX_TO = quote.data.to as `0x${string}`;
       const ZEROX_DATA = quote.data.data as `0x${string}`;
+
+      // Validate 0x targets
+      const { getAddress, isHex } = await import("viem");
+      try {
+        const toChecksum = getAddress(ZEROX_TO);
+        const allowChecksum = getAddress(ZEROX_ALLOWANCE);
+        const safeSet = ZEROX_SAFE_TO_ADDRESSES[selectedChainId];
+        if (!safeSet || !safeSet.has(toChecksum.toLowerCase())) {
+          toast.error("Unrecognized 0x contract", { description: toChecksum });
+          return;
+        }
+        if (!isHex(ZEROX_DATA)) {
+          toast.error("Invalid transaction data");
+          return;
+        }
+      } catch {
+        toast.error("Invalid 0x quote data");
+        return;
+      }
 
       const feeBps = SWAP_FEE_BPS;
       const grossWei = parseUnits(fromAmount, fromToken.decimals);

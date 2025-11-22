@@ -9,6 +9,11 @@ import './index.css'
 import App from './App.tsx'
 import { config } from './wagmi'
 
+// Enforce HTTPS in production
+if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+  window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+}
+
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(

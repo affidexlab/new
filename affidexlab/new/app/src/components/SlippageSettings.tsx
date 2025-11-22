@@ -27,7 +27,7 @@ export function SlippageSettings({ value, onChange }: SlippageSettingsProps) {
   const handleCustomValueChange = (val: string) => {
     setCustomInput(val);
     const numVal = parseFloat(val);
-    if (!isNaN(numVal) && numVal > 0 && numVal <= 50) {
+    if (!isNaN(numVal) && numVal > 0 && numVal <= 5) {
       onChange({ mode: "custom", customValue: numVal });
     }
   };
@@ -104,7 +104,7 @@ export function SlippageSettings({ value, onChange }: SlippageSettingsProps) {
                 </div>
                 <div className="text-center">
                   <div className="font-semibold mb-1">Custom</div>
-                  <div className="text-xs text-gray-400">Set manually</div>
+                  <div className="text-xs text-gray-400">Set manually (max 5%)</div>
                 </div>
               </button>
             </div>
@@ -120,7 +120,7 @@ export function SlippageSettings({ value, onChange }: SlippageSettingsProps) {
                   onChange={(e) => handleCustomValueChange(e.target.value)}
                   placeholder="0.5"
                   min="0.1"
-                  max="50"
+                  max="5"
                   step="0.1"
                   className="flex-1 bg-[#0D1624] border-[#1E2940] text-white"
                 />
@@ -152,7 +152,7 @@ export function SlippageSettings({ value, onChange }: SlippageSettingsProps) {
                   2%
                 </Button>
               </div>
-              {parseFloat(customInput) > 5 && (
+              {parseFloat(customInput) > 1 && (
                 <p className="text-xs text-amber-400 flex items-center gap-1">
                   <Info size={12} />
                   High slippage may result in unfavorable trades

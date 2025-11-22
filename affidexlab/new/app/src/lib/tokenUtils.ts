@@ -8,8 +8,16 @@ const CUSTOM_TOKENS_KEY = "decaflow_custom_tokens";
 export function getCustomTokens(): Token[] {
   try {
     const stored = localStorage.getItem(CUSTOM_TOKENS_KEY);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((t: any) => {
+      if (!t || typeof t !== 'object') return false;
+      if (!t.address || !t.symbol || typeof t.decimals !== 'number' || !t.chainId) return false;
+      return isValidAddress(t.address) && t.decimals >= 0 && t.decimals <= 18;
+    });
   } catch {
+    localStorage.removeItem(CUSTOM_TOKENS_KEY);
     return [];
   }
 }
@@ -70,8 +78,16 @@ export async function fetchTokenMetadata(address: string, chainId: number): Prom
   }
 }
 
+import { isAddress, getAddress } from "viem";
 export function isValidAddress(address: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
+  try {
+    if (!isAddress(address)) return false;
+    // getAddress throws if checksum invalid
+    getAddress(address);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function searchTokens(tokens: Token[], query: string): Token[] {
