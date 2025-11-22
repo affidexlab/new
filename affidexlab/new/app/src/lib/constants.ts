@@ -116,6 +116,10 @@ export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
 export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
 
+// Fee configuration
+export const SWAP_FEE_BPS = 80; // 0.8% fee (80 basis points)
+export const TREASURY_WALLET = "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901" as `0x${string}`;
+
 // FeeRouter addresses per chain (deployed)
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
   42161: "0xd3e6E44a7E85a352987F665E2Ceba1cD364e0519", // Arbitrum

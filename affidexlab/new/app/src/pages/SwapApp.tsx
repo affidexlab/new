@@ -192,14 +192,31 @@ export default function SwapApp() {
       try {
         // CoW settlement contract (Arbitrum)
         const cowSettlement = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41" as `0x${string}`;
-        // Ensure approval for ERC20 sell token to settlement
+        // CoW only supports ERC20
         if (fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-          if (!allowance || BigInt(allowance.toString()) < parseUnits(fromAmount || "0", fromToken.decimals)) {
+          // Step 1: Transfer fee to treasury (if fee > 0)
+          if (feeAmountWei > 0n) {
+            try {
+              await writeContractGeneric({
+                address: fromToken.address as `0x${string}`,
+                abi: erc20Abi,
+                functionName: "transfer",
+                args: [TREASURY_WALLET, feeAmountWei],
+              });
+              toast.success("Fee sent to treasury", { description: "Now approving CoW settlement..." });
+            } catch (feeError) {
+              toast.error("Fee transfer failed", { description: "Please try again" });
+              return;
+            }
+          }
+
+          // Step 2: Ensure approval for ERC20 sell token to settlement (net amount)
+          if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
             approve({
               address: fromToken.address as `0x${string}`,
               abi: erc20Abi,
               functionName: "approve",
-              args: [cowSettlement, parseUnits(fromAmount, fromToken.decimals)],
+              args: [cowSettlement, netAmountWei],
             });
             toast.info("Approval requested for CoW", { description: "Please confirm in your wallet" });
             return; // wait user to approve then swap again
@@ -346,15 +363,57 @@ export default function SwapApp() {
       }
     }
 
-    // Regular 0x path with input split
+    // Fallback: Regular 0x path with manual fee split (2-tx flow)
     try {
       if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+        // Native ETH: Send fee to treasury first, then swap with net amount
+        if (feeAmountWei > 0n) {
+          try {
+            await sendTransaction({
+              to: TREASURY_WALLET,
+              value: feeAmountWei,
+            });
+            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
+          } catch (feeError) {
+            toast.error("Fee transfer failed", { description: "Please try again" });
+            return;
+          }
+        }
+        // Swap with net amount
         sendTransaction({
           to: quote.data.to,
           data: quote.data.data,
-          value: BigInt(quote.data.value || "0"),
+          value: netAmountWei,
         });
       } else {
+        // ERC20: Transfer fee to treasury first, then swap with net amount
+        if (feeAmountWei > 0n) {
+          try {
+            await writeContractGeneric({
+              address: fromToken.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "transfer",
+              args: [TREASURY_WALLET, feeAmountWei],
+            });
+            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
+          } catch (feeError) {
+            toast.error("Fee transfer failed", { description: "Please try again" });
+            return;
+          }
+        }
+        // Ensure approval for net amount to 0x
+        const allowanceTarget = quote.data.allowanceTarget as `0x${string}`;
+        if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
+          await approve({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [allowanceTarget, netAmountWei],
+          });
+          toast.info("Approval requested", { description: "Please confirm and retry swap" });
+          return;
+        }
+        // Swap with net amount
         sendTransaction({
           to: quote.data.to,
           data: quote.data.data,
