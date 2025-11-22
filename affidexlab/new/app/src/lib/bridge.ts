@@ -1,4 +1,4 @@
-import { SOCKET_API_BASE, CHAIN_IDS } from "./constants";
+import { SOCKET_API_BASE, CHAIN_IDS, BACKEND_API_BASE } from "./constants";
 import { CCTP_TOKEN_MESSENGER_ABI, CCIP_ROUTER_ABI } from "./bridgeAbis";
 
 export type BridgeParams = {
@@ -75,14 +75,13 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
 
 // Socket: Aggregator fallback for all routes
 export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
-  // Validate Socket API key
-  const SOCKET_API_KEY = import.meta.env.VITE_SOCKET_API_KEY;
-  if (!SOCKET_API_KEY || SOCKET_API_KEY === "") {
-    throw new Error("Socket API key not configured. Please set VITE_SOCKET_API_KEY environment variable.");
+  // Use backend proxy to protect API key
+  if (!BACKEND_API_BASE) {
+    throw new Error("Backend not configured. Set VITE_BACKEND_URL to enable bridging.");
   }
 
   try {
-    const url = `${SOCKET_API_BASE}/quote?${new URLSearchParams({
+    const url = `${BACKEND_API_BASE}/api/socket/quote?${new URLSearchParams({
       fromChainId: CHAIN_IDS[params.fromChain].toString(),
       toChainId: CHAIN_IDS[params.toChain].toString(),
       fromTokenAddress: params.token,
@@ -93,11 +92,7 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
       sort: "output",
     })}`;
 
-    const response = await fetch(url, {
-      headers: {
-        "API-KEY": import.meta.env.VITE_SOCKET_API_KEY || "",
-      },
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(`Socket API error: ${response.statusText}`);

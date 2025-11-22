@@ -50,12 +50,16 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) throw new Error(`0x API error: ${response.statusText}`);
     const data = await response.json();
+    // Basic schema validation
+    if (!data || typeof data !== 'object' || !data.price || !data.buyAmount || !data.to || !data.data) {
+      throw new Error("Invalid 0x API response");
+    }
     return {
       provider: "0x",
       price: data.price,
       estimatedOutput: data.buyAmount,
       estimatedGas: data.estimatedGas || "0",
-      route: data.sources?.map((s: any) => s.name).join(" → ") || "Unknown",
+      route: Array.isArray(data.sources) ? data.sources.map((s: any) => s?.name).filter(Boolean).join(" → ") : "Unknown",
       data,
     };
   } finally {
