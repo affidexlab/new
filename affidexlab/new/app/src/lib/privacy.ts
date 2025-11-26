@@ -97,13 +97,13 @@ export function createCowOrder(params: {
   };
 }
 
-// Get EIP-712 domain for CoW Protocol on Arbitrum
+// Get EIP-712 domain for CoW Protocol on Base
 export function getCowDomain() {
   return {
     name: "Gnosis Protocol",
     version: "v2",
-    chainId: 42161, // Arbitrum One
-    verifyingContract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41" as `0x${string}`, // Settlement contract on Arbitrum
+    chainId: 8453, // Base
+    verifyingContract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41" as `0x${string}`, // Settlement contract on Base
   };
 }
 
@@ -129,12 +129,15 @@ export function getCowOrderTypes() {
 
 // Check if privacy mode is available for current chain
 export function isPrivacyAvailable(chainId: number): boolean {
-  // CoW Protocol supports Arbitrum One (42161)
-  const supportedChains = [1, 100, 42161]; // Ethereum, Gnosis, Arbitrum One
+  // CoW Protocol supports Base (8453), Ethereum, Gnosis, and Arbitrum One
+  const supportedChains = [1, 100, 8453, 42161]; // Ethereum, Gnosis, Base, Arbitrum One
   return supportedChains.includes(chainId);
 }
 
 export function getPrivacyDisclaimer(chainId: number): string {
+  if (chainId === 8453) {
+    return "Privacy mode uses CoW Protocol intents on Base to protect against MEV attacks like front-running and sandwich attacks.";
+  }
   if (chainId === 42161) {
     return "Privacy mode uses CoW Protocol intents on Arbitrum to protect against MEV attacks like front-running and sandwich attacks.";
   }
