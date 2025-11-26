@@ -10,6 +10,7 @@ export interface Token {
 
 // Chain IDs
 export const CHAIN_IDS = {
+  ETHEREUM: 1,
   ARBITRUM: 42161,
   AVALANCHE: 43114,
   BASE: 8453,
@@ -21,12 +22,25 @@ export type ChainKey = keyof typeof CHAIN_IDS;
 
 // Chain metadata
 export const CHAIN_METADATA: Record<ChainKey, { name: string; logo: string; nativeCurrency: string }> = {
+  ETHEREUM: { name: "Ethereum", logo: "/images/chains/ethereum.png", nativeCurrency: "ETH" },
   ARBITRUM: { name: "Arbitrum", logo: "/images/chains/arbitrum.png", nativeCurrency: "ETH" },
   AVALANCHE: { name: "Avalanche", logo: "/images/chains/avalanche.png", nativeCurrency: "AVAX" },
   BASE: { name: "Base", logo: "/images/chains/base.png", nativeCurrency: "ETH" },
   OPTIMISM: { name: "Optimism", logo: "/images/chains/optimism.png", nativeCurrency: "ETH" },
   POLYGON: { name: "Polygon", logo: "/images/chains/polygon.png", nativeCurrency: "MATIC" },
 };
+
+// Ethereum Mainnet Tokens
+export const ETHEREUM_TOKENS: Token[] = [
+  { symbol: "ETH", name: "Ethereum", address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", decimals: 18, logo: "https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "WETH", name: "Wrapped Ether", address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals: 18, logo: "https://tokens.1inch.io/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "USDC", name: "USD Coin", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6, logo: "https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "USDT", name: "Tether USD", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6, logo: "https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "WBTC", name: "Wrapped BTC", address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals: 8, logo: "https://tokens.1inch.io/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "DAI", name: "Dai Stablecoin", address: "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals: 18, logo: "https://tokens.1inch.io/0x6b175474e89094c44da98b954eedeac495271d0f.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "LINK", name: "ChainLink Token", address: "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals: 18, logo: "https://tokens.1inch.io/0x514910771af9ca656af840dff83e8264ecf986ca.png", chainId: CHAIN_IDS.ETHEREUM },
+  { symbol: "UNI", name: "Uniswap", address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", decimals: 18, logo: "https://tokens.1inch.io/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984.png", chainId: CHAIN_IDS.ETHEREUM },
+];
 
 // Arbitrum Tokens
 export const ARBITRUM_TOKENS: Token[] = [
@@ -83,6 +97,7 @@ export const POLYGON_TOKENS: Token[] = [
 
 // All tokens by chain
 export const TOKENS_BY_CHAIN: Record<number, Token[]> = {
+  [CHAIN_IDS.ETHEREUM]: ETHEREUM_TOKENS,
   [CHAIN_IDS.ARBITRUM]: ARBITRUM_TOKENS,
   [CHAIN_IDS.AVALANCHE]: AVALANCHE_TOKENS,
   [CHAIN_IDS.BASE]: BASE_TOKENS,
@@ -92,6 +107,7 @@ export const TOKENS_BY_CHAIN: Record<number, Token[]> = {
 
 // API endpoints per chain
 export const API_ENDPOINTS: Record<number, { zeroX?: string; cow?: string }> = {
+  [CHAIN_IDS.ETHEREUM]: { zeroX: "https://api.0x.org", cow: "https://api.cow.fi/mainnet/api/v1" },
   [CHAIN_IDS.ARBITRUM]: { zeroX: "https://arbitrum.api.0x.org", cow: "https://api.cow.fi/arbitrum/api/v1" },
   [CHAIN_IDS.AVALANCHE]: { zeroX: "https://avalanche.api.0x.org" },
   [CHAIN_IDS.BASE]: { zeroX: "https://base.api.0x.org", cow: "https://api.cow.fi/base/api/v1" },
@@ -132,6 +148,7 @@ export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
 
 // Coingecko platform IDs for chain token prices
 export const COINGECKO_NATIVE_IDS: Record<number, string> = {
+  [CHAIN_IDS.ETHEREUM]: "ethereum",
   [CHAIN_IDS.ARBITRUM]: "ethereum",
   [CHAIN_IDS.AVALANCHE]: "avalanche-2",
   [CHAIN_IDS.BASE]: "ethereum",
@@ -140,6 +157,7 @@ export const COINGECKO_NATIVE_IDS: Record<number, string> = {
 };
 
 export const COINGECKO_PLATFORMS: Record<number, string> = {
+  [CHAIN_IDS.ETHEREUM]: "ethereum",
   [CHAIN_IDS.ARBITRUM]: "arbitrum-one",
   [CHAIN_IDS.AVALANCHE]: "avalanche",
   [CHAIN_IDS.BASE]: "base",
@@ -149,6 +167,7 @@ export const COINGECKO_PLATFORMS: Record<number, string> = {
 
 // Known safe 0x Exchange Proxy contracts (whitelist)
 export const ZEROX_SAFE_TO_ADDRESSES: Record<number, Set<string>> = {
+  [CHAIN_IDS.ETHEREUM]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
   [CHAIN_IDS.ARBITRUM]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
   [CHAIN_IDS.BASE]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
   [CHAIN_IDS.OPTIMISM]: new Set(["0xDef1C0ded9bec7F1a1670819833240f027b25EfF".toLowerCase()]),
@@ -158,6 +177,7 @@ export const ZEROX_SAFE_TO_ADDRESSES: Record<number, Set<string>> = {
 
 // CoW Settlement contracts per chain (only where supported)
 export const COW_SETTLEMENTS: Partial<Record<number, `0x${string}`>> = {
+  [CHAIN_IDS.ETHEREUM]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
   [CHAIN_IDS.ARBITRUM]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
   [CHAIN_IDS.BASE]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
   [CHAIN_IDS.OPTIMISM]: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",

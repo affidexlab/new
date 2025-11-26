@@ -22,6 +22,7 @@ export type BridgeQuote = {
 export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
   // CCTP only supports USDC
   const usdcAddresses: Record<string, string> = {
+    ETHEREUM: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
@@ -34,6 +35,7 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
 
   // CCTP contract addresses per chain
   const cctpBridges: Record<string, string> = {
+    ETHEREUM: "0xBd3fa81B58Ba92a82136038B25aDec7066af3155",
     ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
     BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
     OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
@@ -56,6 +58,7 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
 export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
   // CCIP router addresses
   const ccipRouters: Record<string, string> = {
+    ETHEREUM: "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D",
     ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
     BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
     OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
@@ -215,6 +218,7 @@ export async function executeBridge({
   if (quote.provider === "cctp") {
     // Execute CCTP bridge
     const cctpBridges: Record<string, string> = {
+      ETHEREUM: "0xBd3fa81B58Ba92a82136038B25aDec7066af3155",
       ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
       BASE: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
       OPTIMISM: "0x2B4069517957735bE00ceE0fadAE88a26365528f",
@@ -222,6 +226,7 @@ export async function executeBridge({
     };
 
     const destinationDomain = {
+      ETHEREUM: 0,
       ARBITRUM: 3,
       BASE: 6,
       OPTIMISM: 2,
@@ -248,6 +253,7 @@ export async function executeBridge({
   } else if (quote.provider === "ccip") {
     // Execute CCIP bridge
     const ccipRouters: Record<string, string> = {
+      ETHEREUM: "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D",
       ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
       BASE: "0x673AA85efd75080031d44fcA061575d1dA427A28",
       OPTIMISM: "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
@@ -255,6 +261,7 @@ export async function executeBridge({
     };
 
     const chainSelectors = {
+      ETHEREUM: "5009297550715157269",
       ARBITRUM: "4949039107694359620",
       BASE: "15971525489660198786",
       OPTIMISM: "3734403246176062136",
