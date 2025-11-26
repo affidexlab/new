@@ -1,6 +1,7 @@
-import { SOCKET_API_BASE, CHAIN_IDS, BACKEND_API_BASE } from "./constants";
+import { SOCKET_API_BASE, CHAIN_IDS, BACKEND_API_BASE, BRIDGE_FEE_BPS, TREASURY_WALLET } from "./constants";
 import { CCTP_TOKEN_MESSENGER_ABI, CCIP_ROUTER_ABI } from "./bridgeAbis";
 import { logger } from "./logger";
+import { erc20Abi } from "viem";
 
 export type BridgeParams = {
   fromChain: keyof typeof CHAIN_IDS;
@@ -269,6 +270,25 @@ export async function executeBridge({
     throw new Error("Invalid bridge amount");
   }
 
+  const NATIVE_SENTINEL = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+  // Compute fee and net amount in base units (same convention as existing code)
+  const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
+  const feeWei = (amountWei * BigInt(BRIDGE_FEE_BPS)) / BigInt(10000);
+  const netWei = amountWei - feeWei;
+
+  // If ERC20, transfer fee to treasury up-front
+  if ((token.address as string)?.toLowerCase() !== NATIVE_SENTINEL.toLowerCase()) {
+    if (feeWei > 0n) {
+      await writeContract({
+        address: token.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [TREASURY_WALLET as `0x${string}`, feeWei],
+      });
+    }
+  } // For native token bridge, fee transfer is skipped for now to avoid value mismatch; can be enabled with dedicated native path.
+
   if (quote.provider === "cctp") {
     // Execute CCTP bridge
     const cctpBridges: Record<string, string> = {
@@ -290,7 +310,6 @@ export async function executeBridge({
     // CCTP Token Messenger ABI (complete production ABI)
     const cctpAbi = CCTP_TOKEN_MESSENGER_ABI;
 
-    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
     const mintRecipient = `0x000000000000000000000000${fromAddress.slice(2)}`;
 
     await writeContract({
@@ -298,7 +317,7 @@ export async function executeBridge({
       abi: cctpAbi,
       functionName: "depositForBurn",
       args: [
-        amountWei,
+        netWei,
         destinationDomain,
         mintRecipient as `0x${string}`,
         token.address as `0x${string}`
@@ -325,8 +344,6 @@ export async function executeBridge({
     // CCIP Router ABI (complete production ABI)
     const ccipAbi = CCIP_ROUTER_ABI;
 
-    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
-
     await writeContract({
       address: ccipRouters[fromChain] as `0x${string}`,
       abi: ccipAbi,
@@ -338,7 +355,7 @@ export async function executeBridge({
           data: "0x" as `0x${string}`,
           tokenAmounts: [{
             token: token.address as `0x${string}`,
-            amount: amountWei
+            amount: netWei
           }],
           feeToken: "0x0000000000000000000000000000000000000000" as `0x${string}`,
           extraArgs: "0x" as `0x${string}`
@@ -351,8 +368,22 @@ export async function executeBridge({
       throw new Error("Li.Fi route data incomplete");
     }
 
-    const txData = quote.data.transactionRequest;
-    
+    // If ERC20, we already transferred fee; now re-quote with net amount so route executes successfully
+    let lifiQuote = quote;
+    try {
+      lifiQuote = await quoteLiFi({
+        fromChain,
+        toChain,
+        token: token.address,
+        amount: netWei.toString(),
+        fromAddress,
+      });
+    } catch (e) {
+      logger.warn("Li.Fi re-quote with net amount failed, using original route", e);
+    }
+
+    const txData = (lifiQuote.data?.transactionRequest) || quote.data.transactionRequest;
+
     if (!txData.to || !txData.data) {
       throw new Error("Invalid Li.Fi transaction data");
     }
@@ -376,7 +407,21 @@ export async function executeBridge({
     }
 
     // Socket provides ready-to-use transaction data
-    const txData = quote.data.txData;
+    // Re-quote with net amount via backend for correctness (especially after fee transfer)
+    let socketQuote = quote;
+    try {
+      socketQuote = await quoteSocket({
+        fromChain,
+        toChain,
+        token: token.address,
+        amount: netWei.toString(),
+        fromAddress,
+      });
+    } catch (e) {
+      logger.warn("Socket re-quote with net amount failed, using original route", e);
+    }
+
+    const txData = (socketQuote.data?.txData) || quote.data.txData;
     
     // Socket returns complete transaction object - send as raw transaction
     // Note: Socket API provides the complete calldata and target contract
