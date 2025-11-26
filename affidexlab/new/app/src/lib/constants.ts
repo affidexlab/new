@@ -128,8 +128,8 @@ export const SECURITY_SETTINGS = {
 } as const;
 
 // Legacy exports (for existing imports)
-export const ZERO_X_API_BASE = "https://arbitrum.api.0x.org";
-export const COW_API_BASE = "https://api.cow.fi/arbitrum/api/v1";
+export const ZERO_X_API_BASE = "https://base.api.0x.org";
+export const COW_API_BASE = "https://api.cow.fi/base/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
 export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "";
 

@@ -16,10 +16,10 @@ export default function Swap() {
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
   
-  const [fromChain, setFromChain] = useState<ChainKey>("ARBITRUM");
-  const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
-  const [fromToken, setFromToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][0]);
-  const [toToken, setToToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][2]);
+  const [fromChain, setFromChain] = useState<ChainKey>("BASE");
+  const [toChain, setToChain] = useState<ChainKey>("BASE");
+  const [fromToken, setFromToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][0]);
+  const [toToken, setToToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]);
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);

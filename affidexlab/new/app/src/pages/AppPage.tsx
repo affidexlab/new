@@ -67,13 +67,13 @@ export default function AppPage() {
                 <OptimizedImage src="/images/social/discord.png" alt="Discord" className="w-6 h-6" />
               </a>
               <a 
-                href="https://arbitrum.io/" 
+                href="https://base.org/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1E2940] hover:border-[#47A1FF]/50 transition bg-[#0D1624]"
               >
-                <img src="https://arbitrum.io/favicon.ico" alt="Arbitrum" className="w-4 h-4" />
-                <span className="text-[10px] text-gray-400">Powered by Arbitrum</span>
+                <img src="/images/chains/base.png" alt="Base" className="w-4 h-4" />
+                <span className="text-[10px] text-gray-400">Powered by Base</span>
               </a>
             </div>
 
@@ -83,7 +83,7 @@ export default function AppPage() {
                 Email: team@decaflow.tech
               </a>
               <span className="hidden sm:inline text-gray-700">|</span>
-              <span>ENS: Decaflow.arb</span>
+              <span>ENS: Decaflow.base.eth</span>
             </div>
 
             {/* Right - Version */}
