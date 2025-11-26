@@ -4,6 +4,6 @@ import { mainnet, arbitrum, avalanche, base, optimism, polygon } from 'wagmi/cha
 export const config = getDefaultConfig({
   appName: 'DecaFlow',
   projectId: (() => { const id = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined; if (!id) { throw new Error('WalletConnect Project ID is required. Set VITE_WALLETCONNECT_PROJECT_ID.'); } return id; })(),
-  chains: [mainnet, arbitrum, avalanche, base, optimism, polygon],
+  chains: [base, mainnet, arbitrum, avalanche, optimism, polygon],
   ssr: false,
 });

@@ -128,7 +128,7 @@ export default function Landing() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition cursor-pointer group">
                 <span className="text-xs sm:text-sm font-medium text-white">DECAFLOW</span>
                 <span className="text-gray-500">|</span>
-                <span className="text-xs sm:text-sm text-[#47A1FF]">Powered by Arbitrum</span>
+                <span className="text-xs sm:text-sm text-[#47A1FF]">Powered by Base</span>
                 <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
               </div>
 
@@ -186,8 +186,8 @@ export default function Landing() {
             <div className="flex animate-scroll gap-8 sm:gap-12">
               {[...Array(2)].map((_, i) => (
                 <div key={i} className="flex gap-8 sm:gap-12 items-center">
-                  <LogoCard name="Arbitrum" />
                   <LogoCard name="Base" />
+                  <LogoCard name="Arbitrum" />
                   <LogoCard name="Optimism" />
                   <LogoCard name="Polygon" />
                   <LogoCard name="Ethereum" />
@@ -216,7 +216,7 @@ export default function Landing() {
             <FeatureCard 
               icon="🛡️"
               title="DecaFlow Solution"
-              description="DecaFlow bridges blockchains using advanced security protocols optimized for Arbitrum. This ensures a highly secure environment for cross-chain transactions, facilitating secure asset transfers."
+              description="DecaFlow bridges blockchains using advanced security protocols optimized for Base. This ensures a highly secure environment for cross-chain transactions, facilitating secure asset transfers."
             />
             <FeatureCard 
               icon="⚡"
@@ -273,7 +273,7 @@ export default function Landing() {
                   <div className="space-y-6">
                     <h3 className="text-2xl sm:text-3xl font-bold">Cross Chain Swap</h3>
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      Embrace interoperability and unlock the full potential of DeFi with DecaFlow's Cross Chain Swap utilizing Arbitrum's infrastructure and bridging protocols to trade any token effortlessly between various leading blockchains, all within a single platform.
+                      Embrace interoperability and unlock the full potential of DeFi with DecaFlow's Cross Chain Swap utilizing Base's infrastructure and bridging protocols to trade any token effortlessly between various leading blockchains, all within a single platform.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
                       <OptimizedImage src="/images/illustrations/cross-chain-swap.png" alt="Cross Chain Swap" className="w-full h-full object-cover" />
@@ -368,7 +368,7 @@ export default function Landing() {
             Intra-Chain Swaps and Future Multi-Chain DEX
           </h2>
           <p className="text-xl text-gray-400 mb-12 max-w-4xl mx-auto">
-            Swap tokens directly on any of the CCIP enabled blockchains that DecaFlow supports including Ethereum, Avalanche, Binance Smart Chain Arbitrum, Optimism, Polygon, or Base.
+            Swap tokens directly on any of the CCIP enabled blockchains that DecaFlow supports including Base, Ethereum, Avalanche, Arbitrum, Optimism, and Polygon.
           </p>
           <div className="flex items-center justify-center mb-12">
             <OptimizedImage src="/images/chainswap/same-chain-swaps-graphic.png" alt="Blockchain Network" className="max-w-4xl w-full h-auto" />
@@ -426,7 +426,7 @@ export default function Landing() {
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinMarketCap</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinGecko</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">DexScreener</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Arbitrum Explorer</a></li>
+                <li><a href="#" className="hover:text-[#47A1FF] transition">Base Explorer</a></li>
               </ul>
             </div>
 
@@ -466,7 +466,7 @@ export default function Landing() {
 
           {/* Copyright */}
           <div className="border-t border-[#47A1FF]/10 pt-8 text-center text-sm text-gray-500">
-            <p>Copyright © DecaFlow 2024 | Powered by Arbitrum</p>
+            <p>Copyright © DecaFlow 2024 | Powered by Base</p>
           </div>
         </div>
       </footer>

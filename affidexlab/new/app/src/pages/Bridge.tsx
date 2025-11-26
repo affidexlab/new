@@ -14,9 +14,9 @@ import { logger } from "@/lib/logger";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
-  const [fromChain, setFromChain] = useState<ChainKey>("ARBITRUM");
-  const [toChain, setToChain] = useState<ChainKey>("BASE");
-  const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][2]); // USDC
+  const [fromChain, setFromChain] = useState<ChainKey>("BASE");
+  const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
+  const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]); // USDC
   const [amount, setAmount] = useState("");
   const [selectedRoute, setSelectedRoute] = useState<"auto" | "cctp" | "ccip" | "socket">("auto");
   const [quote, setQuote] = useState<BridgeQuote | null>(null);
