@@ -11,7 +11,7 @@ export type BridgeParams = {
 };
 
 export type BridgeQuote = {
-  provider: "cctp" | "ccip" | "socket";
+  provider: "cctp" | "ccip" | "socket" | "lifi";
   path: string;
   eta: string;
   feeEstimate: string;
@@ -77,6 +77,45 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
   };
 }
 
+// Li.Fi: Multi-bridge aggregator (preferred for best rates)
+export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
+  try {
+    const url = `https://li.quest/v1/quote?${new URLSearchParams({
+      fromChain: CHAIN_IDS[params.fromChain].toString(),
+      toChain: CHAIN_IDS[params.toChain].toString(),
+      fromToken: params.token,
+      toToken: params.token,
+      fromAmount: params.amount,
+      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
+    })}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Li.Fi quote failed");
+    }
+
+    const data = await response.json();
+
+    if (!data.estimate) {
+      throw new Error("No Li.Fi route found");
+    }
+
+    const toolNames = data.toolDetails?.map((t: any) => t.name).join(", ") || "Multi-bridge";
+
+    return {
+      provider: "lifi",
+      path: `Li.Fi (${toolNames})`,
+      eta: `${Math.ceil(data.estimate.executionDuration / 60)} min`,
+      feeEstimate: `$${(Number(data.estimate.gasCosts?.[0]?.amountUSD) || 0).toFixed(2)}`,
+      data: data,
+    };
+  } catch (error) {
+    logger.error("Li.Fi quote error", error);
+    throw error;
+  }
+}
+
 // Socket: Aggregator fallback for all routes
 export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
   // Use backend proxy to protect API key
@@ -126,8 +165,9 @@ export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
 export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
   // Priority:
   // 1. CCTP for USDC (fastest, cheapest)
-  // 2. CCIP for supported tokens
-  // 3. Socket for everything else
+  // 2. Li.Fi for best aggregated rates
+  // 3. CCIP for supported tokens
+  // 4. Socket for everything else
 
   // Check if it's USDC
   if (params.token.toLowerCase().includes("usdc")) {
@@ -136,6 +176,13 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
     } catch (error) {
       console.warn("CCTP failed, trying CCIP:", error);
     }
+  }
+
+  // Try Li.Fi for best aggregated rates
+  try {
+    return await quoteLiFi(params);
+  } catch (error) {
+    logger.warn("Li.Fi failed, trying CCIP", error);
   }
 
   // Try CCIP for major tokens
@@ -164,6 +211,13 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
     } catch (e) {
       console.warn("CCTP not available");
     }
+  }
+
+  // Try Li.Fi (prioritize for best rates)
+  try {
+    quotes.push(await quoteLiFi(params));
+  } catch (e) {
+    console.warn("Li.Fi not available");
   }
 
   // Try CCIP
@@ -290,6 +344,30 @@ export async function executeBridge({
           extraArgs: "0x" as `0x${string}`
         }
       ],
+    });
+  } else if (quote.provider === "lifi") {
+    // Execute Li.Fi bridge
+    if (!quote.data?.transactionRequest) {
+      throw new Error("Li.Fi route data incomplete");
+    }
+
+    const txData = quote.data.transactionRequest;
+    
+    if (!txData.to || !txData.data) {
+      throw new Error("Invalid Li.Fi transaction data");
+    }
+
+    await writeContract({
+      address: txData.to as `0x${string}`,
+      abi: [{
+        type: "function",
+        name: "executeRoute",
+        stateMutability: "payable",
+        inputs: [],
+        outputs: []
+      }] as const,
+      functionName: "executeRoute",
+      value: BigInt(txData.value || 0),
     });
   } else if (quote.provider === "socket") {
     // Execute Socket bridge using their API route data
