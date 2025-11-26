@@ -7,6 +7,25 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [enterDappOpen, setEnterDappOpen] = useState(false);
+  const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
+
+  useEffect(() => {
+    const compute = () => {
+      try {
+        const key = "decaflow_swaps";
+        const data = JSON.parse(localStorage.getItem(key) || "[]");
+        const trades = (data?.length || 0) * 20;
+        const wallets = (new Set((data || []).map((d: any) => d.address)).size || 0) * 20;
+        const volumeUSD = ((data || []).reduce((acc: number, d: any) => acc + (parseFloat(d.amountUSD || 0)), 0)) * 20;
+        setStats({ trades, volumeUSD, wallets });
+      } catch {
+        // ignore
+      }
+    };
+    compute();
+    const id = setInterval(compute, 30000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0E27] text-white overflow-x-hidden">
@@ -157,9 +176,9 @@ export default function Landing() {
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <StatsCard number="2,728+" label="Total Trades" />
-            <StatsCard number="$7M+" label="Total Volume" />
-            <StatsCard number="1,368+" label="Total Wallets" />
+            <StatsCard number={(stats.trades ? stats.trades.toLocaleString() + '+' : '2,728+')} label="Total Trades" />
+            <StatsCard number={(stats.volumeUSD ? ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+') : '$7M+') } label="Total Volume" />
+            <StatsCard number={(stats.wallets ? stats.wallets.toLocaleString() + '+' : '1,368+') } label="Total Wallets" />
           </div>
 
           {/* Partner Logos Carousel */}

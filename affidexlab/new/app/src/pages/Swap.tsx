@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useReadContract } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
+import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -150,6 +151,39 @@ export default function Swap() {
     setFromChain(toChain);
     setToChain(fromChain);
   };
+
+  // Persist swap to analytics after on-chain confirmation
+  useEffect(() => {
+    const persist = async () => {
+      if (!swapHash || isSwapping) return;
+      try {
+        const amountNum = parseFloat(amount || "0");
+        if (!amountNum || !fromToken) return;
+        const chainId = CHAIN_IDS[fromChain];
+        const priceUSD = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          ? await getNativePriceUSD(chainId)
+          : await getTokenPriceUSD(chainId, fromToken.address);
+        const amountUSD = amountNum * (priceUSD || 0);
+        const entry = {
+          hash: swapHash,
+          address,
+          type: "swap",
+          amount: amountNum.toString(),
+          amountUSD: amountUSD.toFixed(2),
+          timestamp: Date.now(),
+          fromToken: fromToken.symbol,
+          chainId,
+        };
+        const key = "decaflow_swaps";
+        const prev = JSON.parse(localStorage.getItem(key) || "[]");
+        prev.push(entry);
+        localStorage.setItem(key, JSON.stringify(prev));
+      } catch (e) {
+        // ignore analytics failures
+      }
+    };
+    persist();
+  }, [isSwapping, swapHash]);
 
   const handleChainSwitch = async () => {
     try { await switchChain({ chainId: CHAIN_IDS[fromChain] }); } catch (e) { logger.error("Chain switch error", e); }
