@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useReadContract } from "wagmi";
 import { parseUnits, formatUnits, erc20Abi } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ export default function Swap() {
   const [fromToken, setFromToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][0]);
   const [toToken, setToToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.ARBITRUM][2]);
   const [amount, setAmount] = useState("");
-  const [privacy, setPrivacy] = useState(false);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
   const [needsChainSwitch, setNeedsChainSwitch] = useState(false);
@@ -39,6 +38,23 @@ export default function Swap() {
   const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
 
   const isCrossChainSwap = fromChain !== toChain;
+
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
+    address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+      ? fromToken.address as `0x${string}` 
+      : undefined,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address && quote?.data?.allowanceTarget
+      ? [address, quote.data.allowanceTarget as `0x${string}`]
+      : undefined,
+  });
+
+  useEffect(() => {
+    if (isApproving === false && approvalHash) {
+      refetchAllowance();
+    }
+  }, [isApproving, approvalHash, refetchAllowance]);
 
   // Check if user is on the correct chain
   useEffect(() => {
@@ -79,7 +95,7 @@ export default function Swap() {
           amount: amountWei,
           fromAddress: address,
           chainId: CHAIN_IDS[fromChain],
-          privacy,
+          privacy: false,
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -93,11 +109,15 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [amount, fromToken, toToken, address, privacy, fromChain, isCrossChainSwap]);
+  }, [amount, fromToken, toToken, address, fromChain, isCrossChainSwap]);
 
+  const amountBigInt = amount ? parseUnits(amount, fromToken.decimals) : BigInt(0);
+  const currentAllowance = allowanceData ? BigInt(allowanceData.toString()) : BigInt(0);
   const needsApproval = !isCrossChainSwap && 
     fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
-    amount && BigInt(0) < parseUnits(amount || "0", fromToken.decimals); // conservative; allowance checked during 0x quote
+    amount && 
+    quote?.data?.allowanceTarget &&
+    currentAllowance < amountBigInt;
 
   const handleApprove = () => {
     if (!quote?.data?.allowanceTarget) {
@@ -108,7 +128,7 @@ export default function Swap() {
       address: fromToken.address as `0x${string}`,
       abi: erc20Abi,
       functionName: "approve",
-      args: [quote.data.allowanceTarget, BigInt(quote.data.sellAmount || parseUnits(amount, fromToken.decimals).toString())],
+      args: [quote.data.allowanceTarget, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
     });
   };
 
@@ -136,6 +156,7 @@ export default function Swap() {
   };
 
   const explorers: Record<ChainKey, string> = {
+    ETHEREUM: "https://etherscan.io",
     ARBITRUM: "https://arbiscan.io",
     AVALANCHE: "https://snowtrace.io",
     BASE: "https://basescan.org",
@@ -262,19 +283,7 @@ export default function Swap() {
         </div>
       )}
 
-      {/* Privacy Toggle */}
-      {!isCrossChainSwap && (
-        <div className="mb-4 flex items-center justify-between rounded-xl bg-[#1E2433]/50 p-3 border border-white/5">
-          <label className="flex items-center gap-3 text-sm cursor-pointer">
-            <div className="relative">
-              <input type="checkbox" className="sr-only peer" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#47A1FF] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#3396FF] peer-checked:to-[#47A1FF]"></div>
-            </div>
-            <span className="font-medium">🔒 Privacy Mode</span>
-          </label>
-          <span className="text-xs text-gray-500">MEV Protection</span>
-        </div>
-      )}
+
 
       {/* Quote Error */}
       {quoteError && !isQuoting && (
@@ -318,6 +327,10 @@ export default function Swap() {
       {/* Action Button */}
       {isCrossChainSwap ? (
         <Button disabled className="w-full h-14 bg-gray-600 text-white font-bold text-lg rounded-xl cursor-not-allowed">Use Bridge Tab for Cross-Chain</Button>
+      ) : needsApproval ? (
+        <Button onClick={handleApprove} disabled={isApproving || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
+          {isApproving ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Approving...</>) : "Approve " + fromToken.symbol}
+        </Button>
       ) : (
         <Button onClick={handleSwap} disabled={!quote || isSwapping || !amount || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
           {isSwapping ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Swapping...</>) : (!amount ? "Enter an amount" : (!quote ? "Select tokens" : "Swap"))}
@@ -340,7 +353,7 @@ export default function Swap() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">🌐</div><div className="text-xs font-semibold text-gray-400">Multi-Chain</div></div>
         <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">✨</div><div className="text-xs font-semibold text-gray-400">Best Pricing</div></div>
-        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">🛡️</div><div className="text-xs font-semibold text-gray-400">MEV Protection</div></div>
+        <div className="rounded-xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 p-4 text-center"><div className="text-2xl mb-2">🛡️</div><div className="text-xs font-semibold text-gray-400">Secure Swaps</div></div>
       </div>
     </div>
   );
