@@ -136,10 +136,16 @@ export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "";
 // Fee configuration
 import { getAddress } from "viem";
 export const SWAP_FEE_BPS = 80; // 0.8% fee (80 basis points)
+export const BRIDGE_FEE_BPS = SWAP_FEE_BPS; // keep bridge fee consistent with swap by default
 export const TREASURY_WALLET = getAddress((import.meta.env.VITE_TREASURY_WALLET as string) || "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
 
 // FeeRouter addresses per chain (deployed with security hardening)
+const ROUTER_ETHEREUM = (import.meta.env.VITE_ROUTER_ETHEREUM as `0x${string}` | undefined);
+const ROUTER_OPTIMISM = (import.meta.env.VITE_ROUTER_OPTIMISM as `0x${string}` | undefined);
+
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
+  ...(ROUTER_ETHEREUM ? { 1: ROUTER_ETHEREUM } : {}),
+  ...(ROUTER_OPTIMISM ? { 10: ROUTER_OPTIMISM } : {}),
   42161: "0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3", // Arbitrum
   8453: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Base
   137: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Polygon

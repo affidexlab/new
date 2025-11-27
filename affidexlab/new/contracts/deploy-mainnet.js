@@ -4,10 +4,12 @@ const solc = require('solc');
 const Web3 = require('web3').default;
 
 const CHAINS = {
-  arbitrum: { chainId: 42161, rpc: 'https://arb1.arbitrum.io/rpc', explorer: 'https://arbiscan.io' },
-  base: { chainId: 8453, rpc: 'https://mainnet.base.org', explorer: 'https://basescan.org' },
-  polygon: { chainId: 137, rpc: 'https://polygon-rpc.com', explorer: 'https://polygonscan.com' },
-  avalanche: { chainId: 43114, rpc: 'https://api.avax.network/ext/bc/C/rpc', explorer: 'https://snowtrace.io' },
+  ethereum: { chainId: 1, rpc: process.env.ETHEREUM_RPC || 'https://rpc.ankr.com/eth', explorer: 'https://etherscan.io' },
+  optimism: { chainId: 10, rpc: process.env.OPTIMISM_RPC || 'https://mainnet.optimism.io', explorer: 'https://optimistic.etherscan.io' },
+  arbitrum: { chainId: 42161, rpc: process.env.ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc', explorer: 'https://arbiscan.io' },
+  base: { chainId: 8453, rpc: process.env.BASE_RPC || 'https://mainnet.base.org', explorer: 'https://basescan.org' },
+  polygon: { chainId: 137, rpc: process.env.POLYGON_RPC || 'https://polygon-rpc.com', explorer: 'https://polygonscan.com' },
+  avalanche: { chainId: 43114, rpc: process.env.AVALANCHE_RPC || 'https://api.avax.network/ext/bc/C/rpc', explorer: 'https://snowtrace.io' },
 };
 
 const ZEROX_PROXY = '0xDef1C0ded9bec7F1a1670819833240f027b25EfF';
@@ -140,7 +142,7 @@ async function main() {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║    FeeRouter Mainnet Deployment - Security Hardening    ║
-║    Chains: Arbitrum, Base, Polygon, Avalanche            ║
+║    Chains: Ethereum, Optimism, Arbitrum, Base, Polygon, Avalanche |
 ╚══════════════════════════════════════════════════════════╝
   `);
 
