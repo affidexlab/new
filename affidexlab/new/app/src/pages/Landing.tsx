@@ -412,10 +412,10 @@ export default function Landing() {
                 Where Privacy Meets Secure Cross Chain Swaps
               </p>
               <div className="flex gap-4">
-                <SocialIcon icon="twitter" />
-                <SocialIcon icon="telegram" />
-                <SocialIcon icon="discord" />
-                <SocialIcon icon="medium" />
+                <SocialIcon icon="twitter" href="https://x.com/decaflow" />
+                <SocialIcon icon="telegram" href="https://t.me/decaflowprotocol" />
+                <SocialIcon icon="discord" href="#" />
+                <SocialIcon icon="medium" href="#" />
               </div>
             </div>
 
@@ -426,7 +426,7 @@ export default function Landing() {
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinMarketCap</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinGecko</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">DexScreener</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Base Explorer</a></li>
+                <li><a href="https://basescan.org" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Base Explorer</a></li>
               </ul>
             </div>
 
@@ -434,8 +434,8 @@ export default function Landing() {
             <div>
               <h3 className="font-semibold mb-4">Socials</h3>
               <ul className="space-y-3 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Telegram</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Twitter/X</a></li>
+                <li><a href="https://t.me/decaflowprotocol" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Telegram</a></li>
+                <li><a href="https://x.com/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Twitter/X</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">Discord</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">Medium</a></li>
               </ul>
@@ -466,7 +466,7 @@ export default function Landing() {
 
           {/* Copyright */}
           <div className="border-t border-[#47A1FF]/10 pt-8 text-center text-sm text-gray-500">
-            <p>Copyright © DecaFlow 2024 | Powered by Base</p>
+            <p>Copyright © DecaFlow 2025 | Powered by Base</p>
           </div>
         </div>
       </footer>
@@ -529,7 +529,7 @@ function FeatureCard({ icon, title, description }: { icon: string; title: string
   );
 }
 
-function SocialIcon({ icon }: { icon: string }) {
+function SocialIcon({ icon, href }: { icon: string; href: string }) {
   const iconMap: Record<string, string> = {
     'twitter': '/images/social/twitter.png',
     'telegram': '/images/social/telegram.png',
@@ -539,7 +539,9 @@ function SocialIcon({ icon }: { icon: string }) {
   
   return (
     <a 
-      href="#" 
+      href={href} 
+      target="_blank"
+      rel="noopener noreferrer"
       className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
     >
       <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
