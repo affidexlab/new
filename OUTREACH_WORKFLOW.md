@@ -6,6 +6,23 @@ This document explains the new 2-step outreach strategy for DecaFlow partnership
 
 ---
 
+## ⚠️ CRITICAL: Use V2, Not V1!
+
+**ALWAYS use `short-outreach-dms-v2.md`** - The V1 version sounds scammy!
+
+**Why V2?**
+- ✅ Leads with **partnership** (professional)
+- ✅ Explains what they'd **actually do**
+- ✅ References their **specific work**
+- ✅ Sounds like a **business proposal**
+
+**Why V1 was bad:**
+- ❌ Led with "$10K/month forever!" (scammy)
+- ❌ No context about the partnership
+- ❌ Sounded like MLM/get-rich-quick
+
+---
+
 ## 🎯 Strategy
 
 **Problem:** Long DMs on X turn people off and often go unread.
@@ -20,11 +37,12 @@ This document explains the new 2-step outreach strategy for DecaFlow partnership
 
 ```
 affidexlab/new/
-├── short-outreach-dms.md           # Short DM versions (copy-paste ready)
-├── short-outreach-dms.pdf          # PDF version of short DMs
-├── outreach-dms.md                  # Full long versions (reference)
-├── outreach-dms.pdf                 # PDF of all full versions
-└── individual_pdfs/                 # Individual PDFs for Telegram follow-ups
+├── short-outreach-dms-v2.md        # ✅ USE THIS - Professional short DMs
+├── short-outreach-dms-v2.pdf       # PDF version of V2
+├── short-outreach-dms.md           # ❌ V1 (too scammy - don't use)
+├── outreach-dms.md                 # Full long versions (reference)
+├── outreach-dms.pdf                # PDF of all full versions
+└── individual_pdfs/                # Individual PDFs for Telegram follow-ups
     ├── hidreams_partnership_proposal.pdf
     ├── bitlanger_partnership_proposal.pdf
     ├── ubong_007_partnership_proposal.pdf
@@ -35,47 +53,54 @@ affidexlab/new/
     └── kelvinking_partnership_proposal.pdf
 ```
 
+**⚠️ IMPORTANT: Use V2, not V1!**
+- V1 sounded scammy (led with money)
+- V2 is professional (leads with partnership)
+
 ---
 
-## 📤 Step 1: X DM (Short Version)
+## 📤 Step 1: X DM (Short Version - V2 Professional)
 
 ### What to do:
-1. Open `short-outreach-dms.md` or `short-outreach-dms.pdf`
+1. Open `short-outreach-dms-v2.md` or `short-outreach-dms-v2.pdf` ⚠️ **Use V2!**
 2. Copy the short DM for the influencer you're contacting
 3. Send on X DM
 
-### Key Features of Short DMs:
-- ✅ **Short** - Only ~150-200 words (vs. 1000+ in original)
-- ✅ **Punchy** - Gets straight to the value prop
-- ✅ **Clear CTA** - "Hit me up on Telegram @defidboss"
-- ✅ **Income projections** - Shows potential earnings
-- ✅ **No upfront payment** emphasis
+### Key Features of V2 Short DMs:
+- ✅ **Professional** - Sounds like a business partnership, not a scam
+- ✅ **Partnership-first** - Explains what they'd DO before mentioning money
+- ✅ **Specific to them** - References their actual work
+- ✅ **Clear value prop** - Why DecaFlow + why them
+- ✅ **Clear CTA** - "Reach out on Telegram @defidboss"
 
-### Example (for @bitlanger):
+### Example (for @bitlanger - V2):
 ```
-Hey Bitlanger! 📊
+Hey Bitlanger! 👋
 
-395K following + Bitcoin educator + "Ph.D in shitpost" 😂 - that's exactly who I need to talk to.
+Your 395K following + educational content on DeFi/NFT/GameFi is impressive. Been following your work for a while.
 
-I'm Samuel, founder of @DecaFlow - first privacy-focused cross-chain DEX on Base.
+I'm Samuel, founder of @DecaFlow - a privacy-focused cross-chain DEX on Base. We're looking to partner with educators like you who have engaged communities.
 
-**Quick value prop:** Your massive community gets private trading (no bots, no copycats, no wallet tracking). You get:
+**The Partnership:**
+We want to work with you to educate your community about privacy trading while providing them with actual tools to trade privately. Instead of a one-time sponsored post, we're proposing a long-term revenue-sharing partnership.
 
-• 30% of ALL swap fees from your community (forever)
-• With 395K followers, this could be $5-10K+/month passive income
-• VIP fees for your Telegram community
-• Telegram bot integration
-• No upfront payments - 100% performance-based
+**What this looks like:**
+- You create educational content about privacy trading (fits your educator brand)
+- Your Telegram community gets access to DecaFlow with VIP benefits
+- You earn ongoing revenue from your community's trading activity
+- We can co-brand it or even white-label it for your community
 
-**The math:** If just 1% of your 395K does $1M monthly volume, that's $900-$1,200/month to YOU. Scale that up = serious money.
+Given your audience size and engagement, this could be a significant partnership for both of us.
 
-Fits your educator brand perfectly - teach them about privacy trading while earning passive income.
-
-Interested? Hit me up on Telegram @defidboss and I'll send you the full breakdown + volume projections for your audience size.
+If you're open to exploring this, reach out on Telegram @defidboss and I'll send you detailed projections + partnership structure.
 
 Samuel  
-@Decaflow
+DecaFlow | @Decaflow
 ```
+
+### Why V2 is Better:
+- ❌ **V1 sounded scammy** - Led with "$10K/month!" 
+- ✅ **V2 sounds professional** - Leads with partnership opportunity
 
 ---
 
