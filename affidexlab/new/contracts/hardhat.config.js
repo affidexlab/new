@@ -13,6 +13,11 @@ module.exports = {
     },
   },
   networks: {
+    ethereum: {
+      url: process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com',
+      chainId: 1,
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+    },
     arbitrum: {
       url: 'https://arb1.arbitrum.io/rpc',
       chainId: 42161,
@@ -21,6 +26,11 @@ module.exports = {
     base: {
       url: 'https://mainnet.base.org',
       chainId: 8453,
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+    },
+    optimism: {
+      url: 'https://mainnet.optimism.io',
+      chainId: 10,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
     polygon: {

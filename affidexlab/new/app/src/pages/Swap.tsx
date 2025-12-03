@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TokenSelector } from "@/components/TokenSelector";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, CHAIN_METADATA, type Token, type ChainKey } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
+import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI } from "@/lib/contracts";
+import { calculateMinimumOutput } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -25,6 +27,8 @@ export default function Swap() {
   const [isQuoting, setIsQuoting] = useState(false);
   const [needsChainSwitch, setNeedsChainSwitch] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [useDirectRouter, setUseDirectRouter] = useState(true);
+  const [slippage, setSlippage] = useState(0.5);
 
   const { data: balance } = useBalance({
     address,
@@ -97,6 +101,8 @@ export default function Swap() {
           fromAddress: address,
           chainId: CHAIN_IDS[fromChain],
           privacy: false,
+          useDirectRouter,
+          slippagePercentage: slippage,
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -114,14 +120,19 @@ export default function Swap() {
 
   const amountBigInt = amount ? parseUnits(amount, fromToken.decimals) : BigInt(0);
   const currentAllowance = allowanceData ? BigInt(allowanceData.toString()) : BigInt(0);
+  
+  const allowanceTarget = useDirectRouter && quote?.routerData
+    ? getLiquidityRouterAddress(CHAIN_IDS[fromChain])
+    : quote?.data?.allowanceTarget;
+  
   const needsApproval = !isCrossChainSwap && 
     fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
     amount && 
-    quote?.data?.allowanceTarget &&
+    allowanceTarget &&
     currentAllowance < amountBigInt;
 
   const handleApprove = () => {
-    if (!quote?.data?.allowanceTarget) {
+    if (!allowanceTarget) {
       toast.error("Unable to approve", { description: "Quote data is missing" });
       return;
     }
@@ -129,17 +140,65 @@ export default function Swap() {
       address: fromToken.address as `0x${string}`,
       abi: erc20Abi,
       functionName: "approve",
-      args: [quote.data.allowanceTarget, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
+      args: [allowanceTarget as `0x${string}`, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
     });
   };
 
   const handleSwap = () => {
-    if (!quote?.data) return;
+    if (!quote) return;
 
-    if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      sendTransaction({ to: quote.data.to, data: quote.data.data, value: BigInt(quote.data.value || "0") });
-    } else {
-      sendTransaction({ to: quote.data.to, data: quote.data.data });
+    if (useDirectRouter && quote.routerData) {
+      handleDirectRouterSwap();
+    } else if (quote.data) {
+      if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+        sendTransaction({ to: quote.data.to, data: quote.data.data, value: BigInt(quote.data.value || "0") });
+      } else {
+        sendTransaction({ to: quote.data.to, data: quote.data.data });
+      }
+    }
+  };
+
+  const handleDirectRouterSwap = () => {
+    if (!quote?.routerData) return;
+    
+    const routerAddress = getLiquidityRouterAddress(CHAIN_IDS[fromChain]);
+    if (!routerAddress) {
+      toast.error("Router not deployed", { description: `LiquidityRouter not available on ${CHAIN_METADATA[fromChain].name}` });
+      return;
+    }
+
+    const deadline = Math.floor(Date.now() / 1000) + 1200;
+    const amountIn = parseUnits(amount, fromToken.decimals);
+    const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippage);
+
+    const routerData = quote.routerData;
+
+    if (routerData.provider === "uniswap_v3" && routerData.fee) {
+      approve({
+        address: routerAddress,
+        abi: LIQUIDITY_ROUTER_ABI,
+        functionName: "swapExactInputUniswapV3",
+        args: [
+          fromToken.address as `0x${string}`,
+          toToken.address as `0x${string}`,
+          routerData.fee,
+          amountIn,
+          amountOutMin,
+          BigInt(deadline),
+        ],
+      });
+    } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
+      approve({
+        address: routerAddress,
+        abi: LIQUIDITY_ROUTER_ABI,
+        functionName: "swapExactInputAerodrome",
+        args: [
+          routerData.aerodromeRoutes,
+          amountIn,
+          amountOutMin,
+          BigInt(deadline),
+        ],
+      });
     }
   };
 
@@ -219,6 +278,23 @@ export default function Swap() {
           <Settings size={20} className="text-gray-400 hover:text-[#47A1FF]" />
         </button>
       </div>
+
+      {/* Direct Router Info */}
+      {useDirectRouter && getLiquidityRouterAddress(CHAIN_IDS[fromChain]) && (
+        <div className="mb-4 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/30 p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-xl">⚡</div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-300 mb-1">
+                Production Router Enabled
+              </p>
+              <p className="text-xs text-gray-300">
+                Using Uniswap V3 {CHAIN_IDS[fromChain] === 8453 && "+ Aerodrome"} for optimal pricing and deep liquidity
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wrong Network Warning */}
       {needsChainSwitch && (

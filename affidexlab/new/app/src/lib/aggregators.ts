@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "./constants";
+import { getBestRoute, type QuoteResult as RouterQuoteResult, type QuoteParams as RouterQuoteParams } from "./routerIntegration";
 
 export type QuoteParams = {
   fromToken: string;
@@ -9,15 +10,17 @@ export type QuoteParams = {
   privacy?: boolean;
   slippagePercentage?: number;
   timeoutMs?: number;
+  useDirectRouter?: boolean;
 };
 
 export type QuoteResponse = {
-  provider: "0x" | "cow";
+  provider: "0x" | "cow" | "uniswap_v3" | "aerodrome";
   price: string;
   estimatedOutput: string;
   estimatedGas: string;
   route: string;
   data: any;
+  routerData?: RouterQuoteResult;
 };
 
 export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
@@ -111,6 +114,31 @@ export async function quoteCow(params: QuoteParams): Promise<QuoteResponse> {
 }
 
 export async function bestRoute(params: QuoteParams): Promise<QuoteResponse> {
+  if (params.useDirectRouter) {
+    try {
+      const routerQuote = await getBestRoute({
+        fromToken: params.fromToken,
+        toToken: params.toToken,
+        amount: params.amount,
+        fromAddress: params.fromAddress,
+        chainId: params.chainId,
+        slippagePercentage: params.slippagePercentage,
+      });
+
+      return {
+        provider: routerQuote.provider,
+        price: routerQuote.price,
+        estimatedOutput: routerQuote.estimatedOutput,
+        estimatedGas: routerQuote.estimatedGas,
+        route: routerQuote.route,
+        data: routerQuote,
+        routerData: routerQuote,
+      };
+    } catch (error) {
+      console.error("Direct router quote failed, falling back to 0x:", error);
+    }
+  }
+
   if (params.privacy && API_ENDPOINTS[params.chainId]?.cow) {
     try {
       return await quoteCow(params);

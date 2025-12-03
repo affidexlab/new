@@ -159,3 +159,65 @@ export function isFactoryDeployed(chainId: number): boolean {
 export function getFactoryAddress(chainId: number): `0x${string}` | undefined {
   return MINIMAL_FACTORY_ADDRESSES[chainId];
 }
+
+export const LIQUIDITY_ROUTER_ABI = [
+  {
+    inputs: [
+      { internalType: "address", name: "tokenIn", type: "address" },
+      { internalType: "address", name: "tokenOut", type: "address" },
+      { internalType: "uint24", name: "fee", type: "uint24" },
+      { internalType: "uint256", name: "amountIn", type: "uint256" },
+      { internalType: "uint256", name: "amountOutMinimum", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+    ],
+    name: "swapExactInputUniswapV3",
+    outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "bytes", name: "path", type: "bytes" },
+      { internalType: "uint256", name: "amountIn", type: "uint256" },
+      { internalType: "uint256", name: "amountOutMinimum", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+    ],
+    name: "swapExactInputUniswapV3MultiHop",
+    outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { internalType: "address", name: "from", type: "address" },
+          { internalType: "address", name: "to", type: "address" },
+          { internalType: "bool", name: "stable", type: "bool" },
+          { internalType: "address", name: "factory", type: "address" },
+        ],
+        internalType: "struct IAerodromeRouter.Route[]",
+        name: "routes",
+        type: "tuple[]",
+      },
+      { internalType: "uint256", name: "amountIn", type: "uint256" },
+      { internalType: "uint256", name: "amountOutMin", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+    ],
+    name: "swapExactInputAerodrome",
+    outputs: [{ internalType: "uint256[]", name: "amounts", type: "uint256[]" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
+export const LIQUIDITY_ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
+};
+
+export function isLiquidityRouterDeployed(chainId: number): boolean {
+  return !!LIQUIDITY_ROUTER_ADDRESSES[chainId];
+}
+
+export function getLiquidityRouterAddress(chainId: number): `0x${string}` | undefined {
+  return LIQUIDITY_ROUTER_ADDRESSES[chainId];
+}
