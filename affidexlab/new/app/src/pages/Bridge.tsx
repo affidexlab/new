@@ -108,26 +108,33 @@ export default function Bridge() {
 
   if (!isConnected) {
     return (
-      <div className="mx-auto max-w-xl p-6 text-center">
-        <p className="text-muted-foreground">Please connect your wallet to bridge assets</p>
+      <div className="mx-auto max-w-xl">
+        <div className="rounded-3xl bg-gradient-to-b from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-8 text-center shadow-2xl">
+          <div className="mb-4 text-5xl">🌉</div>
+          <h3 className="mb-2 text-xl font-bold">Connect Your Wallet</h3>
+          <p className="text-sm text-gray-400">Please connect your wallet to bridge assets cross-chain</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Bridge</h1>
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Bridge</h1>
+        <p className="text-gray-400 text-sm">Transfer assets across chains with best pricing</p>
+      </div>
       
-      <div className="space-y-4 rounded-xl border p-4">
+      <div className="space-y-4 rounded-3xl bg-gradient-to-b from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-6 shadow-2xl">
         {/* Chain Selection */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">From Chain</label>
+            <label className="text-xs font-medium text-gray-400">From Chain</label>
             <Select value={fromChain} onValueChange={(v: any) => setFromChain(v)}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="bg-[#0D1624] border-[#1E2940] h-12">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#0D1624] border-[#1E2940]">
                 <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
                 <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
@@ -138,12 +145,12 @@ export default function Bridge() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">To Chain</label>
+            <label className="text-xs font-medium text-gray-400">To Chain</label>
             <Select value={toChain} onValueChange={(v: any) => setToChain(v)}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="bg-[#0D1624] border-[#1E2940] h-12">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#0D1624] border-[#1E2940]">
                 <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
                 <SelectItem value="AVALANCHE">Avalanche</SelectItem>
                 <SelectItem value="BASE">Base</SelectItem>
@@ -156,8 +163,8 @@ export default function Bridge() {
 
         {/* Token & Amount */}
         <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Token & Amount</label>
-          <div className="grid grid-cols-5 gap-2">
+          <label className="text-xs font-medium text-gray-400">Token & Amount</label>
+          <div className="grid grid-cols-5 gap-3">
             <div className="col-span-2">
               <TokenSelector selectedToken={token} onSelect={setToken} tokens={TOKENS_BY_CHAIN[CHAIN_IDS[fromChain]]} />
             </div>
@@ -167,7 +174,7 @@ export default function Bridge() {
                 placeholder="0.0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="text-right text-lg"
+                className="text-right text-xl bg-[#0D1624] border-[#1E2940] h-12 font-medium"
               />
             </div>
           </div>
@@ -176,51 +183,51 @@ export default function Bridge() {
         {/* Route Preference */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-muted-foreground">Route Preference</label>
+            <label className="text-xs font-medium text-gray-400">Route Preference</label>
             <button
               onClick={() => setShowComparison(!showComparison)}
-              className="text-xs text-primary hover:underline"
+              className="text-xs text-[#47A1FF] hover:text-[#3396FF] transition"
             >
               {showComparison ? "Hide" : "Compare all routes"}
             </button>
           </div>
           <Tabs value={selectedRoute} onValueChange={(v: any) => setSelectedRoute(v)}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="auto">Auto</TabsTrigger>
-              <TabsTrigger value="cctp">CCTP</TabsTrigger>
-              <TabsTrigger value="ccip">CCIP</TabsTrigger>
-              <TabsTrigger value="socket">Socket</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-[#0D1624] border border-[#1E2940] p-1">
+              <TabsTrigger value="auto" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">Auto</TabsTrigger>
+              <TabsTrigger value="cctp" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">CCTP</TabsTrigger>
+              <TabsTrigger value="ccip" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">CCIP</TabsTrigger>
+              <TabsTrigger value="socket" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">Socket</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
         {/* Quote Loading */}
         {isQuoting && (
-          <div className="rounded-md bg-muted/30 p-3 text-sm flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Finding best route...
+          <div className="rounded-xl bg-[#3396FF]/10 border border-[#3396FF]/30 p-4 text-sm flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-[#47A1FF]" />
+            <span className="text-gray-300">Finding best route...</span>
           </div>
         )}
 
         {/* Single Quote */}
         {quote && !isQuoting && !showComparison && (
-          <div className="rounded-md bg-muted/30 p-3 text-sm space-y-2">
-            <div className="flex items-center gap-2 font-medium">
-              <Info className="w-4 h-4" />
+          <div className="rounded-xl bg-[#0D1624] border border-[#1E2940] p-4 text-sm space-y-3">
+            <div className="flex items-center gap-2 font-semibold text-[#47A1FF]">
+              <Info className="w-5 h-5" />
               Best Route: {quote.provider.toUpperCase()}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Path:</span>
-                <span>{quote.path}</span>
+                <span className="text-gray-400">Path:</span>
+                <span className="text-white font-medium">{quote.path}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">ETA:</span>
-                <span>{quote.eta}</span>
+                <span className="text-gray-400">ETA:</span>
+                <span className="text-white font-medium">{quote.eta}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fee:</span>
-                <span>{quote.feeEstimate}</span>
+                <span className="text-gray-400">Fee:</span>
+                <span className="text-white font-medium">{quote.feeEstimate}</span>
               </div>
             </div>
           </div>
@@ -228,23 +235,25 @@ export default function Bridge() {
 
         {/* Comparison View */}
         {showComparison && allQuotes.length > 0 && !isQuoting && (
-          <div className="space-y-2">
-            <div className="text-sm font-medium">Available Routes:</div>
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-gray-300">Available Routes:</div>
             {allQuotes.map((q, i) => (
               <button
                 key={i}
                 onClick={() => setQuote(q)}
-                className={`w-full rounded-md border p-3 text-left text-sm transition-colors ${
-                  quote === q ? "border-primary bg-primary/10" : "hover:bg-muted/30"
+                className={`w-full rounded-xl border p-4 text-left text-sm transition-all ${
+                  quote === q 
+                    ? "border-[#47A1FF] bg-[#47A1FF]/10 shadow-lg shadow-[#47A1FF]/20" 
+                    : "border-[#1E2940] bg-[#0D1624] hover:border-[#47A1FF]/50 hover:bg-[#0D1624]/80"
                 }`}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-medium">{q.provider.toUpperCase()}</span>
-                  <span className="text-xs text-muted-foreground">{q.eta}</span>
+                <div className="flex justify-between items-start mb-3">
+                  <span className="font-semibold text-[#47A1FF]">{q.provider.toUpperCase()}</span>
+                  <span className="text-xs text-gray-400">{q.eta}</span>
                 </div>
-                <div className="text-xs space-y-1">
-                  <div className="text-muted-foreground">{q.path}</div>
-                  <div>Fee: {q.feeEstimate}</div>
+                <div className="text-xs space-y-1.5">
+                  <div className="text-gray-400">{q.path}</div>
+                  <div className="text-white font-medium">Fee: {q.feeEstimate}</div>
                 </div>
               </button>
             ))}
@@ -255,17 +264,17 @@ export default function Bridge() {
         <Button
           onClick={handleBridge}
           disabled={!quote || isBridging || isConfirming || !amount}
-          className="w-full"
+          className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg"
         >
           {isBridging || isConfirming ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
               {isConfirming ? 'Confirming...' : 'Bridging...'}
             </>
           ) : (
             <>
               Bridge {token.symbol}
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-5 h-5 ml-2" />
             </>
           )}
         </Button>
@@ -276,20 +285,34 @@ export default function Bridge() {
             href={`https://arbiscan.io/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline block text-center"
+            className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"
           >
-            View transaction →
+            <span>Bridge transaction</span>
+            <span>View →</span>
           </a>
         )}
       </div>
 
       {/* Info Box */}
-      <div className="mt-4 rounded-lg bg-muted/30 p-4 text-xs space-y-2">
-        <div className="font-medium">Bridge Protocols:</div>
-        <ul className="space-y-1 text-muted-foreground">
-          <li>• <strong>CCTP:</strong> Native USDC bridging (fastest, lowest fees)</li>
-          <li>• <strong>CCIP:</strong> Chainlink's secure cross-chain protocol</li>
-          <li>• <strong>Socket:</strong> Aggregator with multi-bridge routing</li>
+      <div className="mt-6 rounded-2xl bg-gradient-to-br from-[#0B1221] to-[#1A2332] border border-[#47A1FF]/20 p-6">
+        <div className="font-semibold mb-3 text-white">Bridge Protocols:</div>
+        <ul className="space-y-2.5 text-sm text-gray-300">
+          <li className="flex items-start gap-2">
+            <span className="text-[#47A1FF] mt-0.5">•</span>
+            <span><strong className="text-white">Li.Fi:</strong> Primary aggregator - best rates across all bridges</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-[#47A1FF] mt-0.5">•</span>
+            <span><strong className="text-white">CCTP:</strong> Native USDC bridging (fastest, lowest fees)</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-[#47A1FF] mt-0.5">•</span>
+            <span><strong className="text-white">CCIP:</strong> Chainlink's secure cross-chain protocol</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-[#47A1FF] mt-0.5">•</span>
+            <span><strong className="text-white">Socket:</strong> Fallback aggregator for edge cases</span>
+          </li>
         </ul>
       </div>
     </div>
