@@ -14,9 +14,12 @@ module.exports = {
   },
   networks: {
     ethereum: {
-      url: process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com',
+      url: process.env.ETHEREUM_RPC_URL || 'https://eth.drpc.org',
       chainId: 1,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+      timeout: 180000,
+      gas: 'auto',
+      gasPrice: 'auto',
     },
     arbitrum: {
       url: 'https://arb1.arbitrum.io/rpc',
