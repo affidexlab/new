@@ -235,6 +235,11 @@ export const AERODROME_ROUTER_ABI = [
 ] as const;
 
 export const LIQUIDITY_ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
+  [CHAIN_IDS.BASE]: "0x4b6D747Bc35CF3856e99C1C7B2e73C2687AB7DB4",
+  [CHAIN_IDS.ARBITRUM]: "0xDE8700785C7512a8397683A9BE9717B0aFdB18F3",
+  [CHAIN_IDS.OPTIMISM]: "0xA2fdf81b7967e7FA7610DeBe1901A40686c48992",
+  // [CHAIN_IDS.POLYGON]: "0x...", // Deployment in progress
+  // [CHAIN_IDS.AVALANCHE]: "0x...", // Deployment in progress
 };
 
 export const UNISWAP_V3_QUOTER_ADDRESSES: Record<number, `0x${string}`> = {

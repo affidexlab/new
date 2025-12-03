@@ -37,11 +37,15 @@ module.exports = {
       url: 'https://polygon-rpc.com',
       chainId: 137,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+      timeout: 180000,
+      gasPrice: 100000000000,
     },
     avalanche: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       chainId: 43114,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+      timeout: 180000,
+      gasPrice: 30000000000,
     },
   },
 };

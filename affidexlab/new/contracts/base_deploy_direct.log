@@ -1,0 +1,48 @@
+
+🚀 Deploying LiquidityRouter to Base (Chain ID: 8453)
+   RPC: https://mainnet.base.org
+   Uniswap V3 Router: 0x2626664c2603336E57B271c5C0b26F421741e481
+   Aerodrome Router: 0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43
+   Treasury: 0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901
+   Fee Rate: 80 bps (0.8%)
+
+   Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+   Balance: 0.000163418892985195 ETH
+
+   Compiling contract...
+Compilation errors:
+ParserError: Source "@openzeppelin/contracts/security/ReentrancyGuard.sol" not found: File import callback not supported
+ --> LiquidityRouter.sol:4:1:
+  |
+4 | import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+ParserError: Source "@openzeppelin/contracts/token/ERC20/IERC20.sol" not found: File import callback not supported
+ --> LiquidityRouter.sol:5:1:
+  |
+5 | import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+ParserError: Source "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol" not found: File import callback not supported
+ --> LiquidityRouter.sol:6:1:
+  |
+6 | import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+ParserError: Source "@openzeppelin/contracts/access/Ownable.sol" not found: File import callback not supported
+ --> LiquidityRouter.sol:7:1:
+  |
+7 | import "@openzeppelin/contracts/access/Ownable.sol";
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+❌ Deployment failed:
+Error: Contract compilation failed
+    at compileContract (file:///project/workspace/affidexlab/new/affidexlab/new/contracts/deploy_direct.js:85:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async deployToChain (file:///project/workspace/affidexlab/new/affidexlab/new/contracts/deploy_direct.js:119:29)
+    at async main (file:///project/workspace/affidexlab/new/affidexlab/new/contracts/deploy_direct.js:182:26)

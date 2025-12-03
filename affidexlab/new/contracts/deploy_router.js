@@ -1,32 +1,38 @@
 const hre = require("hardhat");
 
 const ROUTER_CONFIG = {
-  1: {
+  "ethereum": {
+    chainId: 1,
     name: "Ethereum",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
   },
-  42161: {
+  "arbitrum": {
+    chainId: 42161,
     name: "Arbitrum",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
   },
-  10: {
+  "optimism": {
+    chainId: 10,
     name: "Optimism",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
   },
-  137: {
+  "polygon": {
+    chainId: 137,
     name: "Polygon",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
   },
-  8453: {
+  "base": {
+    chainId: 8453,
     name: "Base",
     uniswapV3Router: "0x2626664c2603336E57B271c5C0b26F421741e481",
     aerodromeRouter: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
   },
-  43114: {
+  "avalanche": {
+    chainId: 43114,
     name: "Avalanche",
     uniswapV3Router: "0xbb00FF08d01D300023C629E8fFfFcb65A5a578cE",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
@@ -37,13 +43,14 @@ const TREASURY_WALLET = process.env.TREASURY_WALLET || "0x65b7a307a7e67e38840b91
 const FEE_RATE = 80;
 
 async function main() {
-  const chainId = await hre.network.provider.send("eth_chainId");
-  const chainIdDecimal = parseInt(chainId, 16);
+  const networkName = hre.network.name;
+  const config = ROUTER_CONFIG[networkName];
   
-  const config = ROUTER_CONFIG[chainIdDecimal];
   if (!config) {
-    throw new Error(`Chain ID ${chainIdDecimal} not configured`);
+    throw new Error(`Network ${networkName} not configured`);
   }
+
+  const chainIdDecimal = config.chainId;
 
   console.log(`\n🚀 Deploying LiquidityRouter to ${config.name} (Chain ID: ${chainIdDecimal})`);
   console.log(`   Uniswap V3 Router: ${config.uniswapV3Router}`);
@@ -53,10 +60,12 @@ async function main() {
 
   const [deployer] = await hre.ethers.getSigners();
   console.log(`   Deployer: ${deployer.address}`);
-  console.log(`   Balance: ${hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address))} ETH\n`);
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log(`   Balance: ${hre.ethers.formatEther(balance)} ${getNativeSymbol(chainIdDecimal)}\n`);
 
   const LiquidityRouter = await hre.ethers.getContractFactory("LiquidityRouter");
   
+  console.log("   Deploying contract...");
   const router = await LiquidityRouter.deploy(
     config.uniswapV3Router,
     config.aerodromeRouter,
@@ -68,9 +77,6 @@ async function main() {
   const address = await router.getAddress();
 
   console.log(`✅ LiquidityRouter deployed to: ${address}\n`);
-
-  console.log(`📝 Verification command:`);
-  console.log(`npx hardhat verify --network ${hre.network.name} ${address} "${config.uniswapV3Router}" "${config.aerodromeRouter}" "${TREASURY_WALLET}" ${FEE_RATE}\n`);
 
   const deploymentInfo = {
     chainId: chainIdDecimal,
@@ -88,6 +94,18 @@ async function main() {
   console.log(JSON.stringify(deploymentInfo, null, 2));
 
   return deploymentInfo;
+}
+
+function getNativeSymbol(chainId) {
+  const symbols = {
+    1: "ETH",
+    42161: "ETH",
+    10: "ETH",
+    137: "MATIC",
+    8453: "ETH",
+    43114: "AVAX",
+  };
+  return symbols[chainId] || "ETH";
 }
 
 main()
