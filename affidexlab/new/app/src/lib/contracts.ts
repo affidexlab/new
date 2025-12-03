@@ -215,8 +215,9 @@ export const LIQUIDITY_ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> 
   8453: "0x4b6D747Bc35CF3856e99C1C7B2e73C2687AB7DB4", // Base
   42161: "0xDE8700785C7512a8397683A9BE9717B0aFdB18F3", // Arbitrum
   10: "0xA2fdf81b7967e7FA7610DeBe1901A40686c48992", // Optimism
-  // 137: "0x...", // Polygon - deployment in progress
-  // 43114: "0x...", // Avalanche - deployment in progress
+  137: "0xFd05977256E8D5753728C78A3003BC3B75Fef1DD", // Polygon - DEPLOYED Dec 3, 2025
+  // 43114: "0x...", // Avalanche - needs 0.011 more AVAX
+  // 1: "0x...", // Ethereum - needs 0.00001 more ETH
 };
 
 export function isLiquidityRouterDeployed(chainId: number): boolean {
