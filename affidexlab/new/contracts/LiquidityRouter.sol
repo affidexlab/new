@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -79,7 +79,6 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         uint256 _feeRate
     ) Ownable(msg.sender) {
         require(_uniswapV3Router != address(0), "Invalid Uniswap router");
-        require(_aerodromeRouter != address(0), "Invalid Aerodrome router");
         require(_treasury != address(0), "Invalid treasury");
         require(_feeRate <= 10000, "Fee rate too high");
 
@@ -110,7 +109,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
             emit FeeCollected(tokenIn, feeAmount);
         }
 
-        IERC20(tokenIn).safeApprove(uniswapV3Router, amountInAfterFee);
+        IERC20(tokenIn).forceApprove(uniswapV3Router, amountInAfterFee);
 
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
             tokenIn: tokenIn,
@@ -155,7 +154,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
             emit FeeCollected(tokenIn, feeAmount);
         }
 
-        IERC20(tokenIn).safeApprove(uniswapV3Router, amountInAfterFee);
+        IERC20(tokenIn).forceApprove(uniswapV3Router, amountInAfterFee);
 
         IUniswapV3Router.ExactInputParams memory params = IUniswapV3Router.ExactInputParams({
             path: path,
@@ -184,6 +183,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         uint256 amountOutMin,
         uint256 deadline
     ) external nonReentrant returns (uint256[] memory amounts) {
+        require(aerodromeRouter != address(0), "Aerodrome not available");
         require(amountIn > 0, "Amount must be > 0");
         require(deadline >= block.timestamp, "Deadline expired");
         require(routes.length > 0, "Empty routes");
@@ -201,7 +201,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
             emit FeeCollected(tokenIn, feeAmount);
         }
 
-        IERC20(tokenIn).safeApprove(aerodromeRouter, amountInAfterFee);
+        IERC20(tokenIn).forceApprove(aerodromeRouter, amountInAfterFee);
 
         amounts = IAerodromeRouter(aerodromeRouter).swapExactTokensForTokens(
             amountInAfterFee,
@@ -220,6 +220,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         IAerodromeRouter.Route[] calldata routes,
         uint256 amountIn
     ) external view returns (uint256[] memory amounts) {
+        require(aerodromeRouter != address(0), "Aerodrome not available");
         uint256 amountInAfterFee = amountIn - ((amountIn * feeRate) / 10000);
         return IAerodromeRouter(aerodromeRouter).getAmountsOut(amountInAfterFee, routes);
     }
