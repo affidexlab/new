@@ -1,0 +1,57 @@
+/* DecaFlow Brand Colors */
+
+:root {
+  /* Primary Colors */
+  --decaflow-purple: #4F46E5;
+  --decaflow-blue: #0EA5E9;
+  
+  /* Neutral Colors */
+  --decaflow-dark: #111827;
+  --decaflow-medium-gray: #6B7280;
+  --decaflow-light-gray: #E5E7EB;
+  --decaflow-background: #F9FAFB;
+  --decaflow-white: #FFFFFF;
+  
+  /* Semantic Colors */
+  --decaflow-success: #10B981;
+  --decaflow-warning: #F59E0B;
+  --decaflow-error: #EF4444;
+  --decaflow-info: #3B82F6;
+}
+
+/* Usage Examples */
+
+.btn-primary {
+  background-color: var(--decaflow-purple);
+  color: var(--decaflow-white);
+}
+
+.btn-secondary {
+  background-color: var(--decaflow-blue);
+  color: var(--decaflow-white);
+}
+
+.text-primary {
+  color: var(--decaflow-purple);
+}
+
+.bg-dark {
+  background-color: var(--decaflow-dark);
+  color: var(--decaflow-white);
+}
+
+.border-light {
+  border-color: var(--decaflow-light-gray);
+}
+
+.status-success {
+  color: var(--decaflow-success);
+}
+
+.status-warning {
+  color: var(--decaflow-warning);
+}
+
+.status-error {
+  color: var(--decaflow-error);
+}

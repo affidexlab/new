@@ -1,0 +1,67 @@
+{
+  "brand": {
+    "primary": {
+      "purple": {
+        "hex": "#4F46E5",
+        "rgb": "79, 70, 229",
+        "hsl": "244, 75%, 59%",
+        "name": "DecaFlow Purple"
+      },
+      "blue": {
+        "hex": "#0EA5E9",
+        "rgb": "14, 165, 233",
+        "hsl": "199, 89%, 48%",
+        "name": "DecaFlow Blue"
+      }
+    },
+    "neutral": {
+      "dark": {
+        "hex": "#111827",
+        "rgb": "17, 24, 39",
+        "name": "Dark Gray"
+      },
+      "medium": {
+        "hex": "#6B7280",
+        "rgb": "107, 114, 128",
+        "name": "Medium Gray"
+      },
+      "light": {
+        "hex": "#E5E7EB",
+        "rgb": "229, 231, 235",
+        "name": "Light Gray"
+      },
+      "background": {
+        "hex": "#F9FAFB",
+        "rgb": "249, 250, 251",
+        "name": "Background Gray"
+      },
+      "white": {
+        "hex": "#FFFFFF",
+        "rgb": "255, 255, 255",
+        "name": "White"
+      }
+    },
+    "semantic": {
+      "success": {
+        "hex": "#10B981",
+        "rgb": "16, 185, 129",
+        "name": "Success Green"
+      },
+      "warning": {
+        "hex": "#F59E0B",
+        "rgb": "245, 158, 11",
+        "name": "Warning Yellow"
+      },
+      "error": {
+        "hex": "#EF4444",
+        "rgb": "239, 68, 68",
+        "name": "Error Red"
+      },
+      "info": {
+        "hex": "#3B82F6",
+        "rgb": "59, 130, 246",
+        "name": "Info Blue"
+      }
+    }
+  }
+}

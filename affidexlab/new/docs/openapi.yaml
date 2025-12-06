@@ -1,0 +1,739 @@
+openapi: 3.0.3
+info:
+  title: DecaFlow Partner API
+  description: |
+    Official DecaFlow Partner API for swaps, liquidity management, and cross-chain bridges.
+    
+    ## Authentication
+    All requests require an `X-Partner-ID` header with your partner API key.
+    
+    ## Base URLs
+    - Production: `https://api.decaflow.xyz/v1`
+    - Sandbox: `https://sandbox.decaflow.xyz/v1`
+    
+    ## Rate Limits
+    - Production: 100 requests/minute, 10,000 requests/day
+    - Sandbox: 50 requests/minute, 5,000 requests/day
+    
+    ## Support
+    - Technical: techpartners@decaflow.xyz
+    - Documentation: https://docs.decaflow.xyz
+  version: 1.0.0
+  contact:
+    name: DecaFlow API Support
+    email: techpartners@decaflow.xyz
+    url: https://decaflow.xyz
+  license:
+    name: Proprietary
+    url: https://decaflow.xyz/license
+
+servers:
+  - url: https://api.decaflow.xyz/v1
+    description: Production server
+  - url: https://sandbox.decaflow.xyz/v1
+    description: Sandbox server
+
+security:
+  - PartnerKey: []
+
+tags:
+  - name: Swap
+    description: Token swap operations
+  - name: Liquidity
+    description: Liquidity pool management
+  - name: Bridge
+    description: Cross-chain bridge operations
+
+paths:
+  /swap/quote:
+    post:
+      tags:
+        - Swap
+      summary: Get swap quote
+      description: Returns the best swap route with price impact estimation
+      operationId: getSwapQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fromToken
+                - toToken
+                - amount
+                - chainId
+                - walletAddress
+              properties:
+                fromToken:
+                  type: string
+                  description: Source token address
+                  example: "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+                toToken:
+                  type: string
+                  description: Destination token address
+                  example: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+                amount:
+                  type: string
+                  description: Amount to swap (in token's smallest unit)
+                  example: "1000000"
+                chainId:
+                  type: integer
+                  description: Chain ID (1=Ethereum, 8453=Base, 42161=Arbitrum, etc.)
+                  example: 8453
+                slippage:
+                  type: number
+                  format: float
+                  description: Maximum slippage tolerance (0.5 = 0.5%)
+                  default: 0.5
+                  example: 0.5
+                walletAddress:
+                  type: string
+                  description: User's wallet address
+                  example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwapQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /swap/execute:
+    post:
+      tags:
+        - Swap
+      summary: Execute swap
+      description: Returns transaction data to execute the swap
+      operationId: executeSwap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quoteId
+                - walletAddress
+              properties:
+                quoteId:
+                  type: string
+                  description: Quote ID from /swap/quote response
+                  example: "a1b2c3d4e5f6g7h8i9j0"
+                walletAddress:
+                  type: string
+                  description: User's wallet address
+                  example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwapExecuteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Quote not found or expired
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /liquidity/pools:
+    get:
+      tags:
+        - Liquidity
+      summary: Get liquidity pools
+      description: Returns available liquidity pools for a chain
+      operationId: getLiquidityPools
+      parameters:
+        - name: chainId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Chain ID
+          example: 8453
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiquidityPoolsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /liquidity/add:
+    post:
+      tags:
+        - Liquidity
+      summary: Add liquidity
+      description: Generates transaction data to add liquidity to a pool
+      operationId: addLiquidity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddLiquidityRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddLiquidityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /liquidity/remove:
+    post:
+      tags:
+        - Liquidity
+      summary: Remove liquidity
+      description: Generates transaction data to remove liquidity from a pool
+      operationId: removeLiquidity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveLiquidityRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveLiquidityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /liquidity/positions:
+    get:
+      tags:
+        - Liquidity
+      summary: Get user positions
+      description: Returns user's liquidity positions
+      operationId: getUserPositions
+      parameters:
+        - name: wallet
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Wallet address
+          example: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        - name: chainId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Filter by chain ID (optional)
+          example: 8453
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPositionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bridge/quote:
+    post:
+      tags:
+        - Bridge
+      summary: Get bridge quote
+      description: Returns available bridge routes and estimates
+      operationId: getBridgeQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BridgeQuoteRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bridge/execute:
+    post:
+      tags:
+        - Bridge
+      summary: Execute bridge
+      description: Returns transaction data to execute the bridge
+      operationId: executeBridge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quoteId
+                - walletAddress
+              properties:
+                quoteId:
+                  type: string
+                  description: Quote ID from /bridge/quote response
+                walletAddress:
+                  type: string
+                  description: User's wallet address
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeExecuteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bridge/status/{trackingId}:
+    get:
+      tags:
+        - Bridge
+      summary: Get bridge status
+      description: Returns the current status of a bridge transaction
+      operationId: getBridgeStatus
+      parameters:
+        - name: trackingId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Bridge tracking ID from /bridge/execute response
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Bridge transaction not found
+
+components:
+  securitySchemes:
+    PartnerKey:
+      type: apiKey
+      in: header
+      name: X-Partner-ID
+      description: Partner API key (obtain from partner dashboard)
+
+  schemas:
+    SwapQuoteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            quoteId:
+              type: string
+            fromToken:
+              type: string
+            toToken:
+              type: string
+            amount:
+              type: string
+            chainId:
+              type: integer
+            routes:
+              type: array
+              items:
+                $ref: '#/components/schemas/SwapRoute'
+            bestRoute:
+              $ref: '#/components/schemas/SwapRoute'
+            priceImpact:
+              type: string
+            expiresAt:
+              type: integer
+
+    SwapRoute:
+      type: object
+      properties:
+        provider:
+          type: string
+        protocol:
+          type: string
+        buyAmount:
+          type: string
+        sellAmount:
+          type: string
+        price:
+          type: string
+        estimatedGas:
+          type: string
+
+    SwapExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            quoteId:
+              type: string
+            to:
+              type: string
+            data:
+              type: string
+            value:
+              type: string
+            gasLimit:
+              type: string
+            chainId:
+              type: integer
+            estimatedOutput:
+              type: string
+
+    LiquidityPoolsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            chainId:
+              type: integer
+            routerAddress:
+              type: string
+            pools:
+              type: array
+              items:
+                $ref: '#/components/schemas/LiquidityPool'
+
+    LiquidityPool:
+      type: object
+      properties:
+        id:
+          type: string
+        address:
+          type: string
+        token0:
+          $ref: '#/components/schemas/Token'
+        token1:
+          $ref: '#/components/schemas/Token'
+        fee:
+          type: integer
+        protocol:
+          type: string
+        tvl:
+          type: string
+        apr:
+          type: string
+
+    Token:
+      type: object
+      properties:
+        symbol:
+          type: string
+        address:
+          type: string
+        decimals:
+          type: integer
+
+    AddLiquidityRequest:
+      type: object
+      required:
+        - poolId
+        - token0Amount
+        - token1Amount
+        - chainId
+        - walletAddress
+      properties:
+        poolId:
+          type: string
+        token0Amount:
+          type: string
+        token1Amount:
+          type: string
+        chainId:
+          type: integer
+        walletAddress:
+          type: string
+        deadline:
+          type: integer
+        slippage:
+          type: number
+
+    AddLiquidityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            poolId:
+              type: string
+            chainId:
+              type: integer
+            to:
+              type: string
+            data:
+              type: string
+            value:
+              type: string
+            gasLimit:
+              type: string
+            estimatedShares:
+              type: string
+
+    RemoveLiquidityRequest:
+      type: object
+      required:
+        - positionId
+        - liquidity
+        - chainId
+        - walletAddress
+      properties:
+        positionId:
+          type: string
+        liquidity:
+          type: string
+        chainId:
+          type: integer
+        walletAddress:
+          type: string
+        deadline:
+          type: integer
+
+    RemoveLiquidityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            positionId:
+              type: string
+            chainId:
+              type: integer
+            to:
+              type: string
+            data:
+              type: string
+            gasLimit:
+              type: string
+
+    UserPositionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            wallet:
+              type: string
+            chainId:
+              oneOf:
+                - type: integer
+                - type: string
+            positions:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserPosition'
+            totalPositions:
+              type: integer
+
+    UserPosition:
+      type: object
+      properties:
+        positionId:
+          type: string
+        chainId:
+          type: integer
+        poolId:
+          type: string
+        token0Amount:
+          type: string
+        token1Amount:
+          type: string
+        feesEarned0:
+          type: string
+        feesEarned1:
+          type: string
+        apr:
+          type: string
+
+    BridgeQuoteRequest:
+      type: object
+      required:
+        - fromChainId
+        - toChainId
+        - fromToken
+        - toToken
+        - amount
+        - walletAddress
+      properties:
+        fromChainId:
+          type: integer
+        toChainId:
+          type: integer
+        fromToken:
+          type: string
+        toToken:
+          type: string
+        amount:
+          type: string
+        walletAddress:
+          type: string
+        slippage:
+          type: number
+
+    BridgeQuoteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            quoteId:
+              type: string
+            fromChainId:
+              type: integer
+            toChainId:
+              type: integer
+            routes:
+              type: array
+              items:
+                $ref: '#/components/schemas/BridgeRoute'
+            bestRoute:
+              $ref: '#/components/schemas/BridgeRoute'
+            estimatedArrival:
+              type: string
+            totalFees:
+              type: string
+
+    BridgeRoute:
+      type: object
+      properties:
+        protocol:
+          type: string
+        outputAmount:
+          type: string
+        estimatedTime:
+          type: integer
+        gasCost:
+          type: string
+        bridgeFee:
+          type: string
+
+    BridgeExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            quoteId:
+              type: string
+            trackingId:
+              type: string
+            fromChainId:
+              type: integer
+            toChainId:
+              type: integer
+            to:
+              type: string
+            data:
+              type: string
+            value:
+              type: string
+            gasLimit:
+              type: string
+
+    BridgeStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            trackingId:
+              type: string
+            status:
+              type: string
+              enum: [pending, confirming, completed, failed]
+            fromChainId:
+              type: integer
+            toChainId:
+              type: integer
+            originTxHash:
+              type: string
+            destinationTxHash:
+              type: string
+            estimatedArrival:
+              type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized - Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
