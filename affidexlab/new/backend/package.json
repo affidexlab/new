@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "NODE_ENV=production node src/server.js",
+    "start:sandbox": "NODE_ENV=production ENVIRONMENT=sandbox node src/server.js",
+    "dev": "node src/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
