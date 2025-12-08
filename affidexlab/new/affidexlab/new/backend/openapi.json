@@ -1,0 +1,453 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DecaFlow Partner API",
+    "version": "1.0.0",
+    "description": "DecaFlow Partner API for DeFi swap, bridge, and liquidity operations",
+    "contact": {
+      "name": "DecaFlow Technical Support",
+      "email": "techpartners@decaflow.xyz",
+      "url": "https://decaflow.xyz"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.decaflow.xyz/v1",
+      "description": "Production API"
+    },
+    {
+      "url": "https://sandbox.decaflow.xyz/v1",
+      "description": "Sandbox API"
+    }
+  ],
+  "security": [
+    {
+      "PartnerID": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "PartnerID": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Partner-ID",
+        "description": "Partner API key issued after NDA/licence execution"
+      }
+    },
+    "schemas": {
+      "SwapQuoteRequest": {
+        "type": "object",
+        "required": ["fromToken", "toToken", "amount", "chainId"],
+        "properties": {
+          "fromToken": {
+            "type": "string",
+            "description": "Source token contract address",
+            "example": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          },
+          "toToken": {
+            "type": "string",
+            "description": "Destination token contract address",
+            "example": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in smallest unit (wei, satoshi, etc.)",
+            "example": "1000000"
+          },
+          "chainId": {
+            "type": "number",
+            "description": "Chain ID (1=Ethereum, 8453=Base, etc.)",
+            "example": 8453
+          },
+          "slippage": {
+            "type": "number",
+            "description": "Slippage tolerance (0-100)",
+            "example": 0.5
+          },
+          "walletAddress": {
+            "type": "string",
+            "description": "User wallet address",
+            "example": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+          }
+        }
+      },
+      "SwapQuoteResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "quote": {
+            "type": "object",
+            "properties": {
+              "quoteId": {
+                "type": "string"
+              },
+              "fromToken": {
+                "type": "string"
+              },
+              "toToken": {
+                "type": "string"
+              },
+              "fromAmount": {
+                "type": "string"
+              },
+              "toAmount": {
+                "type": "string"
+              },
+              "priceImpact": {
+                "type": "number"
+              },
+              "route": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "estimatedGas": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "SwapExecuteRequest": {
+        "type": "object",
+        "required": ["quoteId", "walletAddress"],
+        "properties": {
+          "quoteId": {
+            "type": "string",
+            "description": "Quote ID from /swap/quote"
+          },
+          "walletAddress": {
+            "type": "string",
+            "description": "User wallet address"
+          }
+        }
+      },
+      "BridgeQuoteRequest": {
+        "type": "object",
+        "required": ["fromChainId", "toChainId", "fromToken", "toToken", "amount", "walletAddress"],
+        "properties": {
+          "fromChainId": {
+            "type": "number",
+            "example": 1
+          },
+          "toChainId": {
+            "type": "number",
+            "example": 8453
+          },
+          "fromToken": {
+            "type": "string"
+          },
+          "toToken": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "walletAddress": {
+            "type": "string"
+          }
+        }
+      },
+      "PoolsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "pools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "chainId": {
+                  "type": "number"
+                },
+                "token0": {
+                  "type": "string"
+                },
+                "token1": {
+                  "type": "string"
+                },
+                "fee": {
+                  "type": "number"
+                },
+                "tvl": {
+                  "type": "string"
+                },
+                "apr": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/swap/quote": {
+      "post": {
+        "summary": "Get swap quote",
+        "description": "Returns best route and price impact for a token swap",
+        "tags": ["Swap"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapQuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapQuoteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing Partner ID"
+          },
+          "400": {
+            "description": "Bad request - Invalid parameters"
+          }
+        }
+      }
+    },
+    "/swap/execute": {
+      "post": {
+        "summary": "Execute swap",
+        "description": "Generates calldata and transaction metadata for swap execution",
+        "tags": ["Swap"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapExecuteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/liquidity/pools": {
+      "get": {
+        "summary": "List liquidity pools",
+        "description": "Returns supported pools and metadata for a chain",
+        "tags": ["Liquidity"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "chainId",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Chain ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoolsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/liquidity/add": {
+      "post": {
+        "summary": "Add liquidity",
+        "description": "Add liquidity to a pool",
+        "tags": ["Liquidity"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "poolId": {
+                    "type": "string"
+                  },
+                  "amount0": {
+                    "type": "string"
+                  },
+                  "amount1": {
+                    "type": "string"
+                  },
+                  "walletAddress": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/liquidity/remove": {
+      "post": {
+        "summary": "Remove liquidity",
+        "description": "Burns LP position and returns tokens",
+        "tags": ["Liquidity"],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/liquidity/positions": {
+      "get": {
+        "summary": "Get user positions",
+        "description": "Lists user positions and APY",
+        "tags": ["Liquidity"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/bridge/quote": {
+      "post": {
+        "summary": "Get bridge quote",
+        "description": "Returns available routes, arrival estimates, and fees",
+        "tags": ["Bridge"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BridgeQuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/bridge/execute": {
+      "post": {
+        "summary": "Execute bridge",
+        "description": "Returns transaction data for origin chain",
+        "tags": ["Bridge"],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/bridge/status/{trackingId}": {
+      "get": {
+        "summary": "Check bridge status",
+        "description": "Poll bridge transaction state",
+        "tags": ["Bridge"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "trackingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/partners/me": {
+      "get": {
+        "summary": "Get partner details",
+        "description": "Returns authenticated partner information and stats",
+        "tags": ["Partners"],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/partners/stats": {
+      "get": {
+        "summary": "Get partner statistics",
+        "description": "Returns usage statistics for last 30 days",
+        "tags": ["Partners"],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Swap",
+      "description": "Token swap operations"
+    },
+    {
+      "name": "Liquidity",
+      "description": "Liquidity pool management"
+    },
+    {
+      "name": "Bridge",
+      "description": "Cross-chain bridge operations"
+    },
+    {
+      "name": "Partners",
+      "description": "Partner management"
+    }
+  ]
+}
