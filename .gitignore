@@ -1,1 +1,16 @@
-.vercel
+.gitscout/
+.git.scout-backup/
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+.env.sandbox
+*.log
+.DS_Store
+.vercel/
+*.tsbuildinfo
+__pycache__/
+*.pyc
+.cache/
+build/
