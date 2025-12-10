@@ -2,11 +2,19 @@ import { useState, useEffect } from "react";
 import Landing from "./pages/Landing";
 import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
+import Leaderboard from "./pages/Leaderboard";
+import Admin from "./pages/Admin";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/leaderboard") || hash === "#leaderboard") {
+    return "leaderboard";
+  }
+  if (path.startsWith("/admin") || hash === "#admin") {
+    return "admin";
+  }
   if (path.startsWith("/app/privacy") || hash === "#privacy") {
     return "privacy";
   }
@@ -35,6 +43,14 @@ export default function App() {
 
   if (currentPage === "home") {
     return <Landing />;
+  }
+
+  if (currentPage === "leaderboard") {
+    return <Leaderboard />;
+  }
+
+  if (currentPage === "admin") {
+    return <Admin />;
   }
 
   if (currentPage === "privacy") {

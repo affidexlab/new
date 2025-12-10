@@ -51,6 +51,7 @@ export default function Landing() {
               <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
               <a href="#CardCCIP" className="text-gray-400 hover:text-[#47A1FF] transition">CCIP</a>
               <a href="#CardCCTP" className="text-gray-400 hover:text-[#47A1FF] transition">CCTP</a>
+              <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <div className="relative">
                 <Button 
                   className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
@@ -84,6 +85,7 @@ export default function Landing() {
               <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
               <a href="#CardCCIP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCIP</a>
               <a href="#CardCCTP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCTP</a>
+              <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <div className="space-y-2">
                 <Button 
                   className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"

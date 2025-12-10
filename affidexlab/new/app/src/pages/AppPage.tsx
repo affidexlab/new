@@ -5,6 +5,7 @@ import SwapApp from "./SwapApp";
 import Bridge from "./Bridge";
 import Analytics from "./Analytics";
 import Pools from "./Pools";
+import PointsDashboard from "@/components/PointsDashboard";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -34,9 +35,9 @@ export default function AppPage() {
             <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
               <a href="/" className="text-gray-400 hover:text-white transition">Home</a>
               <a href="/app" className="text-white transition">Swap</a>
+              <a href="/leaderboard" className="text-gray-400 hover:text-white transition">Leaderboard</a>
               <a href="#" className="text-gray-400 hover:text-white transition">Docs</a>
               <a href="#" className="text-gray-400 hover:text-white transition">Support</a>
-              <a href="#" className="text-gray-400 hover:text-white transition">Revenue Share</a>
             </nav>
 
             {/* Right Side */}
@@ -53,7 +54,7 @@ export default function AppPage() {
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-8 sm:py-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8 bg-[#0D1624] border border-[#1E2940] p-1 rounded-xl">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 mb-8 bg-[#0D1624] border border-[#1E2940] p-1 rounded-xl">
             <TabsTrigger 
               value="swap" 
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3396FF] data-[state=active]:to-[#47A1FF] data-[state=active]:text-white rounded-lg transition-all"
@@ -78,6 +79,12 @@ export default function AppPage() {
             >
               Analytics
             </TabsTrigger>
+            <TabsTrigger 
+              value="points" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3396FF] data-[state=active]:to-[#47A1FF] data-[state=active]:text-white rounded-lg transition-all"
+            >
+              Points
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="swap" className="mt-0">
@@ -94,6 +101,10 @@ export default function AppPage() {
 
           <TabsContent value="analytics" className="mt-0">
             <Analytics />
+          </TabsContent>
+
+          <TabsContent value="points" className="mt-0">
+            <PointsDashboard />
           </TabsContent>
         </Tabs>
       </main>
