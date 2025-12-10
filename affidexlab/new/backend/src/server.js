@@ -8,6 +8,7 @@ import { authenticatePartner } from './middleware/auth.js';
 import swapRoutes from './routes/v1/swap.js';
 import liquidityRoutes from './routes/v1/liquidity.js';
 import bridgeRoutes from './routes/v1/bridge.js';
+import partnersRoutes from './routes/v1/partners.js';
 
 dotenv.config();
 
@@ -121,6 +122,7 @@ app.get('/v1', (_req, res) => {
 app.use('/v1/swap', authenticatePartner, swapRoutes);
 app.use('/v1/liquidity', authenticatePartner, liquidityRoutes);
 app.use('/v1/bridge', authenticatePartner, bridgeRoutes);
+app.use('/v1/partners', partnersRoutes);
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);
