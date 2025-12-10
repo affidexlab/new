@@ -11,9 +11,12 @@ import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { usePointsTracking } from "@/hooks/usePointsTracking";
+import { getTokenPriceUSD } from "@/lib/prices";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
+  const { trackBridge } = usePointsTracking();
   const [fromChain, setFromChain] = useState<ChainKey>("BASE");
   const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
   const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]); // USDC
@@ -25,7 +28,34 @@ export default function Bridge() {
   const [showComparison, setShowComparison] = useState(false);
 
   const { writeContract, data: txHash, isPending: isBridging } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // Track bridge transactions after confirmation
+  useEffect(() => {
+    const trackTransaction = async () => {
+      if (!txHash || !isSuccess || isConfirming) return;
+      try {
+        const amountNum = parseFloat(amount || "0");
+        if (!amountNum || !token) return;
+        const fromChainId = CHAIN_IDS[fromChain];
+        const toChainId = CHAIN_IDS[toChain];
+        const priceUSD = await getTokenPriceUSD(fromChainId, token.address);
+        const amountUSD = amountNum * (priceUSD || 0);
+
+        await trackBridge(
+          txHash,
+          fromChainId,
+          toChainId,
+          token.address,
+          token.address,
+          amountUSD
+        );
+      } catch (e) {
+        logger.error("Bridge tracking error", e);
+      }
+    };
+    trackTransaction();
+  }, [isSuccess, isConfirming, txHash]);
 
   // Fetch quotes when params change
   useEffect(() => {

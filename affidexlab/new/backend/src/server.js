@@ -3,12 +3,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { initializeDatabase, healthCheck } from './db/connection.js';
 
 import { authenticatePartner } from './middleware/auth.js';
 import swapRoutes from './routes/v1/swap.js';
 import liquidityRoutes from './routes/v1/liquidity.js';
 import bridgeRoutes from './routes/v1/bridge.js';
-import partnersRoutes from './routes/v1/partners.js';
+import webhooksRoutes from './routes/v1/webhooks.js';
+import pointsRoutes from './routes/v1/points.js';
+import leaderboardRoutes from './routes/v1/leaderboard.js';
 
 dotenv.config();
 
@@ -83,9 +86,11 @@ const apiLimiter = rateLimit({
 
 app.use('/v1/', apiLimiter);
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  const dbHealth = await healthCheck();
   res.json({
-    status: 'ok',
+    status: dbHealth.healthy ? 'ok' : 'degraded',
+    database: dbHealth,
     environment: isSandbox ? 'sandbox' : 'production',
     version: '1.0.0',
     timestamp: new Date().toISOString()
@@ -122,7 +127,9 @@ app.get('/v1', (_req, res) => {
 app.use('/v1/swap', authenticatePartner, swapRoutes);
 app.use('/v1/liquidity', authenticatePartner, liquidityRoutes);
 app.use('/v1/bridge', authenticatePartner, bridgeRoutes);
-app.use('/v1/partners', partnersRoutes);
+app.use('/v1/webhooks', webhooksRoutes);
+app.use('/v1/points', pointsRoutes);
+app.use('/v1/leaderboard', leaderboardRoutes);
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -146,12 +153,30 @@ app.use((req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`🚀 DecaFlow API Server`);
-  console.log(`📍 Port: ${port}`);
-  console.log(`🌍 Environment: ${isSandbox ? 'Sandbox' : 'Production'}`);
-  console.log(`🔒 CORS: ${origins.length} origins allowed`);
-  console.log(`⏰ Started: ${new Date().toISOString()}`);
-});
+
+async function startServer() {
+  try {
+    if (process.env.DATABASE_URL) {
+      console.log('🔄 Initializing database...');
+      await initializeDatabase();
+      console.log('✅ Database initialized successfully');
+    } else {
+      console.warn('⚠️  DATABASE_URL not set, skipping database initialization');
+    }
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error.message);
+    console.error('Server will continue but points system will not work');
+  }
+
+  app.listen(port, () => {
+    console.log(`🚀 DecaFlow API Server`);
+    console.log(`📍 Port: ${port}`);
+    console.log(`🌍 Environment: ${isSandbox ? 'Sandbox' : 'Production'}`);
+    console.log(`🔒 CORS: ${origins.length} origins allowed`);
+    console.log(`⏰ Started: ${new Date().toISOString()}`);
+  });
+}
+
+startServer();
 
 export default app;
