@@ -60,9 +60,7 @@ const origins = allowedOrigins.length ? allowedOrigins : defaultOrigins;
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) {
-      return isProduction 
-        ? callback(new Error('Origin required')) 
-        : callback(null, true);
+      return callback(null, true);
     }
     
     if (origins.includes(origin) || origins.some(o => origin.startsWith(o))) {
