@@ -13,10 +13,12 @@ import { calculateMinimumOutput } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { usePointsTracking } from "@/hooks/usePointsTracking";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
+  const { trackSwap } = usePointsTracking();
   
   const [fromChain, setFromChain] = useState<ChainKey>("BASE");
   const [toChain, setToChain] = useState<ChainKey>("BASE");
@@ -237,6 +239,15 @@ export default function Swap() {
         const prev = JSON.parse(localStorage.getItem(key) || "[]");
         prev.push(entry);
         localStorage.setItem(key, JSON.stringify(prev));
+
+        // Track points for this swap transaction
+        await trackSwap(
+          swapHash,
+          fromToken.address,
+          toToken.address,
+          amountUSD,
+          chainId
+        );
       } catch (e) {
         // ignore analytics failures
       }
