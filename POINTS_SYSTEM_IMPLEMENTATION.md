@@ -147,17 +147,15 @@ Environment variable templates for:
 
 ## 💰 Reward Structure
 
-### Weekly Rewards ($5,000)
-- 🥇 1st: $2,000
-- 🥈 2nd: $1,200
-- 🥉 3rd: $800
-- 4th-10th: $1,000 shared
+### Weekly Rewards
+- 🥇 Top 10 traders receive tiered USD payouts each week
+- 💸 Higher ranks earn larger cash rewards
+- 🔁 Distributed automatically after weekly review
 
-### Monthly Rewards ($20,000)
-- 🥇 1st: $8,000
-- 🥈 2nd: $5,000
-- 🥉 3rd: $3,000
-- 4th-20th: $4,000 shared
+### Monthly Rewards
+- 🥇 Top 20 traders receive bonus USD payouts each month
+- 💸 Rewards scale with monthly performance
+- 🔁 Distributed after the monthly leaderboard closes
 
 ## 🎁 Airdrop Eligibility
 

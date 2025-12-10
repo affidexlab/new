@@ -44,7 +44,8 @@ export default function Admin() {
     periodType: 'weekly',
     periodStart: '',
     periodEnd: '',
-    topN: 10
+    topN: 10,
+    rewardAmounts: ''
   });
 
   useEffect(() => {
@@ -102,9 +103,15 @@ export default function Admin() {
 
   const distributeRewards = async () => {
     const performers = activeTab === 'weekly' ? weeklyTop : monthlyTop;
-    const rewardAmounts = activeTab === 'weekly' 
-      ? [2000, 1200, 800, 400, 300, 200, 150, 100, 75, 75]
-      : [8000, 5000, 3000, 1500, 1000, 800, 600, 400, 300, 200];
+    const rewardAmounts = rewardForm.rewardAmounts
+      .split(',')
+      .map(value => parseFloat(value.trim()))
+      .filter(amount => !isNaN(amount));
+
+    if (rewardAmounts.length === 0) {
+      alert('Enter reward amounts separated by commas');
+      return;
+    }
 
     try {
       const rewards = performers.slice(0, rewardForm.topN).map((performer, index) => ({
@@ -114,7 +121,7 @@ export default function Admin() {
         periodEnd: rewardForm.periodEnd,
         rank: performer.rank,
         points: parseFloat(performer.points),
-        rewardAmountUSD: rewardAmounts[index] || 100,
+        rewardAmountUSD: rewardAmounts[index] ?? rewardAmounts[rewardAmounts.length - 1] ?? 0,
         status: 'pending'
       }));
 
@@ -420,6 +427,18 @@ export default function Admin() {
               onChange={(e) => setRewardForm({ ...rewardForm, topN: parseInt(e.target.value) })}
               className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500"
               placeholder="Top N"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm text-gray-400 mb-2">
+              Reward Amounts (comma-separated, descending order)
+            </label>
+            <input
+              type="text"
+              value={rewardForm.rewardAmounts}
+              onChange={(e) => setRewardForm({ ...rewardForm, rewardAmounts: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500"
+              placeholder="Example: 100,80,60,40"
             />
           </div>
           <button

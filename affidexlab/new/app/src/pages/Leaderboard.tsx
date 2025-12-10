@@ -97,7 +97,7 @@ export default function Leaderboard() {
                 <DollarSign className="w-8 h-8 text-purple-400" />
                 <div>
                   <p className="text-sm text-gray-400">Weekly Rewards</p>
-                  <p className="text-2xl font-bold">$5,000</p>
+                  <p className="text-2xl font-bold">$$ Cash Prizes</p>
                 </div>
               </div>
             </div>
@@ -106,7 +106,7 @@ export default function Leaderboard() {
                 <TrendingUp className="w-8 h-8 text-blue-400" />
                 <div>
                   <p className="text-sm text-gray-400">Monthly Rewards</p>
-                  <p className="text-2xl font-bold">$20,000</p>
+                  <p className="text-2xl font-bold">$$ Cash Prizes</p>
                 </div>
               </div>
             </div>
@@ -218,24 +218,22 @@ export default function Leaderboard() {
             )}
 
             <div className="mt-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
-              <h3 className="text-xl font-bold mb-4">Reward Distribution</h3>
+              <h3 className="text-xl font-bold mb-4">Cash Rewards</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-purple-400 mb-2">Weekly Top 10</h4>
+                  <h4 className="font-semibold text-purple-400 mb-2">Weekly Top Performers</h4>
                   <ul className="space-y-1 text-sm text-gray-300">
-                    <li>🥇 1st Place: $2,000</li>
-                    <li>🥈 2nd Place: $1,200</li>
-                    <li>🥉 3rd Place: $800</li>
-                    <li>4th-10th: $1,000 shared</li>
+                    <li>🥇 Top 10 traders receive USD rewards</li>
+                    <li>💸 Payouts scale by weekly rank</li>
+                    <li>🔁 Distributed every week</li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-pink-400 mb-2">Monthly Top 20</h4>
+                  <h4 className="font-semibold text-pink-400 mb-2">Monthly Top Performers</h4>
                   <ul className="space-y-1 text-sm text-gray-300">
-                    <li>🥇 1st Place: $8,000</li>
-                    <li>🥈 2nd Place: $5,000</li>
-                    <li>🥉 3rd Place: $3,000</li>
-                    <li>4th-20th: $4,000 shared</li>
+                    <li>🥇 Top 20 traders earn bonus USD rewards</li>
+                    <li>💸 Rewards scale by monthly rank</li>
+                    <li>🔁 Distributed every month</li>
                   </ul>
                 </div>
               </div>

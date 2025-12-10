@@ -21,17 +21,15 @@ DecaFlow's Points & Rewards System is designed to incentivize user engagement an
 
 ### 💰 Cash Rewards
 
-#### Weekly Rewards ($5,000 total)
-- 🥇 1st Place: $2,000
-- 🥈 2nd Place: $1,200
-- 🥉 3rd Place: $800
-- 4th-10th: $1,000 shared equally
+#### Weekly Rewards
+- 🥇 Top 10 traders receive tiered USD rewards every week
+- 💸 Payouts scale with rank and weekly points
+- 🔁 Distributed automatically after each weekly cycle
 
-#### Monthly Rewards ($20,000 total)
-- 🥇 1st Place: $8,000
-- 🥈 2nd Place: $5,000
-- 🥉 3rd Place: $3,000
-- 4th-20th: $4,000 shared equally
+#### Monthly Rewards
+- 🥇 Top 20 traders receive bonus USD rewards every month
+- 💸 Higher ranks unlock larger cash payouts
+- 🔁 Distributed after the monthly period closes
 
 ### 🎁 Airdrop Eligibility
 To qualify for the 2026 token airdrop:
@@ -332,4 +330,4 @@ For issues or questions:
 
 **Launch Date**: December 2025  
 **Token Airdrop**: 2026  
-**Total Rewards Pool**: $25,000/month + token allocation
+**Total Rewards Pool**: Significant USD rewards + upcoming token allocation

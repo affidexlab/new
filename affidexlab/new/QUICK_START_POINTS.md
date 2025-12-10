@@ -179,6 +179,6 @@ Users can now:
 - Track their progress
 - Qualify for rewards and airdrops
 
-**Total Rewards Pool**: $25,000/month + 2026 token airdrop
+**Total Rewards Pool**: Rolling USD rewards + 2026 token airdrop
 
 Happy trading! 🚀
