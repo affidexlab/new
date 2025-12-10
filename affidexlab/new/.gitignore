@@ -1,0 +1,8 @@
+.gitscout/
+.git.scout-backup/
+affidexlab/new/.gitscout/
+affidexlab/new/.git.scout-backup/
+affidexlab/new/backend/node_modules/
+affidexlab/new/app/dist/
+affidexlab/new/backend/.vercel/
+partners/.vercel/
