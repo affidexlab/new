@@ -251,7 +251,7 @@ export default function Admin() {
               </button>
               <button
                 onClick={createAirdropSnapshot}
-                className="w-full px-4 py-3 bg-purple-500/20 border border-purple-500/30 rounded-lg hover:bg-purple-500/30 transition-all font-medium"
+                className="w-full px-4 py-3 bg-[#3396FF]/20 border border-[#3396FF]/30 rounded-lg hover:bg-[#3396FF]/30 transition-all font-medium"
               >
                 Create Airdrop Snapshot
               </button>
@@ -260,7 +260,7 @@ export default function Admin() {
 
           <div className="lg:col-span-2 bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <TrendingUp className="w-6 h-6 text-purple-400" />
+              <TrendingUp className="w-6 h-6 text-[#47A1FF]" />
               <h3 className="text-lg font-semibold">Create Multiplier Event</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -269,7 +269,7 @@ export default function Admin() {
                 placeholder="Event Name"
                 value={multiplierForm.name}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, name: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               />
               <input
                 type="number"
@@ -277,12 +277,12 @@ export default function Admin() {
                 placeholder="Multiplier (e.g., 2.0)"
                 value={multiplierForm.multiplier}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, multiplier: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               />
               <select
                 value={multiplierForm.transactionType}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, transactionType: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               >
                 <option value="">All Types</option>
                 <option value="swap">Swap</option>
@@ -294,32 +294,32 @@ export default function Admin() {
                 placeholder="Min Amount USD"
                 value={multiplierForm.minAmountUSD}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, minAmountUSD: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               />
               <input
                 type="datetime-local"
                 placeholder="Start Date"
                 value={multiplierForm.startDate}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, startDate: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               />
               <input
                 type="datetime-local"
                 placeholder="End Date"
                 value={multiplierForm.endDate}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, endDate: e.target.value })}
-                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
               />
               <textarea
                 placeholder="Description"
                 value={multiplierForm.description}
                 onChange={(e) => setMultiplierForm({ ...multiplierForm, description: e.target.value })}
-                className="md:col-span-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500"
+                className="md:col-span-2 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-[#47A1FF]"
                 rows={2}
               />
               <button
                 onClick={createMultiplier}
-                className="md:col-span-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                className="md:col-span-2 px-4 py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] rounded-lg font-medium hover:opacity-90 transition-opacity"
               >
                 Create Multiplier Event
               </button>
@@ -338,7 +338,7 @@ export default function Admin() {
                 onClick={() => setActiveTab('weekly')}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   activeTab === 'weekly'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
@@ -348,7 +348,7 @@ export default function Admin() {
                 onClick={() => setActiveTab('monthly')}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   activeTab === 'monthly'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                     : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
@@ -359,7 +359,7 @@ export default function Admin() {
 
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#47A1FF]"></div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -378,7 +378,7 @@ export default function Admin() {
                     <tr key={performer.wallet_address} className="hover:bg-gray-800/30">
                       <td className="px-4 py-3 font-bold">#{performer.rank}</td>
                       <td className="px-4 py-3 font-mono text-sm">{formatAddress(performer.wallet_address)}</td>
-                      <td className="px-4 py-3 text-right text-purple-400 font-semibold">
+                      <td className="px-4 py-3 text-right text-[#47A1FF] font-semibold">
                         {formatNumber(performer.points)}
                       </td>
                       <td className="px-4 py-3 text-right">${formatNumber(performer.total_volume_usd)}</td>

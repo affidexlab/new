@@ -90,8 +90,8 @@ export default function PointsDashboard() {
 
   if (!isConnected) {
     return (
-      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-8 text-center">
-        <Star className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+      <div className="bg-gradient-to-br from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-xl p-8 text-center">
+        <Star className="w-16 h-16 mx-auto mb-4 text-[#47A1FF]" />
         <h3 className="text-2xl font-bold mb-2">Connect Wallet to Earn Points</h3>
         <p className="text-gray-400">Start trading to earn points and qualify for rewards & airdrops</p>
       </div>
@@ -101,15 +101,15 @@ export default function PointsDashboard() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#47A1FF]"></div>
       </div>
     );
   }
 
   if (!userPoints) {
     return (
-      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-8 text-center">
-        <Star className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+      <div className="bg-gradient-to-br from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-xl p-8 text-center">
+        <Star className="w-16 h-16 mx-auto mb-4 text-[#47A1FF]" />
         <h3 className="text-2xl font-bold mb-2">Start Earning Points</h3>
         <p className="text-gray-400 mb-4">Make your first trade to start earning points!</p>
         <div className="text-sm text-gray-500">
@@ -124,9 +124,9 @@ export default function PointsDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-6">
+        <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/20 border border-[#3396FF]/30 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Star className="w-6 h-6 text-purple-400" />
+            <Star className="w-6 h-6 text-[#47A1FF]" />
             <p className="text-sm text-gray-400">Total Points</p>
           </div>
           <p className="text-3xl font-bold">{formatNumber(userPoints.total_points)}</p>
@@ -193,13 +193,13 @@ export default function PointsDashboard() {
         <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-xl p-6">
           <h3 className="text-lg font-semibold mb-4">Referral Code</h3>
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-3">
-            <p className="text-2xl font-mono font-bold text-center text-purple-400">
+            <p className="text-2xl font-mono font-bold text-center text-[#47A1FF]">
               {userPoints.referral_code}
             </p>
           </div>
           <button
             onClick={copyReferralCode}
-            className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-medium hover:opacity-90 transition-opacity"
+            className="w-full px-4 py-2 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] rounded-lg font-medium hover:opacity-90 transition-opacity"
           >
             Copy Code
           </button>
@@ -212,12 +212,12 @@ export default function PointsDashboard() {
       <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-purple-400" />
+            <History className="w-5 h-5 text-[#47A1FF]" />
             <h3 className="text-lg font-semibold">Recent Transactions</h3>
           </div>
           <button
             onClick={() => setShowTransactions(!showTransactions)}
-            className="text-sm text-purple-400 hover:text-purple-300"
+            className="text-sm text-[#47A1FF] hover:text-[#3396FF]"
           >
             {showTransactions ? 'Hide' : 'Show All'}
           </button>
@@ -243,7 +243,7 @@ export default function PointsDashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-purple-400">
+                  <p className="font-semibold text-[#47A1FF]">
                     +{parseFloat(tx.points_earned).toFixed(2)} pts
                   </p>
                   <p className="text-xs text-gray-500">
@@ -268,11 +268,11 @@ export default function PointsDashboard() {
         )}
       </div>
 
-      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+      <div className="bg-gradient-to-br from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-xl p-6">
         <h3 className="text-lg font-semibold mb-3">How to Earn More Points</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-sm">
-            <p className="font-semibold text-purple-400 mb-1">💱 Swaps</p>
+            <p className="font-semibold text-[#47A1FF] mb-1">💱 Swaps</p>
             <p className="text-gray-400">1x points per $1 volume</p>
           </div>
           <div className="text-sm">

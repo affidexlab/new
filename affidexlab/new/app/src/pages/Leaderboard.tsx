@@ -70,7 +70,7 @@ export default function Leaderboard() {
       return 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/50';
     }
     if (rank <= 10) {
-      return 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/50';
+      return 'bg-gradient-to-r from-[#3396FF]/20 to-[#47A1FF]/20 border-[#3396FF]/50';
     }
     return 'bg-gray-800/50 border-gray-700';
   };
@@ -80,11 +80,11 @@ export default function Leaderboard() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+            <div className="p-3 bg-gradient-to-br from-[#3396FF] to-[#47A1FF] rounded-xl">
               <Trophy className="w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#3396FF] to-[#47A1FF] bg-clip-text text-transparent">
                 Leaderboard
               </h1>
               <p className="text-gray-400 mt-1">Compete for weekly and monthly rewards</p>
@@ -92,9 +92,9 @@ export default function Leaderboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+            <div className="bg-gradient-to-br from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-xl p-6">
               <div className="flex items-center gap-3">
-                <DollarSign className="w-8 h-8 text-purple-400" />
+                <DollarSign className="w-8 h-8 text-[#47A1FF]" />
                 <div>
                   <p className="text-sm text-gray-400">Weekly Rewards</p>
                   <p className="text-2xl font-bold">$$ Cash Prizes</p>
@@ -126,7 +126,7 @@ export default function Leaderboard() {
               onClick={() => setPeriod('all')}
               className={`px-6 py-3 rounded-lg font-medium transition-all ${
                 period === 'all'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
@@ -136,7 +136,7 @@ export default function Leaderboard() {
               onClick={() => setPeriod('weekly')}
               className={`px-6 py-3 rounded-lg font-medium transition-all ${
                 period === 'weekly'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
@@ -146,7 +146,7 @@ export default function Leaderboard() {
               onClick={() => setPeriod('monthly')}
               className={`px-6 py-3 rounded-lg font-medium transition-all ${
                 period === 'monthly'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
@@ -157,7 +157,7 @@ export default function Leaderboard() {
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#47A1FF]"></div>
           </div>
         ) : (
           <>
@@ -190,7 +190,7 @@ export default function Leaderboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="font-bold text-lg text-purple-400">
+                          <div className="font-bold text-lg text-[#47A1FF]">
                             {formatNumber(entry.points)}
                           </div>
                         </td>
@@ -217,11 +217,11 @@ export default function Leaderboard() {
               </p>
             )}
 
-            <div className="mt-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+            <div className="mt-8 bg-gradient-to-br from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-xl p-6">
               <h3 className="text-xl font-bold mb-4">Cash Rewards</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-purple-400 mb-2">Weekly Top Performers</h4>
+                  <h4 className="font-semibold text-[#47A1FF] mb-2">Weekly Top Performers</h4>
                   <ul className="space-y-1 text-sm text-gray-300">
                     <li>🥇 Top 10 traders receive USD rewards</li>
                     <li>💸 Payouts scale by weekly rank</li>
@@ -229,7 +229,7 @@ export default function Leaderboard() {
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-pink-400 mb-2">Monthly Top Performers</h4>
+                  <h4 className="font-semibold text-[#3396FF] mb-2">Monthly Top Performers</h4>
                   <ul className="space-y-1 text-sm text-gray-300">
                     <li>🥇 Top 20 traders earn bonus USD rewards</li>
                     <li>💸 Rewards scale by monthly rank</li>
