@@ -243,6 +243,7 @@ function TokenItem({
     address,
     token: token.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : token.address as `0x${string}`,
     chainId: token.chainId,
+    enabled: !!address,
   });
 
   return (
