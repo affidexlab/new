@@ -46,10 +46,8 @@ export default function Swap() {
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: CHAIN_IDS[fromChain],
-    query: {
-      enabled: !!address && !!fromToken && isConnected && chain?.id === CHAIN_IDS[fromChain],
-      refetchInterval: 10000,
-    },
+    enabled: !!address && !!fromToken && isConnected && chain?.id === CHAIN_IDS[fromChain],
+    refetchInterval: 10000,
   });
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
