@@ -46,26 +46,10 @@ export default function SwapApp() {
     if (isConnected && chain?.id) {
       const supportedChains = Object.values(CHAIN_IDS);
       if (supportedChains.includes(chain.id) && chain.id !== selectedChainId) {
-        logger.info(`Syncing chain: ${chain.id} -> ${selectedChainId}`);
         setSelectedChainId(chain.id);
       }
     }
-  }, [isConnected, chain?.id]);
-
-  useEffect(() => {
-    if (isConnected && address && chain?.id) {
-      logger.info('Balance check:', {
-        address,
-        isConnected,
-        chainId: chain.id,
-        selectedChainId,
-        fromToken: fromToken?.symbol,
-        balance: fromBalance?.formatted,
-        isLoading: isFromBalanceLoading,
-        isError: isFromBalanceError,
-      });
-    }
-  }, [address, isConnected, chain?.id, selectedChainId, fromToken, fromBalance, isFromBalanceLoading, isFromBalanceError]);
+  }, [isConnected, chain?.id, selectedChainId]);
 
   useEffect(() => {
     const tokens = TOKENS_BY_CHAIN[selectedChainId];
