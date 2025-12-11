@@ -73,20 +73,16 @@ export default function SwapApp() {
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: selectedChainId,
-    query: {
-      enabled: !!address && !!fromToken && isConnected && chain?.id === selectedChainId,
-      refetchInterval: 10000,
-    },
+    enabled: !!address && !!fromToken && isConnected && chain?.id === selectedChainId,
+    refetchInterval: 10000,
   });
 
   const { data: toBalance, isLoading: isToBalanceLoading, refetch: refetchToBalance, isError: isToBalanceError } = useBalance({
     address,
     token: toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : toToken.address as `0x${string}`,
     chainId: selectedChainId,
-    query: {
-      enabled: !!address && !!toToken && isConnected && chain?.id === selectedChainId,
-      refetchInterval: 10000,
-    },
+    enabled: !!address && !!toToken && isConnected && chain?.id === selectedChainId,
+    refetchInterval: 10000,
   });
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -94,9 +90,7 @@ export default function SwapApp() {
     abi: erc20Abi,
     functionName: "allowance",
     args: address && quote?.data?.allowanceTarget ? [address, quote.data.allowanceTarget as `0x${string}`] : undefined,
-    query: {
-      enabled: !!address && !!quote?.data?.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-    },
+    enabled: !!address && !!quote?.data?.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
   });
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
