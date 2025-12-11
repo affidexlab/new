@@ -24,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
-  const [selectedChainId, setSelectedChainId] = useState(CHAIN_IDS.ARBITRUM);
+  const [selectedChainId, setSelectedChainId] = useState(chain?.id || CHAIN_IDS.BASE);
   const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[selectedChainId][0]);
   const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[selectedChainId][2]);
   const [fromAmount, setFromAmount] = useState("");
@@ -41,6 +41,26 @@ export default function SwapApp() {
   const [netAmountWei, setNetAmountWei] = useState<bigint>(0n);
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
+
+  useEffect(() => {
+    if (isConnected && chain?.id && chain.id !== selectedChainId) {
+      logger.info(`Syncing chain: ${chain.id} -> ${selectedChainId}`);
+      setSelectedChainId(chain.id);
+    }
+  }, [isConnected, chain?.id]);
+
+  useEffect(() => {
+    logger.info('Balance check:', {
+      address,
+      isConnected,
+      chainId: chain?.id,
+      selectedChainId,
+      fromToken: fromToken.symbol,
+      balance: fromBalance?.formatted,
+      isLoading: isFromBalanceLoading,
+      isError: isFromBalanceError,
+    });
+  }, [address, isConnected, chain?.id, selectedChainId, fromToken, fromBalance, isFromBalanceLoading, isFromBalanceError]);
 
   useEffect(() => {
     const tokens = TOKENS_BY_CHAIN[selectedChainId];
@@ -60,22 +80,22 @@ export default function SwapApp() {
     })();
   }, [selectedChainId]);
 
-  const { data: fromBalance, isLoading: isFromBalanceLoading, refetch: refetchFromBalance } = useBalance({
+  const { data: fromBalance, isLoading: isFromBalanceLoading, refetch: refetchFromBalance, isError: isFromBalanceError } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: selectedChainId,
     query: {
-      enabled: !!address && !!fromToken && isConnected,
+      enabled: !!address && !!fromToken && isConnected && chain?.id === selectedChainId,
       refetchInterval: 10000,
     },
   });
 
-  const { data: toBalance, isLoading: isToBalanceLoading, refetch: refetchToBalance } = useBalance({
+  const { data: toBalance, isLoading: isToBalanceLoading, refetch: refetchToBalance, isError: isToBalanceError } = useBalance({
     address,
     token: toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : toToken.address as `0x${string}`,
     chainId: selectedChainId,
     query: {
-      enabled: !!address && !!toToken && isConnected,
+      enabled: !!address && !!toToken && isConnected && chain?.id === selectedChainId,
       refetchInterval: 10000,
     },
   });
@@ -627,8 +647,12 @@ export default function SwapApp() {
             />
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">
-                Balance: {isFromBalanceLoading ? (
+                Balance: {chain?.id !== selectedChainId ? (
+                  <span className="text-orange-400">Switch Chain</span>
+                ) : isFromBalanceLoading ? (
                   <Loader2 className="w-3 h-3 inline animate-spin" />
+                ) : isFromBalanceError ? (
+                  <span className="text-red-400">Error</span>
                 ) : fromBalance ? (
                   Number(fromBalance.formatted).toFixed(4)
                 ) : (
@@ -680,8 +704,12 @@ export default function SwapApp() {
               onChainChange={setSelectedChainId}
             />
             <span className="text-xs text-gray-500">
-              Balance: {isToBalanceLoading ? (
+              Balance: {chain?.id !== selectedChainId ? (
+                <span className="text-orange-400">Switch Chain</span>
+              ) : isToBalanceLoading ? (
                 <Loader2 className="w-3 h-3 inline animate-spin" />
+              ) : isToBalanceError ? (
+                <span className="text-red-400">Error</span>
               ) : toBalance ? (
                 Number(toBalance.formatted).toFixed(4)
               ) : (

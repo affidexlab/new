@@ -20,7 +20,17 @@ export default function Swap() {
   const { switchChain } = useSwitchChain();
   const { trackSwap } = usePointsTracking();
   
-  const [fromChain, setFromChain] = useState<ChainKey>("BASE");
+  const [fromChain, setFromChain] = useState<ChainKey>(() => {
+    const chainIdToKey: Record<number, ChainKey> = {
+      [CHAIN_IDS.BASE]: "BASE",
+      [CHAIN_IDS.ETHEREUM]: "ETHEREUM",
+      [CHAIN_IDS.ARBITRUM]: "ARBITRUM",
+      [CHAIN_IDS.AVALANCHE]: "AVALANCHE",
+      [CHAIN_IDS.OPTIMISM]: "OPTIMISM",
+      [CHAIN_IDS.POLYGON]: "POLYGON",
+    };
+    return "BASE";
+  });
   const [toChain, setToChain] = useState<ChainKey>("BASE");
   const [fromToken, setFromToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][0]);
   const [toToken, setToToken] = useState<Token>(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]);
@@ -32,12 +42,12 @@ export default function Swap() {
   const [useDirectRouter, setUseDirectRouter] = useState(true);
   const [slippage, setSlippage] = useState(0.5);
 
-  const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance } = useBalance({
+  const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance, isError: isBalanceError } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: CHAIN_IDS[fromChain],
     query: {
-      enabled: !!address && !!fromToken && isConnected,
+      enabled: !!address && !!fromToken && isConnected && chain?.id === CHAIN_IDS[fromChain],
       refetchInterval: 10000,
     },
   });
@@ -78,6 +88,25 @@ export default function Swap() {
       refetchBalance();
     }
   }, [isConnected, address, fromChain, fromToken, refetchBalance]);
+
+  // Sync with connected wallet chain on mount
+  useEffect(() => {
+    if (isConnected && chain?.id) {
+      const chainIdToKey: Record<number, ChainKey> = {
+        [CHAIN_IDS.BASE]: "BASE",
+        [CHAIN_IDS.ETHEREUM]: "ETHEREUM",
+        [CHAIN_IDS.ARBITRUM]: "ARBITRUM",
+        [CHAIN_IDS.AVALANCHE]: "AVALANCHE",
+        [CHAIN_IDS.OPTIMISM]: "OPTIMISM",
+        [CHAIN_IDS.POLYGON]: "POLYGON",
+      };
+      const connectedChainKey = chainIdToKey[chain.id];
+      if (connectedChainKey && connectedChainKey !== fromChain) {
+        setFromChain(connectedChainKey);
+        setToChain(connectedChainKey);
+      }
+    }
+  }, [isConnected, chain?.id]);
 
   // Check if user is on the correct chain
   useEffect(() => {
@@ -361,15 +390,19 @@ export default function Swap() {
           </Select>
           <div className="flex items-center justify-end gap-2">
             <span className="text-xs text-gray-500">
-              Balance: {isBalanceLoading ? (
+              Balance: {needsChainSwitch ? (
+                <span className="text-orange-400">Switch Chain</span>
+              ) : isBalanceLoading ? (
                 <Loader2 className="w-3 h-3 inline animate-spin" />
+              ) : isBalanceError ? (
+                <span className="text-red-400">Error</span>
               ) : balance ? (
                 Number(balance.formatted).toFixed(4)
               ) : (
                 '0.0000'
               )}
             </span>
-            <button onClick={handleMaxClick} disabled={!balance || isBalanceLoading} className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition disabled:opacity-40 disabled:cursor-not-allowed">MAX</button>
+            <button onClick={handleMaxClick} disabled={!balance || isBalanceLoading || needsChainSwitch} className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition disabled:opacity-40 disabled:cursor-not-allowed">MAX</button>
           </div>
         </div>
         <div className="flex items-center gap-3">
