@@ -32,10 +32,14 @@ export default function Swap() {
   const [useDirectRouter, setUseDirectRouter] = useState(true);
   const [slippage, setSlippage] = useState(0.5);
 
-  const { data: balance } = useBalance({
+  const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: CHAIN_IDS[fromChain],
+    query: {
+      enabled: !!address && !!fromToken && isConnected,
+      refetchInterval: 10000,
+    },
   });
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
@@ -62,6 +66,18 @@ export default function Swap() {
       refetchAllowance();
     }
   }, [isApproving, approvalHash, refetchAllowance]);
+
+  useEffect(() => {
+    if (!isSwapping && swapHash) {
+      refetchBalance();
+    }
+  }, [isSwapping, swapHash, refetchBalance]);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      refetchBalance();
+    }
+  }, [isConnected, address, fromChain, fromToken, refetchBalance]);
 
   // Check if user is on the correct chain
   useEffect(() => {
@@ -343,12 +359,18 @@ export default function Swap() {
               ))}
             </SelectContent>
           </Select>
-          {balance && (
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-gray-500">Balance: {Number(balance.formatted).toFixed(4)}</span>
-              <button onClick={handleMaxClick} className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition">MAX</button>
-            </div>
-          )}
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-gray-500">
+              Balance: {isBalanceLoading ? (
+                <Loader2 className="w-3 h-3 inline animate-spin" />
+              ) : balance ? (
+                Number(balance.formatted).toFixed(4)
+              ) : (
+                '0.0000'
+              )}
+            </span>
+            <button onClick={handleMaxClick} disabled={!balance || isBalanceLoading} className="rounded-lg border border-[#47A1FF]/50 px-3 py-1 text-xs font-bold text-[#47A1FF] hover:bg-[#47A1FF]/10 transition disabled:opacity-40 disabled:cursor-not-allowed">MAX</button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <TokenSelector selectedToken={fromToken} onSelect={setFromToken} tokens={TOKENS_BY_CHAIN[CHAIN_IDS[fromChain]]} />

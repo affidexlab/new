@@ -60,16 +60,24 @@ export default function SwapApp() {
     })();
   }, [selectedChainId]);
 
-  const { data: fromBalance } = useBalance({
+  const { data: fromBalance, isLoading: isFromBalanceLoading, refetch: refetchFromBalance } = useBalance({
     address,
     token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
     chainId: selectedChainId,
+    query: {
+      enabled: !!address && !!fromToken && isConnected,
+      refetchInterval: 10000,
+    },
   });
 
-  const { data: toBalance } = useBalance({
+  const { data: toBalance, isLoading: isToBalanceLoading, refetch: refetchToBalance } = useBalance({
     address,
     token: toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : toToken.address as `0x${string}`,
     chainId: selectedChainId,
+    query: {
+      enabled: !!address && !!toToken && isConnected,
+      refetchInterval: 10000,
+    },
   });
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
@@ -97,6 +105,20 @@ export default function SwapApp() {
       refetchAllowance();
     }
   }, [isApprovalSuccess, approvalHash, refetchAllowance]);
+
+  useEffect(() => {
+    if (isSwapSuccess) {
+      refetchFromBalance();
+      refetchToBalance();
+    }
+  }, [isSwapSuccess, refetchFromBalance, refetchToBalance]);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      refetchFromBalance();
+      refetchToBalance();
+    }
+  }, [isConnected, address, selectedChainId, fromToken, toToken, refetchFromBalance, refetchToBalance]);
 
   useEffect(() => {
     if (isSwapSuccess) {
@@ -605,11 +627,17 @@ export default function SwapApp() {
             />
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">
-                Balance: {fromBalance ? Number(fromBalance.formatted).toFixed(4) : '0'}
+                Balance: {isFromBalanceLoading ? (
+                  <Loader2 className="w-3 h-3 inline animate-spin" />
+                ) : fromBalance ? (
+                  Number(fromBalance.formatted).toFixed(4)
+                ) : (
+                  '0.0000'
+                )}
               </span>
               <button 
                 onClick={handleMaxClick}
-                disabled={!fromBalance}
+                disabled={!fromBalance || isFromBalanceLoading}
                 className="px-2.5 py-1 rounded-md border border-[#47A1FF]/40 bg-[#47A1FF]/5 text-[#47A1FF] hover:bg-[#47A1FF]/10 text-xs font-medium transition disabled:opacity-40"
               >
                 MAX
@@ -652,7 +680,13 @@ export default function SwapApp() {
               onChainChange={setSelectedChainId}
             />
             <span className="text-xs text-gray-500">
-              Balance: {toBalance ? Number(toBalance.formatted).toFixed(4) : '0'}
+              Balance: {isToBalanceLoading ? (
+                <Loader2 className="w-3 h-3 inline animate-spin" />
+              ) : toBalance ? (
+                Number(toBalance.formatted).toFixed(4)
+              ) : (
+                '0.0000'
+              )}
             </span>
           </div>
           
