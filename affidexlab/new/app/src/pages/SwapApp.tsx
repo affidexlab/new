@@ -630,7 +630,7 @@ export default function SwapApp() {
             />
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">
-                Balance: {chain?.id !== selectedChainId ? (
+                Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
                   <span className="text-orange-400">Switch Chain</span>
                 ) : isFromBalanceLoading ? (
                   <Loader2 className="w-3 h-3 inline animate-spin" />
@@ -687,7 +687,7 @@ export default function SwapApp() {
               onChainChange={setSelectedChainId}
             />
             <span className="text-xs text-gray-500">
-              Balance: {chain?.id !== selectedChainId ? (
+              Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
                 <span className="text-orange-400">Switch Chain</span>
               ) : isToBalanceLoading ? (
                 <Loader2 className="w-3 h-3 inline animate-spin" />
