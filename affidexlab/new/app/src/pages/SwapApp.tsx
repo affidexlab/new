@@ -7,7 +7,7 @@ import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
 import { ChainSelector } from "@/components/ChainSelector";
 import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
-import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES } from "@/lib/constants";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES, COW_SETTLEMENTS, ZEROX_SAFE_TO_ADDRESSES } from "@/lib/constants";
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
@@ -24,9 +24,9 @@ import { Switch } from "@/components/ui/switch";
 
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
-  const [selectedChainId, setSelectedChainId] = useState(chain?.id || CHAIN_IDS.BASE);
-  const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[selectedChainId][0]);
-  const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[selectedChainId][2]);
+  const [selectedChainId, setSelectedChainId] = useState(CHAIN_IDS.BASE);
+  const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][0]);
+  const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]);
   const [fromAmount, setFromAmount] = useState("");
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
@@ -43,23 +43,28 @@ export default function SwapApp() {
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
   useEffect(() => {
-    if (isConnected && chain?.id && chain.id !== selectedChainId) {
-      logger.info(`Syncing chain: ${chain.id} -> ${selectedChainId}`);
-      setSelectedChainId(chain.id);
+    if (isConnected && chain?.id) {
+      const supportedChains = Object.values(CHAIN_IDS);
+      if (supportedChains.includes(chain.id) && chain.id !== selectedChainId) {
+        logger.info(`Syncing chain: ${chain.id} -> ${selectedChainId}`);
+        setSelectedChainId(chain.id);
+      }
     }
   }, [isConnected, chain?.id]);
 
   useEffect(() => {
-    logger.info('Balance check:', {
-      address,
-      isConnected,
-      chainId: chain?.id,
-      selectedChainId,
-      fromToken: fromToken.symbol,
-      balance: fromBalance?.formatted,
-      isLoading: isFromBalanceLoading,
-      isError: isFromBalanceError,
-    });
+    if (isConnected && address && chain?.id) {
+      logger.info('Balance check:', {
+        address,
+        isConnected,
+        chainId: chain.id,
+        selectedChainId,
+        fromToken: fromToken?.symbol,
+        balance: fromBalance?.formatted,
+        isLoading: isFromBalanceLoading,
+        isError: isFromBalanceError,
+      });
+    }
   }, [address, isConnected, chain?.id, selectedChainId, fromToken, fromBalance, isFromBalanceLoading, isFromBalanceError]);
 
   useEffect(() => {
