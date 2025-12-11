@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignTypedData } from "wagmi";
-import { parseUnits, formatUnits, erc20Abi } from "viem";
+import { parseUnits, formatUnits, erc20Abi, createPublicClient, http } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
@@ -9,6 +9,7 @@ import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/compo
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES, COW_SETTLEMENTS, ZEROX_SAFE_TO_ADDRESSES } from "@/lib/constants";
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
+import { mainnet as viemMainnet, arbitrum as viemArbitrum, avalanche as viemAvalanche, base as viemBase, optimism as viemOptimism, polygon as viemPolygon } from "viem/chains";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,12 +25,24 @@ import { Switch } from "@/components/ui/switch";
 
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
+  const publicClients = {
+    [CHAIN_IDS.BASE]: createPublicClient({ chain: viemBase, transport: http("https://mainnet.base.org") }),
+    [CHAIN_IDS.ETHEREUM]: createPublicClient({ chain: viemMainnet, transport: http("https://eth.llamarpc.com") }),
+    [CHAIN_IDS.ARBITRUM]: createPublicClient({ chain: viemArbitrum, transport: http("https://arbitrum.llamarpc.com") }),
+    [CHAIN_IDS.AVALANCHE]: createPublicClient({ chain: viemAvalanche, transport: http("https://api.avax.network/ext/bc/C/rpc") }),
+    [CHAIN_IDS.OPTIMISM]: createPublicClient({ chain: viemOptimism, transport: http("https://mainnet.optimism.io") }),
+    [CHAIN_IDS.POLYGON]: createPublicClient({ chain: viemPolygon, transport: http("https://polygon-rpc.com") }),
+  } as const;
   const [selectedChainId, setSelectedChainId] = useState(CHAIN_IDS.BASE);
   const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][0]);
   const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]);
   const [fromAmount, setFromAmount] = useState("");
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
+  const [fromBalanceFallback, setFromBalanceFallback] = useState<string | null>(null);
+  const [toBalanceFallback, setToBalanceFallback] = useState<string | null>(null);
+  const [isFromFallbackLoading, setIsFromFallbackLoading] = useState(false);
+  const [isToFallbackLoading, setIsToFallbackLoading] = useState(false);
   const [slippageConfig, setSlippageConfig] = useState<SlippageConfig>({ mode: "smart", customValue: 0.5 });
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -84,6 +97,110 @@ export default function SwapApp() {
     enabled: !!address && !!toToken && isConnected && chain?.id === selectedChainId,
     refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    const shouldFetch = !!address && !!fromToken && isConnected && chain?.id === selectedChainId;
+    if (!shouldFetch) {
+      setFromBalanceFallback(null);
+      setIsFromFallbackLoading(false);
+      return;
+    }
+
+    if (!isFromBalanceError) {
+      setFromBalanceFallback(null);
+      return;
+    }
+
+    const client = publicClients[selectedChainId];
+    if (!client) return;
+
+    let cancelled = false;
+    setIsFromFallbackLoading(true);
+
+    (async () => {
+      try {
+        let rawBalance: bigint;
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          rawBalance = await client.getBalance({ address: address as `0x${string}` });
+        } else {
+          rawBalance = await client.readContract({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address as `0x${string}`],
+          }) as bigint;
+        }
+        if (!cancelled) {
+          setFromBalanceFallback(formatUnits(rawBalance, fromToken.decimals));
+        }
+      } catch (error) {
+        console.error("Fallback from balance error", error);
+        if (!cancelled) {
+          setFromBalanceFallback(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFromFallbackLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chain?.id, fromToken, isConnected, isFromBalanceError, selectedChainId]);
+
+  useEffect(() => {
+    const shouldFetch = !!address && !!toToken && isConnected && chain?.id === selectedChainId;
+    if (!shouldFetch) {
+      setToBalanceFallback(null);
+      setIsToFallbackLoading(false);
+      return;
+    }
+
+    if (!isToBalanceError) {
+      setToBalanceFallback(null);
+      return;
+    }
+
+    const client = publicClients[selectedChainId];
+    if (!client) return;
+
+    let cancelled = false;
+    setIsToFallbackLoading(true);
+
+    (async () => {
+      try {
+        let rawBalance: bigint;
+        if (toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          rawBalance = await client.getBalance({ address: address as `0x${string}` });
+        } else {
+          rawBalance = await client.readContract({
+            address: toToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address as `0x${string}`],
+          }) as bigint;
+        }
+        if (!cancelled) {
+          setToBalanceFallback(formatUnits(rawBalance, toToken.decimals));
+        }
+      } catch (error) {
+        console.error("Fallback to balance error", error);
+        if (!cancelled) {
+          setToBalanceFallback(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsToFallbackLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chain?.id, toToken, isConnected, isToBalanceError, selectedChainId]);
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
@@ -632,12 +749,14 @@ export default function SwapApp() {
               <span className="text-xs text-gray-500">
                 Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
                   <span className="text-orange-400">Switch Chain</span>
-                ) : isFromBalanceLoading ? (
+                ) : (isFromBalanceLoading || isFromFallbackLoading) ? (
                   <Loader2 className="w-3 h-3 inline animate-spin" />
-                ) : isFromBalanceError ? (
-                  <span className="text-red-400">Error</span>
                 ) : fromBalance ? (
                   Number(fromBalance.formatted).toFixed(4)
+                ) : fromBalanceFallback ? (
+                  Number(fromBalanceFallback).toFixed(4)
+                ) : isFromBalanceError ? (
+                  <span className="text-red-400">Error</span>
                 ) : (
                   '0.0000'
                 )}
@@ -689,12 +808,14 @@ export default function SwapApp() {
             <span className="text-xs text-gray-500">
               Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
                 <span className="text-orange-400">Switch Chain</span>
-              ) : isToBalanceLoading ? (
+              ) : (isToBalanceLoading || isToFallbackLoading) ? (
                 <Loader2 className="w-3 h-3 inline animate-spin" />
-              ) : isToBalanceError ? (
-                <span className="text-red-400">Error</span>
               ) : toBalance ? (
                 Number(toBalance.formatted).toFixed(4)
+              ) : toBalanceFallback ? (
+                Number(toBalanceFallback).toFixed(4)
+              ) : isToBalanceError ? (
+                <span className="text-red-400">Error</span>
               ) : (
                 '0.0000'
               )}
