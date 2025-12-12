@@ -9,7 +9,7 @@ import { TokenSelector } from "@/components/TokenSelector";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, CHAIN_METADATA, type Token, type ChainKey } from "@/lib/constants";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI } from "@/lib/contracts";
-import { calculateMinimumOutput } from "@/lib/routerIntegration";
+import { calculateMinimumOutput, getWrappedNative } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -50,11 +50,13 @@ export default function Swap() {
     refetchInterval: 10000,
   });
 
-  const { data: approvalHash, writeContract: approve } = useWriteContract();
-  const { data: swapHash, sendTransaction } = useSendTransaction();
+  const { data: approvalHash, writeContract: approve, error: approveError } = useWriteContract();
+  const { data: routerSwapHash, writeContract: executeRouterSwap, error: routerSwapError } = useWriteContract();
+  const { data: swapHash, sendTransaction, error: swapError } = useSendTransaction();
   
-  const { isLoading: isApproving } = useWaitForTransactionReceipt({ hash: approvalHash });
-  const { isLoading: isSwapping } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isApproving, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isRouterSwapping, isSuccess: isRouterSwapSuccess, isError: isRouterSwapError } = useWaitForTransactionReceipt({ hash: routerSwapHash });
+  const { isLoading: isSwapping, isSuccess: isSwapSuccess, isError: isSwapError } = useWaitForTransactionReceipt({ hash: swapHash });
 
   const isCrossChainSwap = fromChain !== toChain;
 
@@ -70,16 +72,60 @@ export default function Swap() {
   });
 
   useEffect(() => {
-    if (isApproving === false && approvalHash) {
+    if (isApproveSuccess && approvalHash) {
       refetchAllowance();
+      toast.success("Approval successful", { description: "You can now proceed with the swap" });
     }
-  }, [isApproving, approvalHash, refetchAllowance]);
+  }, [isApproveSuccess, approvalHash, refetchAllowance]);
 
   useEffect(() => {
-    if (!isSwapping && swapHash) {
-      refetchBalance();
+    if (approveError) {
+      logger.error("Approval error", approveError);
+      toast.error("Approval failed", { description: approveError.message || "Please try again" });
     }
-  }, [isSwapping, swapHash, refetchBalance]);
+  }, [approveError]);
+
+  useEffect(() => {
+    if (isSwapSuccess && swapHash) {
+      refetchBalance();
+      toast.success("Swap successful!", { description: "Your tokens have been swapped" });
+    }
+  }, [isSwapSuccess, swapHash, refetchBalance]);
+
+  useEffect(() => {
+    if (isSwapError) {
+      logger.error("Swap error", swapError);
+      toast.error("Swap failed", { description: "Transaction failed on-chain. Please try again" });
+    }
+  }, [isSwapError]);
+
+  useEffect(() => {
+    if (swapError) {
+      logger.error("Swap submission error", swapError);
+      toast.error("Transaction cancelled", { description: swapError.message || "Please try again" });
+    }
+  }, [swapError]);
+
+  useEffect(() => {
+    if (isRouterSwapSuccess && routerSwapHash) {
+      refetchBalance();
+      toast.success("Swap successful!", { description: "Your tokens have been swapped" });
+    }
+  }, [isRouterSwapSuccess, routerSwapHash, refetchBalance]);
+
+  useEffect(() => {
+    if (isRouterSwapError) {
+      logger.error("Router swap error", routerSwapError);
+      toast.error("Swap failed", { description: "Transaction failed on-chain. Please try again" });
+    }
+  }, [isRouterSwapError]);
+
+  useEffect(() => {
+    if (routerSwapError) {
+      logger.error("Router swap submission error", routerSwapError);
+      toast.error("Transaction cancelled", { description: routerSwapError.message || "Please try again" });
+    }
+  }, [routerSwapError]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -181,30 +227,48 @@ export default function Swap() {
       toast.error("Unable to approve", { description: "Quote data is missing" });
       return;
     }
-    approve({
-      address: fromToken.address as `0x${string}`,
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [allowanceTarget as `0x${string}`, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
-    });
+    try {
+      approve({
+        address: fromToken.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [allowanceTarget as `0x${string}`, BigInt("115792089237316195423570985008687907853269984665640564039457584007913129639935")],
+      });
+    } catch (error) {
+      logger.error("Approve transaction error", error);
+      toast.error("Approval failed", { description: error instanceof Error ? error.message : "Please try again" });
+    }
   };
 
   const handleSwap = () => {
-    if (!quote) return;
+    if (!quote) {
+      toast.error("No quote available", { description: "Please wait for quote to load" });
+      return;
+    }
 
-    if (useDirectRouter && quote.routerData) {
-      handleDirectRouterSwap();
-    } else if (quote.data) {
-      if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-        sendTransaction({ to: quote.data.to, data: quote.data.data, value: BigInt(quote.data.value || "0") });
+    try {
+      if (useDirectRouter && quote.routerData) {
+        handleDirectRouterSwap();
+      } else if (quote.data) {
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          sendTransaction({ to: quote.data.to, data: quote.data.data, value: BigInt(quote.data.value || "0") });
+        } else {
+          sendTransaction({ to: quote.data.to, data: quote.data.data });
+        }
       } else {
-        sendTransaction({ to: quote.data.to, data: quote.data.data });
+        toast.error("Invalid quote", { description: "Quote data is incomplete" });
       }
+    } catch (error) {
+      logger.error("Swap transaction error", error);
+      toast.error("Swap failed", { description: error instanceof Error ? error.message : "Please try again" });
     }
   };
 
   const handleDirectRouterSwap = () => {
-    if (!quote?.routerData) return;
+    if (!quote?.routerData) {
+      toast.error("No router quote available", { description: "Please wait for quote to load" });
+      return;
+    }
     
     const routerAddress = getLiquidityRouterAddress(CHAIN_IDS[fromChain]);
     if (!routerAddress) {
@@ -212,38 +276,68 @@ export default function Swap() {
       return;
     }
 
-    const deadline = Math.floor(Date.now() / 1000) + 1200;
-    const amountIn = parseUnits(amount, fromToken.decimals);
-    const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippage);
+    try {
+      const deadline = Math.floor(Date.now() / 1000) + 1200;
+      const amountIn = parseUnits(amount, fromToken.decimals);
+      const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippage);
 
-    const routerData = quote.routerData;
+      const routerData = quote.routerData;
 
-    if (routerData.provider === "uniswap_v3" && routerData.fee) {
-      approve({
-        address: routerAddress,
-        abi: LIQUIDITY_ROUTER_ABI,
-        functionName: "swapExactInputUniswapV3",
-        args: [
-          fromToken.address as `0x${string}`,
-          toToken.address as `0x${string}`,
-          routerData.fee,
-          amountIn,
-          amountOutMin,
-          BigInt(deadline),
-        ],
-      });
-    } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
-      approve({
-        address: routerAddress,
-        abi: LIQUIDITY_ROUTER_ABI,
-        functionName: "swapExactInputAerodrome",
-        args: [
-          routerData.aerodromeRoutes,
-          amountIn,
-          amountOutMin,
-          BigInt(deadline),
-        ],
-      });
+      // Check if swapping native ETH (will auto-wrap in contract)
+      const isNativeETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+      
+      // Convert native ETH addresses to WETH for router contract
+      const fromTokenAddress = isNativeETH
+        ? getWrappedNative(CHAIN_IDS[fromChain])
+        : fromToken.address;
+      const toTokenAddress = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+        ? "0x0000000000000000000000000000000000000000"
+        : toToken.address;
+
+      if (routerData.provider === "uniswap_v3" && routerData.fee) {
+        executeRouterSwap({
+          address: routerAddress,
+          abi: LIQUIDITY_ROUTER_ABI,
+          functionName: "swapExactInputUniswapV3",
+          args: [
+            fromTokenAddress as `0x${string}`,
+            toTokenAddress as `0x${string}`,
+            routerData.fee,
+            amountIn,
+            amountOutMin,
+            BigInt(deadline),
+          ],
+          value: isNativeETH ? amountIn : undefined,
+        });
+      } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
+        const updatedRoutes = routerData.aerodromeRoutes.map(route => ({
+          ...route,
+          from: route.from === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+            ? getWrappedNative(CHAIN_IDS[fromChain]) as `0x${string}`
+            : route.from,
+          to: route.to === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+            ? "0x0000000000000000000000000000000000000000" as `0x${string}`
+            : route.to,
+        }));
+        
+        executeRouterSwap({
+          address: routerAddress,
+          abi: LIQUIDITY_ROUTER_ABI,
+          functionName: "swapExactInputAerodrome",
+          args: [
+            updatedRoutes,
+            amountIn,
+            amountOutMin,
+            BigInt(deadline),
+          ],
+          value: isNativeETH ? amountIn : undefined,
+        });
+      } else {
+        toast.error("Unsupported router", { description: "Router type not recognized" });
+      }
+    } catch (error) {
+      logger.error("Direct router swap error", error);
+      toast.error("Swap failed", { description: error instanceof Error ? error.message : "Please try again" });
     }
   };
 
@@ -259,7 +353,9 @@ export default function Swap() {
   // Persist swap to analytics after on-chain confirmation
   useEffect(() => {
     const persist = async () => {
-      if (!swapHash || isSwapping) return;
+      const txHash = swapHash || routerSwapHash;
+      const isProcessing = isSwapping || isRouterSwapping;
+      if (!txHash || isProcessing) return;
       try {
         const amountNum = parseFloat(amount || "0");
         if (!amountNum || !fromToken) return;
@@ -269,7 +365,7 @@ export default function Swap() {
           : await getTokenPriceUSD(chainId, fromToken.address);
         const amountUSD = amountNum * (priceUSD || 0);
         const entry = {
-          hash: swapHash,
+          hash: txHash,
           address,
           type: "swap",
           amount: amountNum.toString(),
@@ -285,7 +381,7 @@ export default function Swap() {
 
         // Track points for this swap transaction
         await trackSwap(
-          swapHash,
+          txHash,
           fromToken.address,
           toToken.address,
           amountUSD,
@@ -296,7 +392,7 @@ export default function Swap() {
       }
     };
     persist();
-  }, [isSwapping, swapHash]);
+  }, [isSwapping, isRouterSwapping, swapHash, routerSwapHash]);
 
   const handleChainSwitch = async () => {
     try { await switchChain({ chainId: CHAIN_IDS[fromChain] }); } catch (e) { logger.error("Chain switch error", e); }
@@ -506,19 +602,22 @@ export default function Swap() {
           {isApproving ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Approving...</>) : "Approve " + fromToken.symbol}
         </Button>
       ) : (
-        <Button onClick={handleSwap} disabled={!quote || isSwapping || !amount || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
-          {isSwapping ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Swapping...</>) : (!amount ? "Enter an amount" : (!quote ? "Select tokens" : "Swap"))}
+        <Button onClick={handleSwap} disabled={!quote || isSwapping || isRouterSwapping || !amount || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
+          {(isSwapping || isRouterSwapping) ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Swapping...</>) : (!amount ? "Enter an amount" : (!quote ? "Select tokens" : "Swap"))}
         </Button>
       )}
 
       {/* Transaction Links */}
-      {(approvalHash || swapHash) && (
+      {(approvalHash || swapHash || routerSwapHash) && (
         <div className="mt-4 space-y-2 text-sm">
           {approvalHash && (
             <a href={`${explorers[fromChain]}/tx/${approvalHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Approval transaction</span><span>View →</span></a>
           )}
           {swapHash && (
             <a href={`${explorers[fromChain]}/tx/${swapHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Swap transaction</span><span>View →</span></a>
+          )}
+          {routerSwapHash && (
+            <a href={`${explorers[fromChain]}/tx/${routerSwapHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Swap transaction</span><span>View →</span></a>
           )}
         </div>
       )}
