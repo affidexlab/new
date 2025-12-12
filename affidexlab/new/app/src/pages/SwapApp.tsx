@@ -11,6 +11,8 @@ import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { mainnet as viemMainnet, arbitrum as viemArbitrum, avalanche as viemAvalanche, base as viemBase, optimism as viemOptimism, polygon as viemPolygon } from "viem/chains";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
+import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI } from "@/lib/contracts";
+import { calculateMinimumOutput } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -202,12 +204,16 @@ export default function SwapApp() {
     };
   }, [address, chain?.id, toToken, isConnected, isToBalanceError, selectedChainId]);
 
+  const allowanceSpender = quote?.routerData
+    ? getLiquidityRouterAddress(selectedChainId)
+    : quote?.data?.allowanceTarget;
+
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
     abi: erc20Abi,
     functionName: "allowance",
-    args: address && quote?.data?.allowanceTarget ? [address, quote.data.allowanceTarget as `0x${string}`] : undefined,
-    enabled: !!address && !!quote?.data?.allowanceTarget && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+    args: address && allowanceSpender ? [address, allowanceSpender as `0x${string}`] : undefined,
+    enabled: !!address && !!allowanceSpender && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
   });
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
@@ -295,15 +301,17 @@ export default function SwapApp() {
         setFeeAmountWei(fee);
         setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
+        const hasRouter = !!ROUTER_ADDRESSES[selectedChainId];
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
-          amount: net.toString(),
+          amount: hasRouter ? net.toString() : net.toString(),
           fromAddress: address,
           chainId: selectedChainId,
-          privacy: privacyMode && cowSupported,
+          privacy: !hasRouter && privacyMode && cowSupported,
           slippagePercentage,
           timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
+          useDirectRouter: hasRouter,
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -328,11 +336,11 @@ export default function SwapApp() {
   }, [fromAmount, fromToken, toToken, address, slippageConfig, selectedChainId, privacyMode, cowSupported, timeoutMinutes]);
 
   const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
-                       quote?.data?.allowanceTarget &&
+                       allowanceSpender &&
                        (!allowance || BigInt(allowance.toString()) < (netAmountWei || 0n));
 
   const handleApprove = () => {
-    if (!quote?.data?.allowanceTarget) {
+    if (!allowanceSpender) {
       toast.error("Missing approval target");
       return;
     }
@@ -342,7 +350,7 @@ export default function SwapApp() {
         address: fromToken.address as `0x${string}`,
         abi: erc20Abi,
         functionName: "approve",
-        args: [quote.data.allowanceTarget, parseUnits(fromAmount, fromToken.decimals)],
+        args: [allowanceSpender as `0x${string}`, parseUnits(fromAmount, fromToken.decimals)],
       });
       toast.info("Approval requested", {
         description: "Please confirm in your wallet",
@@ -355,7 +363,60 @@ export default function SwapApp() {
   };
 
   const handleSwap = async () => {
-    if (!quote?.data) {
+    if (!quote) {
+      toast.error("No quote available");
+      return;
+    }
+
+    const routerAddress = ROUTER_ADDRESSES[selectedChainId];
+    if (quote.routerData && routerAddress) {
+      try {
+        const deadline = Math.floor(Date.now() / 1000) + 1200;
+        const amountIn = parseUnits(fromAmount, fromToken.decimals);
+        const slippagePercent = getSlippagePercentage(slippageConfig);
+        const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippagePercent);
+        const routerData = quote.routerData;
+
+        if (routerData.provider === "uniswap_v3" && routerData.fee) {
+          await approve({
+            address: routerAddress as `0x${string}`,
+            abi: LIQUIDITY_ROUTER_ABI,
+            functionName: "swapExactInputUniswapV3",
+            args: [
+              fromToken.address as `0x${string}`,
+              toToken.address as `0x${string}`,
+              routerData.fee,
+              amountIn,
+              amountOutMin,
+              BigInt(deadline),
+            ],
+          });
+        } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
+          await approve({
+            address: routerAddress as `0x${string}`,
+            abi: LIQUIDITY_ROUTER_ABI,
+            functionName: "swapExactInputAerodrome",
+            args: [
+              routerData.aerodromeRoutes,
+              amountIn,
+              amountOutMin,
+              BigInt(deadline),
+            ],
+          });
+        }
+
+        toast.info("Swap submitted", {
+          description: "Please confirm in your wallet",
+        });
+      } catch (error) {
+        toast.error("Swap failed", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      }
+      return;
+    }
+
+    if (!quote.data) {
       toast.error("No quote available");
       return;
     }
