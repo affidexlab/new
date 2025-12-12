@@ -172,7 +172,7 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputUniswapV3",
     outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -184,7 +184,7 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputUniswapV3MultiHop",
     outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -206,18 +206,18 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputAerodrome",
     outputs: [{ internalType: "uint256[]", name: "amounts", type: "uint256[]" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
 ] as const;
 
 export const LIQUIDITY_ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
-  8453: "0x4b6D747Bc35CF3856e99C1C7B2e73C2687AB7DB4", // Base
+  8453: "0xd2ba93660d623b665DbC0957F010F60d5Cb98B5E", // Base - WITH NATIVE ETH SUPPORT
   42161: "0xDE8700785C7512a8397683A9BE9717B0aFdB18F3", // Arbitrum
   10: "0xA2fdf81b7967e7FA7610DeBe1901A40686c48992", // Optimism
-  137: "0xFd05977256E8D5753728C78A3003BC3B75Fef1DD", // Polygon - DEPLOYED Dec 3, 2025
-  // 43114: "0x...", // Avalanche - needs 0.011 more AVAX
-  // 1: "0x...", // Ethereum - needs 0.00001 more ETH
+  137: "0xFd05977256E8D5753728C78A3003BC3B75Fef1DD", // Polygon
+  // 43114: "0x...", // Avalanche
+  // 1: "0x...", // Ethereum
 };
 
 export function isLiquidityRouterDeployed(chainId: number): boolean {

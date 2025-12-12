@@ -1,6 +1,7 @@
 require('@nomicfoundation/hardhat-toolbox');
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || '';
+const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY || '';
 
 module.exports = {
   solidity: {
@@ -10,7 +11,23 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      viaIR: true,
     },
+  },
+  etherscan: {
+    apiKey: {
+      base: BASESCAN_API_KEY,
+    },
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org"
+        }
+      }
+    ]
   },
   networks: {
     ethereum: {
