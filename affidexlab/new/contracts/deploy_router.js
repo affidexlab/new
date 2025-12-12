@@ -6,36 +6,42 @@ const ROUTER_CONFIG = {
     name: "Ethereum",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
+    weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
   },
   "arbitrum": {
     chainId: 42161,
     name: "Arbitrum",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
+    weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
   },
   "optimism": {
     chainId: 10,
     name: "Optimism",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
+    weth: "0x4200000000000000000000000000000000000006",
   },
   "polygon": {
     chainId: 137,
     name: "Polygon",
     uniswapV3Router: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
+    weth: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
   },
   "base": {
     chainId: 8453,
     name: "Base",
     uniswapV3Router: "0x2626664c2603336E57B271c5C0b26F421741e481",
     aerodromeRouter: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
+    weth: "0x4200000000000000000000000000000000000006",
   },
   "avalanche": {
     chainId: 43114,
     name: "Avalanche",
     uniswapV3Router: "0xbb00FF08d01D300023C629E8fFfFcb65A5a578cE",
     aerodromeRouter: "0x0000000000000000000000000000000000000000",
+    weth: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
   },
 };
 
@@ -55,6 +61,7 @@ async function main() {
   console.log(`\n🚀 Deploying LiquidityRouter to ${config.name} (Chain ID: ${chainIdDecimal})`);
   console.log(`   Uniswap V3 Router: ${config.uniswapV3Router}`);
   console.log(`   Aerodrome Router: ${config.aerodromeRouter}`);
+  console.log(`   WETH: ${config.weth}`);
   console.log(`   Treasury: ${TREASURY_WALLET}`);
   console.log(`   Fee Rate: ${FEE_RATE} bps (${FEE_RATE / 100}%)\n`);
 
@@ -69,6 +76,7 @@ async function main() {
   const router = await LiquidityRouter.deploy(
     config.uniswapV3Router,
     config.aerodromeRouter,
+    config.weth,
     TREASURY_WALLET,
     FEE_RATE
   );
@@ -84,6 +92,7 @@ async function main() {
     routerAddress: address,
     uniswapV3Router: config.uniswapV3Router,
     aerodromeRouter: config.aerodromeRouter,
+    weth: config.weth,
     treasury: TREASURY_WALLET,
     feeRate: FEE_RATE,
     deployedAt: new Date().toISOString(),

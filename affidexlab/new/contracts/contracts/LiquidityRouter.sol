@@ -6,6 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+interface IWETH {
+    function deposit() external payable;
+    function withdraw(uint256) external;
+    function approve(address guy, uint256 wad) external returns (bool);
+    function transfer(address dst, uint256 wad) external returns (bool);
+    function balanceOf(address) external view returns (uint256);
+}
+
 interface IUniswapV3Router {
     struct ExactInputSingleParams {
         address tokenIn;
@@ -56,6 +64,7 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
 
     address public immutable uniswapV3Router;
     address public immutable aerodromeRouter;
+    address public immutable WETH;
     address public treasury;
     uint256 public feeRate;
 
@@ -75,15 +84,18 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
     constructor(
         address _uniswapV3Router,
         address _aerodromeRouter,
+        address _weth,
         address _treasury,
         uint256 _feeRate
     ) Ownable(msg.sender) {
         require(_uniswapV3Router != address(0), "Invalid Uniswap router");
+        require(_weth != address(0), "Invalid WETH address");
         require(_treasury != address(0), "Invalid treasury");
         require(_feeRate <= 10000, "Fee rate too high");
 
         uniswapV3Router = _uniswapV3Router;
         aerodromeRouter = _aerodromeRouter;
+        WETH = _weth;
         treasury = _treasury;
         feeRate = _feeRate;
     }
@@ -95,27 +107,45 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         uint256 amountIn,
         uint256 amountOutMinimum,
         uint256 deadline
-    ) external nonReentrant returns (uint256 amountOut) {
+    ) external payable nonReentrant returns (uint256 amountOut) {
         require(amountIn > 0, "Amount must be > 0");
         require(deadline >= block.timestamp, "Deadline expired");
 
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        bool isInputETH = msg.value > 0;
+        bool isOutputETH = tokenOut == address(0);
+
+        if (isInputETH) {
+            require(msg.value == amountIn, "Incorrect ETH amount");
+            require(tokenIn == WETH, "Token in must be WETH for ETH swaps");
+            
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        }
 
         uint256 feeAmount = (amountIn * feeRate) / 10000;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
         if (feeAmount > 0) {
-            IERC20(tokenIn).safeTransfer(treasury, feeAmount);
-            emit FeeCollected(tokenIn, feeAmount);
+            if (isInputETH) {
+                IERC20(WETH).safeTransfer(treasury, feeAmount);
+                emit FeeCollected(WETH, feeAmount);
+            } else {
+                IERC20(tokenIn).safeTransfer(treasury, feeAmount);
+                emit FeeCollected(tokenIn, feeAmount);
+            }
         }
 
         IERC20(tokenIn).forceApprove(uniswapV3Router, amountInAfterFee);
 
+        address recipient = isOutputETH ? address(this) : msg.sender;
+        address actualTokenOut = isOutputETH ? WETH : tokenOut;
+
         IUniswapV3Router.ExactInputSingleParams memory params = IUniswapV3Router.ExactInputSingleParams({
             tokenIn: tokenIn,
-            tokenOut: tokenOut,
+            tokenOut: actualTokenOut,
             fee: fee,
-            recipient: msg.sender,
+            recipient: recipient,
             deadline: deadline,
             amountIn: amountInAfterFee,
             amountOutMinimum: amountOutMinimum,
@@ -124,7 +154,13 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
 
         amountOut = IUniswapV3Router(uniswapV3Router).exactInputSingle(params);
 
-        emit SwapExecuted(msg.sender, tokenIn, tokenOut, amountIn, amountOut, RouterType.UNISWAP_V3);
+        if (isOutputETH) {
+            IWETH(WETH).withdraw(amountOut);
+            (bool success, ) = msg.sender.call{value: amountOut}("");
+            require(success, "ETH transfer failed");
+        }
+
+        emit SwapExecuted(msg.sender, tokenIn, actualTokenOut, amountIn, amountOut, RouterType.UNISWAP_V3);
 
         return amountOut;
     }
@@ -134,17 +170,26 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         uint256 amountIn,
         uint256 amountOutMinimum,
         uint256 deadline
-    ) external nonReentrant returns (uint256 amountOut) {
+    ) external payable nonReentrant returns (uint256 amountOut) {
         require(amountIn > 0, "Amount must be > 0");
         require(deadline >= block.timestamp, "Deadline expired");
         require(path.length >= 43, "Invalid path");
+
+        bool isInputETH = msg.value > 0;
 
         address tokenIn;
         assembly {
             tokenIn := shr(96, calldataload(path.offset))
         }
 
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        if (isInputETH) {
+            require(msg.value == amountIn, "Incorrect ETH amount");
+            require(tokenIn == WETH, "Token in must be WETH for ETH swaps");
+            
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        }
 
         uint256 feeAmount = (amountIn * feeRate) / 10000;
         uint256 amountInAfterFee = amountIn - feeAmount;
@@ -182,16 +227,26 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         uint256 amountIn,
         uint256 amountOutMin,
         uint256 deadline
-    ) external nonReentrant returns (uint256[] memory amounts) {
+    ) external payable nonReentrant returns (uint256[] memory amounts) {
         require(aerodromeRouter != address(0), "Aerodrome not available");
         require(amountIn > 0, "Amount must be > 0");
         require(deadline >= block.timestamp, "Deadline expired");
         require(routes.length > 0, "Empty routes");
 
+        bool isInputETH = msg.value > 0;
+        bool isOutputETH = routes[routes.length - 1].to == address(0);
+
         address tokenIn = routes[0].from;
         address tokenOut = routes[routes.length - 1].to;
 
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        if (isInputETH) {
+            require(msg.value == amountIn, "Incorrect ETH amount");
+            require(tokenIn == WETH, "Token in must be WETH for ETH swaps");
+            
+            IWETH(WETH).deposit{value: msg.value}();
+        } else {
+            IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        }
 
         uint256 feeAmount = (amountIn * feeRate) / 10000;
         uint256 amountInAfterFee = amountIn - feeAmount;
@@ -203,13 +258,22 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
 
         IERC20(tokenIn).forceApprove(aerodromeRouter, amountInAfterFee);
 
+        address recipient = isOutputETH ? address(this) : msg.sender;
+
         amounts = IAerodromeRouter(aerodromeRouter).swapExactTokensForTokens(
             amountInAfterFee,
             amountOutMin,
             routes,
-            msg.sender,
+            recipient,
             deadline
         );
+
+        if (isOutputETH) {
+            uint256 amountOutFinal = amounts[amounts.length - 1];
+            IWETH(WETH).withdraw(amountOutFinal);
+            (bool success, ) = msg.sender.call{value: amountOutFinal}("");
+            require(success, "ETH transfer failed");
+        }
 
         emit SwapExecuted(msg.sender, tokenIn, tokenOut, amountIn, amounts[amounts.length - 1], RouterType.AERODROME);
 
@@ -241,7 +305,12 @@ contract LiquidityRouter is ReentrancyGuard, Ownable {
         IERC20(token).safeTransfer(owner(), amount);
     }
 
+    function rescueETH() external onlyOwner {
+        (bool success, ) = owner().call{value: address(this).balance}("");
+        require(success, "ETH transfer failed");
+    }
+
     receive() external payable {
-        revert("ETH not accepted");
+        require(msg.sender == WETH, "Only WETH contract can send ETH");
     }
 }

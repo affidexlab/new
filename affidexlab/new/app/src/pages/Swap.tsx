@@ -216,8 +216,10 @@ export default function Swap() {
     ? getLiquidityRouterAddress(CHAIN_IDS[fromChain])
     : quote?.data?.allowanceTarget;
   
+  // Native ETH doesn't need approval (sent via msg.value)
+  const isNativeETHSwap = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
   const needsApproval = !isCrossChainSwap && 
-    fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
+    !isNativeETHSwap && 
     amount && 
     allowanceTarget &&
     currentAllowance < amountBigInt;
@@ -269,15 +271,6 @@ export default function Swap() {
       toast.error("No router quote available", { description: "Please wait for quote to load" });
       return;
     }
-
-    // Check if user is trying to swap native ETH
-    if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-      toast.error("Native ETH not supported", { 
-        description: `Please select WETH instead of ETH. The router requires wrapped tokens.`,
-        duration: 6000
-      });
-      return;
-    }
     
     const routerAddress = getLiquidityRouterAddress(CHAIN_IDS[fromChain]);
     if (!routerAddress) {
@@ -292,12 +285,15 @@ export default function Swap() {
 
       const routerData = quote.routerData;
 
-      // Convert native ETH addresses to WETH for router (router only accepts ERC20)
-      const fromTokenAddress = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+      // Check if swapping native ETH (will auto-wrap in contract)
+      const isNativeETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+      
+      // Convert native ETH addresses to WETH for router contract
+      const fromTokenAddress = isNativeETH
         ? getWrappedNative(CHAIN_IDS[fromChain])
         : fromToken.address;
       const toTokenAddress = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-        ? getWrappedNative(CHAIN_IDS[fromChain])
+        ? "0x0000000000000000000000000000000000000000" // Use address(0) to signal output is native ETH
         : toToken.address;
 
       if (routerData.provider === "uniswap_v3" && routerData.fee) {
@@ -313,6 +309,7 @@ export default function Swap() {
             amountOutMin,
             BigInt(deadline),
           ],
+          value: isNativeETH ? amountIn : undefined,
         });
       } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
         // Update aerodrome routes to use WETH instead of native ETH
@@ -322,7 +319,7 @@ export default function Swap() {
             ? getWrappedNative(CHAIN_IDS[fromChain]) as `0x${string}`
             : route.from,
           to: route.to === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
-            ? getWrappedNative(CHAIN_IDS[fromChain]) as `0x${string}`
+            ? "0x0000000000000000000000000000000000000000" as `0x${string}` // address(0) for native ETH output
             : route.to,
         }));
         
@@ -336,6 +333,7 @@ export default function Swap() {
             amountOutMin,
             BigInt(deadline),
           ],
+          value: isNativeETH ? amountIn : undefined,
         });
       } else {
         toast.error("Unsupported router", { description: "Router type not recognized" });
@@ -558,17 +556,6 @@ export default function Swap() {
         </div>
       )}
 
-      {/* Native ETH Warning for Direct Router */}
-      {useDirectRouter && fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && !isCrossChainSwap && (
-        <div className="mb-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 flex gap-3">
-          <AlertCircle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-yellow-300">
-            <p className="font-medium mb-1">Native ETH Not Supported</p>
-            <p className="text-xs">The router requires wrapped tokens. Please select <strong>WETH</strong> instead of ETH for swaps.</p>
-          </div>
-        </div>
-      )}
-
       {/* Quote Error */}
       {quoteError && !isQuoting && (
         <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 p-4 flex items-center gap-3">
@@ -611,8 +598,6 @@ export default function Swap() {
       {/* Action Button */}
       {isCrossChainSwap ? (
         <Button disabled className="w-full h-14 bg-gray-600 text-white font-bold text-lg rounded-xl cursor-not-allowed">Use Bridge Tab for Cross-Chain</Button>
-      ) : useDirectRouter && fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? (
-        <Button disabled className="w-full h-14 bg-yellow-600 text-white font-bold text-lg rounded-xl cursor-not-allowed">Select WETH Instead of ETH</Button>
       ) : needsApproval ? (
         <Button onClick={handleApprove} disabled={isApproving || needsChainSwitch} className="w-full h-14 bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg">
           {isApproving ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" /> Approving...</>) : "Approve " + fromToken.symbol}
