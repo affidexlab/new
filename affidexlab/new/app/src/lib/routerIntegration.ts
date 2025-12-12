@@ -220,7 +220,7 @@ export async function getBestRoute(params: QuoteParams): Promise<QuoteResult> {
   return bestQuote;
 }
 
-function getWrappedNative(chainId: number): string {
+export function getWrappedNative(chainId: number): string {
   const WRAPPED_NATIVE: Record<number, string> = {
     1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
