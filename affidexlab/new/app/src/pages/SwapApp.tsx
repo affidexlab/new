@@ -721,6 +721,20 @@ export default function SwapApp() {
   }, [fromToken, selectedChainId, nativePriceUSD]);
 
   const calculateFeeUSD = () => {
+    if (!quote) return 0;
+    
+    // For direct router quotes (Aerodrome/Uniswap V3)
+    if (quote.routerData) {
+      const estimatedGas = quote.routerData.estimatedGas || "150000";
+      // Use L2-optimized gas price for Base (~0.001 Gwei)
+      const gasPrice = selectedChainId === CHAIN_IDS.BASE ? "1000000" : "50000000000";
+      const gasCostWei = BigInt(estimatedGas) * BigInt(gasPrice);
+      const gasCostNative = parseFloat(formatUnits(gasCostWei, 18));
+      const price = nativePriceUSD || 0;
+      return gasCostNative * price;
+    }
+    
+    // For 0x quotes
     if (!quote?.data?.estimatedGas) return 0;
     const gasPrice = quote.data.gasPrice || "50000000000";
     const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
