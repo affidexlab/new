@@ -11,7 +11,7 @@ import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
 import { mainnet as viemMainnet, arbitrum as viemArbitrum, avalanche as viemAvalanche, base as viemBase, optimism as viemOptimism, polygon as viemPolygon } from "viem/chains";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
-import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI } from "@/lib/contracts";
+import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI, LIQUIDITY_ROUTER_ADDRESSES } from "@/lib/liquidityRouter";
 import { calculateMinimumOutput } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -301,17 +301,17 @@ export default function SwapApp() {
         setFeeAmountWei(fee);
         setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
-        const hasRouter = !!ROUTER_ADDRESSES[selectedChainId];
+        const hasDirectRouter = !!LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
-          amount: hasRouter ? net.toString() : net.toString(),
+          amount: net.toString(),
           fromAddress: address,
           chainId: selectedChainId,
-          privacy: !hasRouter && privacyMode && cowSupported,
+          privacy: !hasDirectRouter && privacyMode && cowSupported,
           slippagePercentage,
           timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
-          useDirectRouter: hasRouter,
+          useDirectRouter: hasDirectRouter,
         });
         setQuote(quoteResult);
       } catch (error) {
@@ -721,6 +721,20 @@ export default function SwapApp() {
   }, [fromToken, selectedChainId, nativePriceUSD]);
 
   const calculateFeeUSD = () => {
+    if (!quote) return 0;
+    
+    // For direct router quotes (Aerodrome/Uniswap V3)
+    if (quote.routerData) {
+      const estimatedGas = quote.routerData.estimatedGas || "150000";
+      // Use a reasonable gas price for L2s (Base is ~0.001 Gwei typically)
+      const gasPrice = selectedChainId === CHAIN_IDS.BASE ? "1000000" : "50000000000";
+      const gasCostWei = BigInt(estimatedGas) * BigInt(gasPrice);
+      const gasCostNative = parseFloat(formatUnits(gasCostWei, 18));
+      const price = nativePriceUSD || 0;
+      return gasCostNative * price;
+    }
+    
+    // For 0x quotes
     if (!quote?.data?.estimatedGas) return 0;
     const gasPrice = quote.data.gasPrice || "50000000000";
     const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
