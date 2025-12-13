@@ -112,7 +112,7 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputAerodrome",
     outputs: [{ internalType: "uint256[]", name: "amounts", type: "uint256[]" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -126,7 +126,7 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputUniswapV3",
     outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
@@ -138,7 +138,7 @@ export const LIQUIDITY_ROUTER_ABI = [
     ],
     name: "swapExactInputUniswapV3MultiHop",
     outputs: [{ internalType: "uint256", name: "amountOut", type: "uint256" }],
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     type: "function",
   },
   {
