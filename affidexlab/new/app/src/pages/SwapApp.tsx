@@ -317,19 +317,17 @@ export default function SwapApp() {
         setFeeAmountWei(fee);
         setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
-        const isNativeFrom = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-        const isNativeTo = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-        const canUseDirectRouter = !!LIQUIDITY_ROUTER_ADDRESSES[selectedChainId] && !isNativeFrom && !isNativeTo;
+        const hasDirectRouter = !!LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
           amount: net.toString(),
           fromAddress: address,
           chainId: selectedChainId,
-          privacy: !canUseDirectRouter && privacyMode && cowSupported,
+          privacy: !hasDirectRouter && privacyMode && cowSupported,
           slippagePercentage,
           timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
-          useDirectRouter: canUseDirectRouter,
+          useDirectRouter: hasDirectRouter,
         });
         setQuote(quoteResult);
       } catch (error) {
