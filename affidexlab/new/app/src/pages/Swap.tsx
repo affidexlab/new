@@ -293,7 +293,7 @@ export default function Swap() {
         ? getWrappedNative(CHAIN_IDS[fromChain])
         : fromToken.address;
       const toTokenAddress = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-        ? "0x0000000000000000000000000000000000000000" // Use address(0) to signal output is native ETH
+        ? "0x0000000000000000000000000000000000000000"
         : toToken.address;
 
       if (routerData.provider === "uniswap_v3" && routerData.fee) {
@@ -312,14 +312,13 @@ export default function Swap() {
           value: isNativeETH ? amountIn : undefined,
         });
       } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
-        // Update aerodrome routes to use WETH instead of native ETH
         const updatedRoutes = routerData.aerodromeRoutes.map(route => ({
           ...route,
           from: route.from === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
             ? getWrappedNative(CHAIN_IDS[fromChain]) as `0x${string}`
             : route.from,
           to: route.to === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
-            ? "0x0000000000000000000000000000000000000000" as `0x${string}` // address(0) for native ETH output
+            ? "0x0000000000000000000000000000000000000000" as `0x${string}`
             : route.to,
         }));
         
