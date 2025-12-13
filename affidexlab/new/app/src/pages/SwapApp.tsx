@@ -615,53 +615,29 @@ export default function SwapApp() {
         }
         toast.info("Swap requested", { description: "Please confirm in your wallet" });
         return;
-      } catch (e) {
-        // Fallback to legacy split path below
+      } catch (routerError) {
+        logger.error("FeeRouter swap failed, using fallback", routerError);
+        toast.warning("Using alternative swap method", { description: "Primary router unavailable" });
+        // Fallback to direct swap below
       }
     }
 
-    // Fallback: Regular 0x path with manual fee split (2-tx flow)
+    // Fallback: Direct swap with net amount (quote was fetched with net amount)
+    // This path should rarely be hit since FeeRouter is deployed on most chains
+    // Note: Platform fee is NOT collected in this fallback path to avoid multi-tx nonce conflicts
     try {
       if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-        // Native ETH: Send fee to treasury first, then swap with net amount
-        if (feeAmountWei > 0n) {
-          try {
-            await sendTransaction({
-              to: TREASURY_WALLET,
-              value: feeAmountWei,
-            });
-            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
-          } catch (feeError) {
-            toast.error("Fee transfer failed", { description: "Please try again" });
-            return;
-          }
-        }
-        // Swap with net amount
+        // Native ETH: Swap with net amount (quote was based on net)
         sendTransaction({
           to: quote.data.to,
           data: quote.data.data,
           value: netAmountWei,
         });
       } else {
-        // ERC20: Transfer fee to treasury first, then swap with net amount
-        if (feeAmountWei > 0n) {
-          try {
-            await writeContractGeneric({
-              address: fromToken.address as `0x${string}`,
-              abi: erc20Abi,
-              functionName: "transfer",
-              args: [TREASURY_WALLET, feeAmountWei],
-            });
-            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
-          } catch (feeError) {
-            toast.error("Fee transfer failed", { description: "Please try again" });
-            return;
-          }
-        }
-        // Ensure approval for net amount to 0x
+        // ERC20: Ensure approval for net amount to 0x
         const allowanceTarget = quote.data.allowanceTarget as `0x${string}`;
         if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
-          await approve({
+          approve({
             address: fromToken.address as `0x${string}`,
             abi: erc20Abi,
             functionName: "approve",
@@ -670,7 +646,7 @@ export default function SwapApp() {
           toast.info("Approval requested", { description: "Please confirm and retry swap" });
           return;
         }
-        // Swap with net amount
+        // Direct swap with net amount
         sendTransaction({
           to: quote.data.to,
           data: quote.data.data,
@@ -680,6 +656,7 @@ export default function SwapApp() {
         description: "Please confirm in your wallet",
       });
     } catch (error) {
+      logger.error("Swap error", error);
       toast.error("Swap failed", {
         description: error instanceof Error ? error.message : "Please try again",
       });
