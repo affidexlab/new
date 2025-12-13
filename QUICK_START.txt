@@ -1,0 +1,64 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║  ✅ FIX COMPLETED: Native ETH Swap Transaction Revert       ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+PROBLEM: "execution reverted" when swapping ETH on decaflow.xyz/app
+STATUS: ✅ FIXED - Contract updated with native ETH support
+
+═══════════════════════════════════════════════════════════════
+
+📋 YOUR NEXT STEPS:
+
+1. CREATE PULL REQUEST
+   Go to: https://github.com/affidexlab/new/compare/main...capy/cap-1-4a108294
+   Click "Create Pull Request" → Review → Merge to main
+
+2. DEPLOY UPDATED CONTRACTS (requires ~$10 in gas)
+   cd affidexlab/new/contracts
+   export DEPLOYER_PRIVATE_KEY="your_key"
+   npx hardhat run deploy_router.js --network base
+   npx hardhat run deploy_router.js --network arbitrum
+   npx hardhat run deploy_router.js --network optimism
+   npx hardhat run deploy_router.js --network polygon
+
+3. UPDATE FRONTEND ADDRESSES
+   Edit: app/src/lib/contracts.ts (line ~214)
+   Edit: app/src/lib/liquidityRouter.ts
+   Replace old addresses with new deployment addresses
+
+4. TEST ETH SWAPS
+   Visit: decaflow.xyz/app
+   Test: ETH → USDC (should work!)
+   Test: USDC → ETH (should work!)
+
+═══════════════════════════════════════════════════════════════
+
+📚 DOCUMENTATION:
+- Complete guide: SUMMARY_OF_FIX.md
+- Deployment steps: DEPLOYMENT_INSTRUCTIONS.md  
+- Technical details: affidexlab/new/NATIVE_ETH_FIX.md
+
+═══════════════════════════════════════════════════════════════
+
+✨ WHAT WAS FIXED:
+- Made swap functions payable (accept ETH)
+- Added automatic ETH → WETH wrapping
+- Added WETH → ETH unwrapping support
+- Updated receive() to accept ETH from WETH
+- 100% backward compatible with ERC20 swaps
+
+═══════════════════════════════════════════════════════════════
+
+Current (OLD) addresses that need replacement:
+  Base:     0x4b6D747Bc35CF3856e99C1C7B2e73C2687AB7DB4
+  Arbitrum: 0xDE8700785C7512a8397683A9BE9717B0aFdB18F3
+  Optimism: 0xA2fdf81b7967e7FA7610DeBe1901A40686c48992
+  Polygon:  0xFd05977256E8D5753728C78A3003BC3B75Fef1DD
+
+These OLD contracts CANNOT handle ETH and will revert.
+
+After deploying new contracts, update frontend with new addresses.
+
+═══════════════════════════════════════════════════════════════
