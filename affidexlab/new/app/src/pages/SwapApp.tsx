@@ -384,40 +384,56 @@ export default function SwapApp() {
       return;
     }
 
-    const routerAddress = ROUTER_ADDRESSES[selectedChainId];
-    if (quote.routerData && routerAddress) {
+    const liquidityRouterAddress = LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
+    if (quote.routerData && liquidityRouterAddress) {
       try {
         const deadline = Math.floor(Date.now() / 1000) + 1200;
         const amountIn = parseUnits(fromAmount, fromToken.decimals);
         const slippagePercent = getSlippagePercentage(slippageConfig);
         const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippagePercent);
         const routerData = quote.routerData;
+        const isNativeETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+        const fromTokenAddr = isNativeETH ? "0x4200000000000000000000000000000000000006" : fromToken.address;
+        const toTokenAddr = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "0x0000000000000000000000000000000000000000" : toToken.address;
 
         if (routerData.provider === "uniswap_v3" && routerData.fee) {
-          await approve({
-            address: routerAddress as `0x${string}`,
+          await writeContractGeneric({
+            address: liquidityRouterAddress as `0x${string}`,
             abi: LIQUIDITY_ROUTER_ABI,
             functionName: "swapExactInputUniswapV3",
             args: [
-              fromToken.address as `0x${string}`,
-              toToken.address as `0x${string}`,
+              fromTokenAddr as `0x${string}`,
+              toTokenAddr as `0x${string}`,
               routerData.fee,
               amountIn,
               amountOutMin,
               BigInt(deadline),
             ],
+            value: isNativeETH ? amountIn : undefined,
           });
         } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
-          await approve({
-            address: routerAddress as `0x${string}`,
+          const updatedRoutes = routerData.aerodromeRoutes.map(route => ({
+            ...route,
+            from: route.from === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+              ? "0x4200000000000000000000000000000000000006" as `0x${string}`
+              : route.from,
+            to: route.to === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+              ? "0x0000000000000000000000000000000000000000" as `0x${string}`
+              : route.to,
+          }));
+
+          await writeContractGeneric({
+            address: liquidityRouterAddress as `0x${string}`,
             abi: LIQUIDITY_ROUTER_ABI,
             functionName: "swapExactInputAerodrome",
             args: [
-              routerData.aerodromeRoutes,
+              updatedRoutes,
               amountIn,
               amountOutMin,
               BigInt(deadline),
             ],
+            value: isNativeETH ? amountIn : undefined,
           });
         }
 
