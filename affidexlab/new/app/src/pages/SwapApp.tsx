@@ -218,10 +218,15 @@ export default function SwapApp() {
 
   const { data: approvalHash, writeContract: approve } = useWriteContract();
   const { data: swapHash, sendTransaction } = useSendTransaction();
+  const { data: feeHash, sendTransaction: sendFeeTransaction } = useSendTransaction();
+  const { data: feeTokenHash, writeContract: sendFeeTokenTransaction } = useWriteContract();
   const { writeContract: writeContractGeneric } = useWriteContract();
   const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
   const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isSendingFee, isSuccess: isFeeSuccess } = useWaitForTransactionReceipt({ hash: feeHash });
+  const { isLoading: isSendingFeeToken, isSuccess: isFeeTokenSuccess } = useWaitForTransactionReceipt({ hash: feeTokenHash });
   const { signTypedDataAsync } = useSignTypedData();
+  const [pendingSwapData, setPendingSwapData] = useState<{ to: string; data: string; value?: bigint } | null>(null);
 
   useEffect(() => {
     if (isApprovalSuccess) {
@@ -236,8 +241,19 @@ export default function SwapApp() {
     if (isSwapSuccess) {
       refetchFromBalance();
       refetchToBalance();
+      setPendingSwapData(null);
     }
   }, [isSwapSuccess, refetchFromBalance, refetchToBalance]);
+
+  // After fee transaction completes, execute the actual swap
+  useEffect(() => {
+    if ((isFeeSuccess || isFeeTokenSuccess) && pendingSwapData) {
+      toast.success("Fee sent to treasury!", {
+        description: "Now executing swap...",
+      });
+      sendTransaction(pendingSwapData);
+    }
+  }, [isFeeSuccess, isFeeTokenSuccess, pendingSwapData, sendTransaction]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -615,53 +631,48 @@ export default function SwapApp() {
         }
         toast.info("Swap requested", { description: "Please confirm in your wallet" });
         return;
-      } catch (e) {
-        // Fallback to legacy split path below
+      } catch (routerError) {
+        logger.error("FeeRouter swap failed, using fallback", routerError);
+        toast.warning("Using alternative swap method", { description: "Primary router unavailable" });
+        // Fallback to direct swap below
       }
     }
 
-    // Fallback: Regular 0x path with manual fee split (2-tx flow)
+    // Fallback: Two-transaction flow (Fee → Swap)
+    // This path should rarely be hit since FeeRouter is deployed on most chains
+    // Fee is sent first, then swap executes after confirmation
     try {
       if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
-        // Native ETH: Send fee to treasury first, then swap with net amount
+        // Native ETH: Send fee to treasury first
         if (feeAmountWei > 0n) {
-          try {
-            await sendTransaction({
-              to: TREASURY_WALLET,
-              value: feeAmountWei,
-            });
-            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
-          } catch (feeError) {
-            toast.error("Fee transfer failed", { description: "Please try again" });
-            return;
-          }
+          // Store swap data for execution after fee completes
+          setPendingSwapData({
+            to: quote.data.to,
+            data: quote.data.data,
+            value: netAmountWei,
+          });
+          // Send fee transaction (will wait for confirmation before swap)
+          sendFeeTransaction({
+            to: TREASURY_WALLET,
+            value: feeAmountWei,
+          });
+          toast.info("Sending fee to treasury...", { 
+            description: "Swap will execute automatically after fee confirmation" 
+          });
+        } else {
+          // No fee, direct swap
+          sendTransaction({
+            to: quote.data.to,
+            data: quote.data.data,
+            value: netAmountWei,
+          });
+          toast.info("Swap requested", { description: "Please confirm in your wallet" });
         }
-        // Swap with net amount
-        sendTransaction({
-          to: quote.data.to,
-          data: quote.data.data,
-          value: netAmountWei,
-        });
       } else {
-        // ERC20: Transfer fee to treasury first, then swap with net amount
-        if (feeAmountWei > 0n) {
-          try {
-            await writeContractGeneric({
-              address: fromToken.address as `0x${string}`,
-              abi: erc20Abi,
-              functionName: "transfer",
-              args: [TREASURY_WALLET, feeAmountWei],
-            });
-            toast.success("Fee sent to treasury", { description: "Now executing swap..." });
-          } catch (feeError) {
-            toast.error("Fee transfer failed", { description: "Please try again" });
-            return;
-          }
-        }
-        // Ensure approval for net amount to 0x
+        // ERC20: Ensure approval for net amount to 0x first
         const allowanceTarget = quote.data.allowanceTarget as `0x${string}`;
         if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
-          await approve({
+          approve({
             address: fromToken.address as `0x${string}`,
             abi: erc20Abi,
             functionName: "approve",
@@ -670,19 +681,39 @@ export default function SwapApp() {
           toast.info("Approval requested", { description: "Please confirm and retry swap" });
           return;
         }
-        // Swap with net amount
-        sendTransaction({
-          to: quote.data.to,
-          data: quote.data.data,
-        });
+        
+        // Send fee to treasury first
+        if (feeAmountWei > 0n) {
+          // Store swap data for execution after fee completes
+          setPendingSwapData({
+            to: quote.data.to,
+            data: quote.data.data,
+          });
+          // Send fee token transaction (will wait for confirmation before swap)
+          sendFeeTokenTransaction({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [TREASURY_WALLET, feeAmountWei],
+          });
+          toast.info("Sending fee to treasury...", { 
+            description: "Swap will execute automatically after fee confirmation" 
+          });
+        } else {
+          // No fee, direct swap
+          sendTransaction({
+            to: quote.data.to,
+            data: quote.data.data,
+          });
+          toast.info("Swap requested", { description: "Please confirm in your wallet" });
+        }
       }
-      toast.info("Swap requested", {
-        description: "Please confirm in your wallet",
-      });
     } catch (error) {
+      logger.error("Swap error", error);
       toast.error("Swap failed", {
         description: error instanceof Error ? error.message : "Please try again",
       });
+      setPendingSwapData(null);
     }
   };
 
@@ -979,6 +1010,25 @@ export default function SwapApp() {
           )}
         </div>
 
+        {/* Two-step process indicator */}
+        {(isSendingFee || isSendingFeeToken || pendingSwapData) && (
+          <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-300 mb-1">
+                  {isSendingFee || isSendingFeeToken ? "Step 1/2: Sending fee to treasury..." : "Step 2/2: Executing swap..."}
+                </p>
+                <p className="text-xs text-gray-300">
+                  {isSendingFee || isSendingFeeToken 
+                    ? "Please wait for fee transaction to confirm. Swap will execute automatically."
+                    : "Fee confirmed! Executing your swap now..."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isConnected ? (
           <Button 
             className="w-full h-14 bg-[#4A5B7D] hover:bg-[#556891] text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2"
@@ -1012,13 +1062,13 @@ export default function SwapApp() {
               `Approve ${fromToken.symbol}`
             )}
           </Button>
-        ) : isSwapping ? (
+        ) : (isSwapping || isSendingFee || isSendingFeeToken) ? (
           <Button 
             className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-semibold text-base rounded-xl"
             disabled
           >
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
-            Swapping...
+            {isSendingFee || isSendingFeeToken ? "Sending fee to treasury..." : "Swapping..."}
           </Button>
         ) : (
           <Button 
@@ -1041,7 +1091,7 @@ export default function SwapApp() {
           </Button>
         )}
 
-        {(approvalHash || swapHash) && (
+        {(approvalHash || feeHash || feeTokenHash || swapHash) && (
           <div className="mt-4 space-y-2">
             {approvalHash && (
               <a 
@@ -1051,6 +1101,17 @@ export default function SwapApp() {
                 className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-[#47A1FF] transition"
               >
                 View approval transaction
+                <ExternalLink size={12} />
+              </a>
+            )}
+            {(feeHash || feeTokenHash) && (
+              <a 
+                href={getExplorerUrl(feeHash || feeTokenHash || '')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs text-green-400 hover:text-green-300 transition"
+              >
+                View fee transaction (1.5% to treasury)
                 <ExternalLink size={12} />
               </a>
             )}
