@@ -216,8 +216,10 @@ export default function Swap() {
     ? getLiquidityRouterAddress(CHAIN_IDS[fromChain])
     : quote?.data?.allowanceTarget;
   
+  // Native ETH doesn't need approval (sent via msg.value)
+  const isNativeETHSwap = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
   const needsApproval = !isCrossChainSwap && 
-    fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
+    !isNativeETHSwap && 
     amount && 
     allowanceTarget &&
     currentAllowance < amountBigInt;
@@ -552,8 +554,6 @@ export default function Swap() {
           </div>
         </div>
       )}
-
-
 
       {/* Quote Error */}
       {quoteError && !isQuoting && (
