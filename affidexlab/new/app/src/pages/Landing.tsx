@@ -12,17 +12,16 @@ export default function Landing() {
   const { subscribeToTransactions } = useTransactionEvents();
 
   const compute = () => {
-      try {
-        const key = "decaflow_swaps";
-        const data = JSON.parse(localStorage.getItem(key) || "[]");
-        const trades = (data?.length || 0) * 20;
-        const wallets = (new Set((data || []).map((d: any) => d.address)).size || 0) * 20;
-        const volumeUSD = ((data || []).reduce((acc: number, d: any) => acc + (parseFloat(d.amountUSD || 0)), 0)) * 20;
-        setStats({ trades, volumeUSD, wallets });
-      } catch {
-        // ignore
-      }
-    };
+    try {
+      const key = "decaflow_swaps";
+      const data = JSON.parse(localStorage.getItem(key) || "[]");
+      const trades = (data?.length || 0) * 20;
+      const wallets = (new Set((data || []).map((d: any) => d.address)).size || 0) * 20;
+      const volumeUSD = ((data || []).reduce((acc: number, d: any) => acc + (parseFloat(d.amountUSD || 0)), 0)) * 20;
+      setStats({ trades, volumeUSD, wallets });
+    } catch {
+      // ignore
+    }
   };
 
   useEffect(() => {
