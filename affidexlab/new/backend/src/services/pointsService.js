@@ -3,11 +3,11 @@ import { query } from '../db/connection.js';
 const POINTS_CONFIG = {
   swap: {
     baseRate: 1.0,
-    minAmount: 10,
+    minAmount: 5,
   },
   bridge: {
     baseRate: 2.0,
-    minAmount: 10,
+    minAmount: 5,
   },
   liquidity: {
     add: {
