@@ -343,13 +343,14 @@ export default function SwapApp() {
         ),
       });
       if (txHash) {
+        const now = Date.now();
         const entry = {
           hash: txHash,
           fromSymbol: fromToken.symbol,
           toSymbol: toToken.symbol,
           amount: fromAmount,
           chainId: selectedChainId,
-          timestamp: Date.now(),
+          timestamp: now,
         };
         setRecentSwaps(prev => {
           const next = [entry, ...prev].slice(0, 5);
@@ -360,6 +361,29 @@ export default function SwapApp() {
           } catch {}
           return next;
         });
+
+        // Also persist to decaflow_swaps for analytics/landing stats
+        try {
+          if (typeof window !== "undefined") {
+            const key = "decaflow_swaps";
+            const prevRaw = localStorage.getItem(key);
+            const prevSwaps = prevRaw ? JSON.parse(prevRaw) : [];
+            const swapEntry = {
+              hash: txHash,
+              address,
+              type: "swap",
+              amount: fromAmount,
+              amountUSD: undefined, // will be filled below when we compute USD
+              timestamp: now,
+              fromToken: fromToken.symbol,
+              chainId: selectedChainId,
+            };
+            prevSwaps.push(swapEntry);
+            localStorage.setItem(key, JSON.stringify(prevSwaps));
+          }
+        } catch (e) {
+          console.error("Failed to persist decaflow_swaps entry", e);
+        }
 
         // Emit transaction event for real-time updates
         emitTransactionComplete({
@@ -377,6 +401,26 @@ export default function SwapApp() {
               ? await getNativePriceUSD(selectedChainId)
               : await getTokenPriceUSD(selectedChainId, fromToken.address);
             const amountUSD = amountNum * (priceUSD || 0);
+
+            // Update last decaflow_swaps entry with computed USD amount
+            try {
+              if (typeof window !== "undefined") {
+                const key = "decaflow_swaps";
+                const prevRaw = localStorage.getItem(key);
+                const prevSwaps = prevRaw ? JSON.parse(prevRaw) : [];
+                if (prevSwaps.length > 0) {
+                  const last = prevSwaps[prevSwaps.length - 1];
+                  if (last.hash === txHash && (last.amountUSD === undefined || last.amountUSD === null)) {
+                    last.amountUSD = amountUSD.toFixed(2);
+                    prevSwaps[prevSwaps.length - 1] = last;
+                    localStorage.setItem(key, JSON.stringify(prevSwaps));
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to backfill amountUSD for decaflow_swaps", e);
+            }
+
             await trackSwap(
               txHash,
               fromToken.address,
