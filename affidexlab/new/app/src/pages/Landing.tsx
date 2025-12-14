@@ -4,6 +4,8 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -11,28 +13,31 @@ export default function Landing() {
   const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
   const { subscribeToTransactions } = useTransactionEvents();
 
-  const compute = () => {
+  const fetchGlobalStats = async () => {
     try {
-      const key = "decaflow_swaps";
-      const data = JSON.parse(localStorage.getItem(key) || "[]");
-      const trades = data?.length || 0;
-      const wallets = new Set((data || []).map((d: any) => d.address)).size || 0;
-      const volumeUSD = (data || []).reduce((acc: number, d: any) => acc + (parseFloat(d.amountUSD || 0)), 0);
-      setStats({ trades, volumeUSD, wallets });
-    } catch {
-      // ignore
+      const response = await fetch(`${API_BASE}/v1/points/metrics`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        setStats({
+          trades: data.data.totalTrades || 0,
+          volumeUSD: data.data.totalVolumeUsd || 0,
+          wallets: data.data.uniqueWallets || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch global stats:', error);
     }
   };
 
   useEffect(() => {
-    compute();
-    const id = setInterval(compute, 30000);
+    fetchGlobalStats();
+    const id = setInterval(fetchGlobalStats, 30000);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToTransactions(() => {
-      compute();
+      fetchGlobalStats();
     });
     return unsubscribe;
   }, []);
@@ -188,9 +193,9 @@ export default function Landing() {
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <StatsCard number={(stats.trades ? stats.trades.toLocaleString() + '+' : '2,728+')} label="Total Trades" />
-            <StatsCard number={(stats.volumeUSD ? ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+') : '$7M+') } label="Total Volume" />
-            <StatsCard number={(stats.wallets ? stats.wallets.toLocaleString() + '+' : '1,368+') } label="Total Wallets" />
+            <StatsCard number={stats.trades > 0 ? stats.trades.toLocaleString() + '+' : 'Loading...'} label="Total Trades" />
+            <StatsCard number={stats.volumeUSD > 0 ? ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+') : 'Loading...'} label="Total Volume" />
+            <StatsCard number={stats.wallets > 0 ? stats.wallets.toLocaleString() + '+' : 'Loading...'} label="Total Wallets" />
           </div>
 
           {/* Partner Logos Carousel */}

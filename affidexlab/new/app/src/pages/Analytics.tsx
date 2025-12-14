@@ -3,6 +3,8 @@ import { useAccount } from "wagmi";
 import { TrendingUp, Activity, Users, Zap, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+
 interface AnalyticsData {
   totalVolume: string;
   totalSwaps: number;
@@ -28,47 +30,43 @@ export default function Analytics() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const storedSwaps = localStorage.getItem("decaflow_swaps");
-      const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+      const response = await fetch(`${API_BASE}/v1/points/metrics`);
+      const data = await response.json();
       
-      const totalVolume = swaps.reduce((acc: number, s: any) => acc + parseFloat(s.amount || 0), 0);
-      const uniqueAddresses = new Set(swaps.map((s: any) => s.address)).size;
-      const avgSize = swaps.length > 0 ? totalVolume / swaps.length : 0;
-      
-      const tokenMap = new Map<string, {volume: number; swaps: number}>();
-      swaps.forEach((s: any) => {
-        const existing = tokenMap.get(s.fromToken) || {volume: 0, swaps: 0};
-        tokenMap.set(s.fromToken, {
-          volume: existing.volume + parseFloat(s.amount || 0),
-          swaps: existing.swaps + 1,
+      if (data.success && data.data) {
+        const totalVolume = data.data.totalVolumeUsd || 0;
+        const totalSwaps = data.data.totalTrades || 0;
+        const uniqueWallets = data.data.uniqueWallets || 0;
+        const avgSize = totalSwaps > 0 ? totalVolume / totalSwaps : 0;
+
+        setAnalytics({
+          totalVolume: totalVolume.toFixed(2),
+          totalSwaps,
+          uniqueWallets,
+          avgSwapSize: avgSize.toFixed(2),
+          topTokens: [],
+          recentActivity: [],
         });
-      });
-      
-      const topTokens = Array.from(tokenMap.entries())
-        .map(([symbol, data]) => ({symbol, volume: data.volume.toFixed(2), swaps: data.swaps}))
-        .sort((a, b) => parseFloat(b.volume) - parseFloat(a.volume))
-        .slice(0, 5);
-
-      const recentActivity = swaps
-        .slice(-10)
-        .reverse()
-        .map((s: any) => ({
-          hash: s.hash || "0x...",
-          type: s.type || "swap",
-          amount: s.amount || "0",
-          timestamp: s.timestamp || Date.now(),
-        }));
-
-      setAnalytics({
-        totalVolume: totalVolume.toFixed(2),
-        totalSwaps: swaps.length,
-        uniqueWallets: uniqueAddresses,
-        avgSwapSize: avgSize.toFixed(2),
-        topTokens,
-        recentActivity,
-      });
+      } else {
+        setAnalytics({
+          totalVolume: "0",
+          totalSwaps: 0,
+          uniqueWallets: 0,
+          avgSwapSize: "0",
+          topTokens: [],
+          recentActivity: [],
+        });
+      }
     } catch (error) {
       console.error("Failed to load analytics:", error);
+      setAnalytics({
+        totalVolume: "0",
+        totalSwaps: 0,
+        uniqueWallets: 0,
+        avgSwapSize: "0",
+        topTokens: [],
+        recentActivity: [],
+      });
     } finally {
       setLoading(false);
     }
