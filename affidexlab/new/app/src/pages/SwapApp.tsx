@@ -9,6 +9,7 @@ import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/compo
 import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES, COW_SETTLEMENTS, ZEROX_SAFE_TO_ADDRESSES } from "@/lib/constants";
 import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
+import { usePointsTracking } from "@/hooks/usePointsTracking";
 import { mainnet as viemMainnet, arbitrum as viemArbitrum, avalanche as viemAvalanche, base as viemBase, optimism as viemOptimism, polygon as viemPolygon } from "viem/chains";
 import { bestRoute, QuoteResponse } from "@/lib/aggregators";
 import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI, LIQUIDITY_ROUTER_ADDRESSES } from "@/lib/liquidityRouter";
@@ -29,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
   const { emitTransactionComplete } = useTransactionEvents();
+  const { trackSwap } = usePointsTracking();
   const publicClients = {
     [CHAIN_IDS.BASE]: createPublicClient({ chain: viemBase, transport: http("https://mainnet.base.org") }),
     [CHAIN_IDS.ETHEREUM]: createPublicClient({ chain: viemMainnet, transport: http("https://eth.llamarpc.com") }),
@@ -365,11 +367,32 @@ export default function SwapApp() {
           txHash,
           timestamp: Date.now(),
         });
+
+        // Track points for this swap transaction
+        (async () => {
+          try {
+            const amountNum = parseFloat(fromAmount || "0");
+            if (!amountNum) return;
+            const priceUSD = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              ? await getNativePriceUSD(selectedChainId)
+              : await getTokenPriceUSD(selectedChainId, fromToken.address);
+            const amountUSD = amountNum * (priceUSD || 0);
+            await trackSwap(
+              txHash,
+              fromToken.address,
+              toToken.address,
+              amountUSD,
+              selectedChainId
+            );
+          } catch (error) {
+            console.error("Failed to track swap points", error);
+          }
+        })();
       }
       setFromAmount("");
       setQuote(null);
     }
-  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.symbol, toToken.symbol, selectedChainId]);
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.address, toToken.address, fromToken.symbol, toToken.symbol, selectedChainId, emitTransactionComplete, trackSwap]);
 
   const requestCountRef = { current: 0 } as { current: number };
   const lastResetRef = { current: Date.now() } as { current: number };
