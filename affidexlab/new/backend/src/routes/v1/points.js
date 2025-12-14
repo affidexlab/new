@@ -10,10 +10,27 @@ import {
   getUserRewards,
   getTopPerformers,
   recordReward,
-  updateRewardStatus
+  updateRewardStatus,
+  getGlobalMetrics
 } from '../../services/pointsService.js';
 
 const router = express.Router();
+
+router.get('/metrics', async (req, res) => {
+  try {
+    const metrics = await getGlobalMetrics();
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    console.error('Get global metrics error:', error);
+    res.status(500).json({
+      error: 'Failed to get global metrics',
+      message: error.message
+    });
+  }
+});
 
 router.get('/user/:walletAddress', [
   param('walletAddress').isString().isLength({ min: 42, max: 42 })

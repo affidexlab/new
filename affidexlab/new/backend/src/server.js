@@ -150,6 +150,7 @@ app.use('/v1/bridge', authenticatePartner, bridgeRoutes);
 app.use('/v1/webhooks', webhooksRoutes);
 app.use('/v1/points', pointsRoutes);
 app.use('/v1/leaderboard', leaderboardRoutes);
+app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);

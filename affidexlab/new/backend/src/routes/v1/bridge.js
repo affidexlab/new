@@ -1,8 +1,47 @@
 import express from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import { getBridgeQuote, executeBridge, getBridgeStatus } from '../../services/bridgeService.js';
+import fetch from 'node-fetch';
 
 const router = express.Router();
+
+router.get('/socket/quote', async (req, res) => {
+  try {
+    const apiKey = process.env.SOCKET_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({
+        error: 'Bridge service unavailable',
+        message: 'Socket API key not configured'
+      });
+    }
+
+    const url = new URL('https://api.socket.tech/v2/quote');
+    
+    Object.keys(req.query).forEach(key => {
+      url.searchParams.set(key, req.query[key]);
+    });
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'API-KEY': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Socket API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Socket proxy error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch bridge quote',
+      message: error.message
+    });
+  }
+});
 
 router.post('/quote', [
   body('fromChainId').isInt({ min: 1 }),

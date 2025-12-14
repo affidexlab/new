@@ -371,3 +371,22 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
   );
   return result.rows[0];
 };
+
+export const getGlobalMetrics = async () => {
+  const result = await query(
+    `SELECT 
+      COUNT(*) as total_trades,
+      COALESCE(SUM(amount_usd), 0) as total_volume_usd,
+      COUNT(DISTINCT wallet_address) as unique_wallets
+     FROM transactions 
+     WHERE status = 'completed'`
+  );
+  
+  const metrics = result.rows[0];
+  
+  return {
+    totalTrades: parseInt(metrics.total_trades) || 0,
+    totalVolumeUsd: parseFloat(metrics.total_volume_usd) || 0,
+    uniqueWallets: parseInt(metrics.unique_wallets) || 0
+  };
+};
