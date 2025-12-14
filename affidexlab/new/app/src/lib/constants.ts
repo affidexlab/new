@@ -131,7 +131,7 @@ export const SECURITY_SETTINGS = {
 export const ZERO_X_API_BASE = "https://base.api.0x.org";
 export const COW_API_BASE = "https://api.cow.fi/base/api/v1";
 export const SOCKET_API_BASE = "https://api.socket.tech/v2";
-export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "";
+export const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || "https://decaflow-backend.onrender.com";
 
 // Fee configuration
 import { getAddress } from "viem";
