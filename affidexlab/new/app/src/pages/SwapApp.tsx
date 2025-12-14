@@ -220,9 +220,11 @@ export default function SwapApp() {
   const { data: swapHash, sendTransaction } = useSendTransaction();
   const { data: feeHash, sendTransaction: sendFeeTransaction } = useSendTransaction();
   const { data: feeTokenHash, writeContract: sendFeeTokenTransaction } = useWriteContract();
+  const { data: directRouterHash, writeContract: writeDirectRouter } = useWriteContract();
   const { writeContract: writeContractGeneric } = useWriteContract();
   const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
   const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isDirectRouterSwapping, isSuccess: isDirectRouterSwapSuccess } = useWaitForTransactionReceipt({ hash: directRouterHash });
   const { isLoading: isSendingFee, isSuccess: isFeeSuccess } = useWaitForTransactionReceipt({ hash: feeHash });
   const { isLoading: isSendingFeeToken, isSuccess: isFeeTokenSuccess } = useWaitForTransactionReceipt({ hash: feeTokenHash });
   const { signTypedDataAsync } = useSignTypedData();
@@ -238,12 +240,12 @@ export default function SwapApp() {
   }, [isApprovalSuccess, approvalHash, refetchAllowance]);
 
   useEffect(() => {
-    if (isSwapSuccess) {
+    if (isSwapSuccess || isDirectRouterSwapSuccess) {
       refetchFromBalance();
       refetchToBalance();
       setPendingSwapData(null);
     }
-  }, [isSwapSuccess, refetchFromBalance, refetchToBalance]);
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, refetchFromBalance, refetchToBalance]);
 
   // After fee transaction completes, execute the actual swap
   useEffect(() => {
@@ -263,14 +265,14 @@ export default function SwapApp() {
   }, [isConnected, address, selectedChainId, fromToken, toToken, refetchFromBalance, refetchToBalance]);
 
   useEffect(() => {
-    if (isSwapSuccess) {
+    if (isSwapSuccess || isDirectRouterSwapSuccess) {
       toast.success("Swap successful!", {
         description: `Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`,
       });
       setFromAmount("");
       setQuote(null);
     }
-  }, [isSwapSuccess, swapHash, fromAmount, fromToken.symbol, toToken.symbol]);
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.symbol, toToken.symbol]);
 
   const requestCountRef = { current: 0 } as { current: number };
   const lastResetRef = { current: Date.now() } as { current: number };
@@ -398,7 +400,7 @@ export default function SwapApp() {
         const toTokenAddr = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "0x0000000000000000000000000000000000000000" : toToken.address;
 
         if (routerData.provider === "uniswap_v3" && routerData.fee) {
-          await writeContractGeneric({
+          await writeDirectRouter({
             address: liquidityRouterAddress as `0x${string}`,
             abi: LIQUIDITY_ROUTER_ABI,
             functionName: "swapExactInputUniswapV3",
@@ -423,7 +425,7 @@ export default function SwapApp() {
               : route.to,
           }));
 
-          await writeContractGeneric({
+          await writeDirectRouter({
             address: liquidityRouterAddress as `0x${string}`,
             abi: LIQUIDITY_ROUTER_ABI,
             functionName: "swapExactInputAerodrome",
@@ -1078,7 +1080,7 @@ export default function SwapApp() {
               `Approve ${fromToken.symbol}`
             )}
           </Button>
-        ) : (isSwapping || isSendingFee || isSendingFeeToken) ? (
+        ) : (isSwapping || isDirectRouterSwapping || isSendingFee || isSendingFeeToken) ? (
           <Button 
             className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-semibold text-base rounded-xl"
             disabled
