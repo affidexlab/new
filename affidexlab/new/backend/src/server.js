@@ -41,7 +41,7 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const allowedOriginsEnv = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const defaultOrigins = [
   'https://decaflow.xyz',
   'https://www.decaflow.xyz',
@@ -56,12 +56,18 @@ if (!isProduction) {
   defaultOrigins.push('http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080');
 }
 
-const origins = allowedOrigins.length ? allowedOrigins : defaultOrigins;
+// Always include defaultOrigins even when ALLOWED_ORIGINS is set
+const origins = Array.from(new Set([...defaultOrigins, ...allowedOriginsEnv]));
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g., mobile apps, Postman, server-to-server)
     if (!origin) {
+      return callback(null, true);
+    }
+
+    // Allow any decaflow.xyz subdomain
+    if (origin === 'https://decaflow.xyz' || origin === 'https://www.decaflow.xyz' || origin.endsWith('.decaflow.xyz')) {
       return callback(null, true);
     }
     
@@ -76,11 +82,11 @@ app.use(cors({
     }
     
     // Allow all Vercel preview deployments
-    if (origin.match(/https:\/\/.*\.vercel\.app$/)) {
+    if (/^https:\/\/.*\.vercel\.app$/.test(origin)) {
       return callback(null, true);
     }
     
-    console.warn('⚠️ CORS blocked origin:', origin);
+    console.warn('⚠️ CORS blocked origin:', origin, 'Allowed origins:', origins);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
