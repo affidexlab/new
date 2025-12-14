@@ -14,11 +14,13 @@ import { ArrowDownUp, Loader2, Settings, Info, AlertCircle } from "lucide-react"
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { usePointsTracking } from "@/hooks/usePointsTracking";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
 export default function Swap() {
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
   const { trackSwap } = usePointsTracking();
+  const { emitTransactionComplete } = useTransactionEvents();
   
   const [fromChain, setFromChain] = useState<ChainKey>(() => {
     const chainIdToKey: Record<number, ChainKey> = {
@@ -389,6 +391,14 @@ export default function Swap() {
           amountUSD,
           chainId
         );
+
+        // Emit transaction event for real-time updates
+        emitTransactionComplete({
+          type: 'swap',
+          txHash,
+          timestamp: Date.now(),
+          amountUSD
+        });
       } catch (e) {
         // ignore analytics failures
       }

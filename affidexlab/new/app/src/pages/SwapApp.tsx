@@ -16,6 +16,7 @@ import { calculateMinimumOutput } from "@/lib/routerIntegration";
 import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 
 export default function SwapApp() {
   const { address, isConnected, chain } = useAccount();
+  const { emitTransactionComplete } = useTransactionEvents();
   const publicClients = {
     [CHAIN_IDS.BASE]: createPublicClient({ chain: viemBase, transport: http("https://mainnet.base.org") }),
     [CHAIN_IDS.ETHEREUM]: createPublicClient({ chain: viemMainnet, transport: http("https://eth.llamarpc.com") }),
@@ -309,6 +311,13 @@ export default function SwapApp() {
             }
           } catch {}
           return next;
+        });
+
+        // Emit transaction event for real-time updates
+        emitTransactionComplete({
+          type: 'swap',
+          txHash,
+          timestamp: Date.now(),
         });
       }
       setFromAmount("");

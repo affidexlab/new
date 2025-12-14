@@ -4,6 +4,7 @@ import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
 import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
+import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
@@ -41,31 +42,23 @@ export default function App() {
     };
   }, []);
 
-  if (currentPage === "home") {
-    return <Landing />;
-  }
-
-  if (currentPage === "leaderboard") {
-    return <Leaderboard />;
-  }
-
-  if (currentPage === "admin") {
-    return <Admin />;
-  }
-
-  if (currentPage === "privacy") {
-    return (
-      <div className="min-h-screen bg-[#0A0E27] text-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold mb-2">Privacy Swap</h1>
-            <p className="text-gray-400">Trade with complete anonymity using MEV protection</p>
+  return (
+    <TransactionEventsProvider>
+      {currentPage === "home" && <Landing />}
+      {currentPage === "leaderboard" && <Leaderboard />}
+      {currentPage === "admin" && <Admin />}
+      {currentPage === "privacy" && (
+        <div className="min-h-screen bg-[#0A0E27] text-white">
+          <div className="container mx-auto px-4 py-8">
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl font-bold mb-2">Privacy Swap</h1>
+              <p className="text-gray-400">Trade with complete anonymity using MEV protection</p>
+            </div>
+            <PrivacySwap />
           </div>
-          <PrivacySwap />
         </div>
-      </div>
-    );
-  }
-
-  return <AppPage />;
+      )}
+      {currentPage === "app" && <AppPage />}
+    </TransactionEventsProvider>
+  );
 }

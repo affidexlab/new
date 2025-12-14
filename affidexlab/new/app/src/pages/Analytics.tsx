@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { TrendingUp, Activity, Users, Zap, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
 interface AnalyticsData {
   totalVolume: string;
@@ -13,6 +14,7 @@ interface AnalyticsData {
 
 export default function Analytics() {
   const { address, isConnected } = useAccount();
+  const { subscribeToTransactions } = useTransactionEvents();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalVolume: "0",
@@ -23,8 +25,7 @@ export default function Analytics() {
     recentActivity: [],
   });
 
-  useEffect(() => {
-    const loadAnalytics = async () => {
+  const loadAnalytics = async () => {
       setLoading(true);
       try {
         const storedSwaps = localStorage.getItem("decaflow_swaps");
@@ -74,6 +75,13 @@ export default function Analytics() {
     };
 
     loadAnalytics();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTransactions(() => {
+      loadAnalytics();
+    });
+    return unsubscribe;
   }, []);
 
   if (loading) {

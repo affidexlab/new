@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Star, TrendingUp, Award, Gift, ExternalLink, History } from 'lucide-react';
+import { useTransactionEvents } from '@/contexts/TransactionEventsContext';
 
 interface UserPoints {
   wallet_address: string;
@@ -31,6 +32,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.decaflow.xyz'
 
 export default function PointsDashboard() {
   const { address, isConnected } = useAccount();
+  const { subscribeToTransactions } = useTransactionEvents();
   const [userPoints, setUserPoints] = useState<UserPoints | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,17 @@ export default function PointsDashboard() {
       fetchUserPoints();
       fetchTransactions();
     }
+  }, [address, isConnected]);
+
+  useEffect(() => {
+    if (!isConnected || !address) return;
+    const unsubscribe = subscribeToTransactions(() => {
+      setTimeout(() => {
+        fetchUserPoints();
+        fetchTransactions();
+      }, 2000);
+    });
+    return unsubscribe;
   }, [address, isConnected]);
 
   const fetchUserPoints = async () => {

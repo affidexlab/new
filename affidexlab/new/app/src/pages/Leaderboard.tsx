@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, TrendingUp, DollarSign, Activity } from 'lucide-react';
+import { useTransactionEvents } from '@/contexts/TransactionEventsContext';
 
 interface LeaderboardEntry {
   wallet_address: string;
@@ -19,9 +20,17 @@ export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const { subscribeToTransactions } = useTransactionEvents();
 
   useEffect(() => {
     fetchLeaderboard();
+  }, [period]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTransactions(() => {
+      setTimeout(() => fetchLeaderboard(), 2000);
+    });
+    return unsubscribe;
   }, [period]);
 
   const fetchLeaderboard = async () => {

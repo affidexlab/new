@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [enterDappOpen, setEnterDappOpen] = useState(false);
   const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
+  const { subscribeToTransactions } = useTransactionEvents();
 
-  useEffect(() => {
-    const compute = () => {
+  const compute = () => {
       try {
         const key = "decaflow_swaps";
         const data = JSON.parse(localStorage.getItem(key) || "[]");
@@ -22,9 +23,19 @@ export default function Landing() {
         // ignore
       }
     };
+  };
+
+  useEffect(() => {
     compute();
     const id = setInterval(compute, 30000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTransactions(() => {
+      compute();
+    });
+    return unsubscribe;
   }, []);
 
   return (

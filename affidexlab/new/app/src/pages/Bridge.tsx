@@ -13,10 +13,12 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { usePointsTracking } from "@/hooks/usePointsTracking";
 import { getTokenPriceUSD } from "@/lib/prices";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
 export default function Bridge() {
   const { address, isConnected, chain } = useAccount();
   const { trackBridge } = usePointsTracking();
+  const { emitTransactionComplete } = useTransactionEvents();
   const [fromChain, setFromChain] = useState<ChainKey>("BASE");
   const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
   const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]); // USDC
@@ -50,6 +52,14 @@ export default function Bridge() {
           token.address,
           amountUSD
         );
+
+        // Emit transaction event for real-time updates
+        emitTransactionComplete({
+          type: 'bridge',
+          txHash,
+          timestamp: Date.now(),
+          amountUSD
+        });
       } catch (e) {
         logger.error("Bridge tracking error", e);
       }
