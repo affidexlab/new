@@ -43,6 +43,14 @@ export default function Swap() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [useDirectRouter, setUseDirectRouter] = useState(true);
   const [slippage, setSlippage] = useState(0.5);
+  const [recentSwaps, setRecentSwaps] = useState<{
+    hash: string;
+    fromSymbol: string;
+    toSymbol: string;
+    amount: string;
+    chainId: number;
+    timestamp: number;
+  }[]>([]);
 
   const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance, isError: isBalanceError } = useBalance({
     address,
@@ -73,6 +81,47 @@ export default function Swap() {
       : undefined,
   });
 
+  // Load and unify historical swaps from both localStorage keys
+  useEffect(() => {
+    try {
+      // Load from new key (decaflow_recent_swaps_v2)
+      const newSwapsRaw = localStorage.getItem("decaflow_recent_swaps_v2");
+      const newSwaps = newSwapsRaw ? JSON.parse(newSwapsRaw) : [];
+
+      // Load from old key (decaflow_swaps) and transform to new format
+      const oldSwapsRaw = localStorage.getItem("decaflow_swaps");
+      const oldSwaps = oldSwapsRaw ? JSON.parse(oldSwapsRaw) : [];
+      
+      // Transform old format to new format
+      const transformedOldSwaps = oldSwaps.map((swap: any) => ({
+        hash: swap.hash,
+        fromSymbol: swap.fromToken || "Unknown",
+        toSymbol: "Unknown",
+        amount: swap.amount || "0",
+        chainId: swap.chainId || CHAIN_IDS.BASE,
+        timestamp: swap.timestamp || Date.now(),
+      })).filter((s: any) => s.hash);
+
+      // Merge and deduplicate by hash
+      const allSwaps = [...newSwaps, ...transformedOldSwaps];
+      const uniqueSwaps = allSwaps.reduce((acc: any[], swap: any) => {
+        if (!acc.find(s => s.hash === swap.hash)) {
+          acc.push(swap);
+        }
+        return acc;
+      }, []);
+
+      // Sort by timestamp (most recent first) and take top 10
+      const sortedSwaps = uniqueSwaps
+        .sort((a: any, b: any) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+
+      setRecentSwaps(sortedSwaps);
+    } catch (error) {
+      console.error("Failed to load historical swaps:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (isApproveSuccess && approvalHash) {
       refetchAllowance();
@@ -90,9 +139,32 @@ export default function Swap() {
   useEffect(() => {
     if (isSwapSuccess && swapHash) {
       refetchBalance();
-      toast.success("Swap successful!", { description: "Your tokens have been swapped" });
+      const explorers: Record<ChainKey, string> = {
+        ETHEREUM: "https://etherscan.io",
+        ARBITRUM: "https://arbiscan.io",
+        AVALANCHE: "https://snowtrace.io",
+        BASE: "https://basescan.org",
+        OPTIMISM: "https://optimistic.etherscan.io",
+        POLYGON: "https://polygonscan.com",
+      };
+      const explorerUrl = `${explorers[fromChain]}/tx/${swapHash}`;
+      toast.success("Swap successful!", { 
+        description: (
+          <div className="flex flex-col gap-1">
+            <span>Your tokens have been swapped</span>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+            >
+              View on explorer
+            </a>
+          </div>
+        )
+      });
     }
-  }, [isSwapSuccess, swapHash, refetchBalance]);
+  }, [isSwapSuccess, swapHash, refetchBalance, fromChain]);
 
   useEffect(() => {
     if (isSwapError) {
@@ -111,9 +183,32 @@ export default function Swap() {
   useEffect(() => {
     if (isRouterSwapSuccess && routerSwapHash) {
       refetchBalance();
-      toast.success("Swap successful!", { description: "Your tokens have been swapped" });
+      const explorers: Record<ChainKey, string> = {
+        ETHEREUM: "https://etherscan.io",
+        ARBITRUM: "https://arbiscan.io",
+        AVALANCHE: "https://snowtrace.io",
+        BASE: "https://basescan.org",
+        OPTIMISM: "https://optimistic.etherscan.io",
+        POLYGON: "https://polygonscan.com",
+      };
+      const explorerUrl = `${explorers[fromChain]}/tx/${routerSwapHash}`;
+      toast.success("Swap successful!", { 
+        description: (
+          <div className="flex flex-col gap-1">
+            <span>Your tokens have been swapped</span>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+            >
+              View on explorer
+            </a>
+          </div>
+        )
+      });
     }
-  }, [isRouterSwapSuccess, routerSwapHash, refetchBalance]);
+  }, [isRouterSwapSuccess, routerSwapHash, refetchBalance, fromChain]);
 
   useEffect(() => {
     if (isRouterSwapError) {
@@ -399,6 +494,23 @@ export default function Swap() {
           timestamp: Date.now(),
           amountUSD
         });
+
+        // Update recent swaps for UI display
+        const recentEntry = {
+          hash: txHash,
+          fromSymbol: fromToken.symbol,
+          toSymbol: toToken.symbol,
+          amount: amountNum.toString(),
+          chainId,
+          timestamp: Date.now(),
+        };
+        setRecentSwaps(prev => {
+          const next = [recentEntry, ...prev].slice(0, 10);
+          try {
+            localStorage.setItem("decaflow_recent_swaps_v2", JSON.stringify(next.slice(0, 5)));
+          } catch {}
+          return next;
+        });
       } catch (e) {
         // ignore analytics failures
       }
@@ -629,6 +741,44 @@ export default function Swap() {
           {routerSwapHash && (
             <a href={`${explorers[fromChain]}/tx/${routerSwapHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-green-400 hover:bg-green-500/20 transition"><span>Swap transaction</span><span>View →</span></a>
           )}
+        </div>
+      )}
+
+      {/* Recent Swaps Panel */}
+      {recentSwaps.length > 0 && (
+        <div className="mt-4 rounded-xl bg-[#0D1624] border border-[#1E2940] p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-400">Recent swaps</span>
+            <span className="text-[10px] text-gray-500">Last {Math.min(5, recentSwaps.length)}</span>
+          </div>
+          <div className="space-y-2">
+            {recentSwaps.slice(0, 5).map((s, idx) => {
+              const chainKey = Object.keys(CHAIN_IDS).find(
+                key => CHAIN_IDS[key as ChainKey] === s.chainId
+              ) as ChainKey | undefined;
+              const explorerUrl = chainKey 
+                ? `${explorers[chainKey]}/tx/${s.hash}`
+                : `https://basescan.org/tx/${s.hash}`;
+              return (
+                <div key={s.hash + idx} className="flex items-center justify-between text-[11px] text-gray-300">
+                  <div className="flex flex-col">
+                    <span>{s.amount} {s.fromSymbol} → {s.toSymbol}</span>
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-[#47A1FF] hover:underline underline-offset-2"
+                    >
+                      {s.hash.slice(0, 6)}...{s.hash.slice(-4)}
+                    </a>
+                  </div>
+                  <span className="text-[10px] text-gray-500">
+                    {new Date(s.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

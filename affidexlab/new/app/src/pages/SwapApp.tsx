@@ -67,6 +67,52 @@ export default function SwapApp() {
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
+  // Load and unify historical swaps from both localStorage keys
+  useEffect(() => {
+    try {
+      // Load from new key (decaflow_recent_swaps_v2)
+      const newSwapsRaw = localStorage.getItem("decaflow_recent_swaps_v2");
+      const newSwaps = newSwapsRaw ? JSON.parse(newSwapsRaw) : [];
+
+      // Load from old key (decaflow_swaps) and transform to new format
+      const oldSwapsRaw = localStorage.getItem("decaflow_swaps");
+      const oldSwaps = oldSwapsRaw ? JSON.parse(oldSwapsRaw) : [];
+      
+      // Transform old format to new format
+      const transformedOldSwaps = oldSwaps.map((swap: any) => ({
+        hash: swap.hash,
+        fromSymbol: swap.fromToken || "Unknown",
+        toSymbol: "Unknown", // Old format doesn't store toToken symbol
+        amount: swap.amount || "0",
+        chainId: swap.chainId || CHAIN_IDS.BASE,
+        timestamp: swap.timestamp || Date.now(),
+      })).filter((s: any) => s.hash); // Only include swaps with valid hash
+
+      // Merge and deduplicate by hash
+      const allSwaps = [...newSwaps, ...transformedOldSwaps];
+      const uniqueSwaps = allSwaps.reduce((acc: any[], swap: any) => {
+        if (!acc.find(s => s.hash === swap.hash)) {
+          acc.push(swap);
+        }
+        return acc;
+      }, []);
+
+      // Sort by timestamp (most recent first) and take top 10
+      const sortedSwaps = uniqueSwaps
+        .sort((a: any, b: any) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+
+      setRecentSwaps(sortedSwaps);
+
+      // Save unified list back to localStorage
+      if (sortedSwaps.length > 0) {
+        localStorage.setItem("decaflow_recent_swaps_v2", JSON.stringify(sortedSwaps.slice(0, 5)));
+      }
+    } catch (error) {
+      console.error("Failed to load historical swaps:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (isConnected && chain?.id) {
       const supportedChains = Object.values(CHAIN_IDS);
