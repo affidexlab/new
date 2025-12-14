@@ -44,6 +44,7 @@ app.use(helmet({
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const defaultOrigins = [
   'https://decaflow.xyz',
+  'https://www.decaflow.xyz',
   'https://decaflow.vercel.app',
   'https://partners.decaflow.xyz',
   'https://partners-sandbox.decaflow.xyz',
@@ -59,19 +60,32 @@ const origins = allowedOrigins.length ? allowedOrigins : defaultOrigins;
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps, Postman, server-to-server)
     if (!origin) {
-      return isProduction 
-        ? callback(new Error('Origin required')) 
-        : callback(null, true);
-    }
-    
-    if (origins.includes(origin) || origins.some(o => origin.startsWith(o))) {
       return callback(null, true);
     }
     
+    // Check exact match
+    if (origins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Check if origin starts with allowed origin
+    if (origins.some(o => origin.startsWith(o))) {
+      return callback(null, true);
+    }
+    
+    // Allow all Vercel preview deployments
+    if (origin.match(/https:\/\/.*\.vercel\.app$/)) {
+      return callback(null, true);
+    }
+    
+    console.warn('⚠️ CORS blocked origin:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID']
 }));
 
 app.use(express.json());
