@@ -21,7 +21,7 @@ interface Multiplier {
   active: boolean;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.decaflow.xyz';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
 
 export default function Admin() {
   const [weeklyTop, setWeeklyTop] = useState<TopPerformer[]>([]);

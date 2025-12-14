@@ -13,7 +13,7 @@ interface LeaderboardEntry {
 
 type Period = 'all' | 'weekly' | 'monthly';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.decaflow.xyz';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
 
 export default function Leaderboard() {
   const [period, setPeriod] = useState<Period>('weekly');
