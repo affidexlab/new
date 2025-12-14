@@ -54,6 +54,14 @@ export default function SwapApp() {
   const [fromTokenPriceUSD, setFromTokenPriceUSD] = useState<number>(0);
   const [feeAmountWei, setFeeAmountWei] = useState<bigint>(0n);
   const [netAmountWei, setNetAmountWei] = useState<bigint>(0n);
+  const [recentSwaps, setRecentSwaps] = useState<{
+    hash: string;
+    fromSymbol: string;
+    toSymbol: string;
+    amount: string;
+    chainId: number;
+    timestamp: number;
+  }[]>([]);
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
@@ -266,13 +274,47 @@ export default function SwapApp() {
 
   useEffect(() => {
     if (isSwapSuccess || isDirectRouterSwapSuccess) {
+      const txHash = directRouterHash || swapHash;
       toast.success("Swap successful!", {
-        description: `Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`,
+        description: (
+          <div className="flex flex-col gap-1">
+            <span>{`Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`}</span>
+            {txHash && (
+              <a
+                href={getExplorerUrl(txHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+              >
+                View on explorer
+              </a>
+            )}
+          </div>
+        ),
       });
+      if (txHash) {
+        const entry = {
+          hash: txHash,
+          fromSymbol: fromToken.symbol,
+          toSymbol: toToken.symbol,
+          amount: fromAmount,
+          chainId: selectedChainId,
+          timestamp: Date.now(),
+        };
+        setRecentSwaps(prev => {
+          const next = [entry, ...prev].slice(0, 5);
+          try {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("decaflow_recent_swaps_v2", JSON.stringify(next));
+            }
+          } catch {}
+          return next;
+        });
+      }
       setFromAmount("");
       setQuote(null);
     }
-  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.symbol, toToken.symbol]);
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.symbol, toToken.symbol, selectedChainId]);
 
   const requestCountRef = { current: 0 } as { current: number };
   const lastResetRef = { current: Date.now() } as { current: number };
@@ -806,7 +848,7 @@ export default function SwapApp() {
     return slippageAmount.toFixed(6);
   };
 
-  const getExplorerUrl = (hash: string) => {
+  const getExplorerUrlForChain = (chainId: number, hash: string) => {
     const explorers: Record<number, string> = {
       [CHAIN_IDS.ARBITRUM]: "https://arbiscan.io/tx/",
       [CHAIN_IDS.AVALANCHE]: "https://snowtrace.io/tx/",
@@ -814,7 +856,12 @@ export default function SwapApp() {
       [CHAIN_IDS.OPTIMISM]: "https://optimistic.etherscan.io/tx/",
       [CHAIN_IDS.POLYGON]: "https://polygonscan.com/tx/",
     };
-    return explorers[selectedChainId] + hash;
+    const base = explorers[chainId] || explorers[CHAIN_IDS.BASE];
+    return base + hash;
+  };
+
+  const getExplorerUrl = (hash: string) => {
+    return getExplorerUrlForChain(selectedChainId, hash);
   };
 
   return (
@@ -1109,7 +1156,36 @@ export default function SwapApp() {
           </Button>
         )}
 
-        {(approvalHash || feeHash || feeTokenHash || swapHash) && (
+        {recentSwaps.length > 0 && (
+          <div className="mt-4 rounded-xl bg-[#0D1624] border border-[#1E2940] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-400">Recent swaps</span>
+              <span className="text-[10px] text-gray-500">Last {Math.min(5, recentSwaps.length)}</span>
+            </div>
+            <div className="space-y-2">
+              {recentSwaps.slice(0, 5).map((s, idx) => (
+                <div key={s.hash + idx} className="flex items-center justify-between text-[11px] text-gray-300">
+                  <div className="flex flex-col">
+                    <span>{s.amount} {s.fromSymbol} → {s.toSymbol}</span>
+                    <a
+                      href={getExplorerUrlForChain(s.chainId, s.hash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-[#47A1FF] hover:underline underline-offset-2"
+                    >
+                      {s.hash.slice(0, 6)}...{s.hash.slice(-4)}
+                    </a>
+                  </div>
+                  <span className="text-[10px] text-gray-500">
+                    {new Date(s.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+ 
+         {(approvalHash || feeHash || feeTokenHash || swapHash) && (
           <div className="mt-4 space-y-2">
             {approvalHash && (
               <a 
