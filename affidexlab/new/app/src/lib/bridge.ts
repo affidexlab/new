@@ -18,22 +18,25 @@ export type BridgeQuote = {
   data?: any;
 };
 
+const USDC_ADDRESSES: Record<string, string> = {
+  ETHEREUM: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+  POLYGON: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+};
+
+function isUSDCAddress(token: string): boolean {
+  const lower = token.toLowerCase();
+  return Object.values(USDC_ADDRESSES).some(addr => addr.toLowerCase() === lower);
+}
+
 // CCTP: Circle's native USDC bridge
 export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
-  // CCTP only supports USDC
-  const usdcAddresses: Record<string, string> = {
-    ETHEREUM: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    POLYGON: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
-  };
-
-  if (!params.token.toLowerCase().includes("usdc")) {
+  if (!isUSDCAddress(params.token)) {
     throw new Error("CCTP only supports USDC");
   }
 
-  // CCTP contract addresses per chain
   const cctpBridges: Record<string, string> = {
     ETHEREUM: "0xBd3fa81B58Ba92a82136038B25aDec7066af3155",
     ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
@@ -56,7 +59,6 @@ export async function quoteCCTP(params: BridgeParams): Promise<BridgeQuote> {
 
 // CCIP: Chainlink's cross-chain protocol
 export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
-  // CCIP router addresses
   const ccipRouters: Record<string, string> = {
     ETHEREUM: "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D",
     ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
@@ -92,12 +94,12 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
     });
 
     const url = `https://li.quest/v1/quote?${queryParams}`;
-    
+
     logger.info("Li.Fi quote request", { url, params });
 
     const response = await fetch(url, {
       headers: {
-        'Accept': 'application/json',
+        Accept: "application/json",
       },
     });
 
@@ -108,7 +110,7 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
     }
 
     const data = await response.json();
-    
+
     logger.info("Li.Fi quote response", { data });
 
     if (!data.estimate) {
@@ -122,7 +124,7 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
       path: `Li.Fi (${toolNames})`,
       eta: `${Math.ceil(data.estimate.executionDuration / 60)} min`,
       feeEstimate: `$${(Number(data.estimate.gasCosts?.[0]?.amountUSD) || 0).toFixed(2)}`,
-      data: data,
+      data,
     };
   } catch (error) {
     logger.error("Li.Fi quote error", error);
@@ -130,18 +132,9 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
   }
 }
 
-
-
-// Smart routing: Choose best bridge based on token and chains
 export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
   const errors: string[] = [];
 
-  // Priority:
-  // 1. Li.Fi for all tokens (primary bridge aggregator - works with all tokens)
-  // 2. CCTP for USDC (fastest, cheapest)
-  // 3. CCIP for supported tokens as fallback
-
-  // Try Li.Fi FIRST - it supports the most tokens
   try {
     return await quoteLiFi(params);
   } catch (error) {
@@ -150,8 +143,9 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
     logger.warn("Li.Fi failed, trying alternatives", error);
   }
 
-  // Check if it's USDC - try CCTP
-  if (params.token.toLowerCase().includes("usdc")) {
+  const tokenIsUSDC = isUSDCAddress(params.token);
+
+  if (tokenIsUSDC) {
     try {
       return await quoteCCTP(params);
     } catch (error) {
@@ -161,7 +155,6 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
     }
   }
 
-  // Try CCIP as final fallback for major tokens
   const ccipSupportedTokens = ["weth", "link", "usdc", "eth"];
   const tokenSymbol = params.token.toLowerCase();
   if (ccipSupportedTokens.some(t => tokenSymbol.includes(t))) {
@@ -174,17 +167,16 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
     }
   }
 
-  // All providers failed
   logger.error("All bridge providers failed", { errors, params });
-  throw new Error(`Unable to find bridge route. Errors: ${errors.join('; ')}. Please try again later or contact support.`);
+  throw new Error(`Unable to find bridge route. Errors: ${errors.join("; ")}. Please try again later or contact support.`);
 }
 
-// Get all available routes and compare
 export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuote[]> {
   const quotes: BridgeQuote[] = [];
 
-  // Try CCTP if USDC
-  if (params.token.toLowerCase().includes("usdc")) {
+  const tokenIsUSDC = isUSDCAddress(params.token);
+
+  if (tokenIsUSDC) {
     try {
       quotes.push(await quoteCCTP(params));
     } catch (e) {
@@ -192,14 +184,12 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
     }
   }
 
-  // Try Li.Fi (primary aggregator)
   try {
     quotes.push(await quoteLiFi(params));
   } catch (e) {
     console.warn("Li.Fi not available");
   }
 
-  // Try CCIP
   try {
     quotes.push(await quoteCCIP(params));
   } catch (e) {
@@ -213,7 +203,6 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
   return quotes;
 }
 
-// Execute bridge transaction
 export async function executeBridge({
   quote,
   token,
@@ -231,22 +220,20 @@ export async function executeBridge({
   fromAddress: string;
   writeContract: any;
 }): Promise<void> {
-  // Validation
   if (!fromAddress || fromAddress === "0x0000000000000000000000000000000000000000") {
     throw new Error("Invalid from address");
   }
-  
+
   if (fromChain === toChain) {
     throw new Error("Source and destination chains must be different");
   }
-  
+
   const amountNum = parseFloat(amount);
   if (isNaN(amountNum) || amountNum <= 0) {
     throw new Error("Invalid bridge amount");
   }
 
   if (quote.provider === "cctp") {
-    // Execute CCTP bridge
     const cctpBridges: Record<string, string> = {
       ETHEREUM: "0xBd3fa81B58Ba92a82136038B25aDec7066af3155",
       ARBITRUM: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
@@ -263,7 +250,6 @@ export async function executeBridge({
       POLYGON: 7,
     }[toChain];
 
-    // CCTP Token Messenger ABI (complete production ABI)
     const cctpAbi = CCTP_TOKEN_MESSENGER_ABI;
 
     const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
@@ -277,11 +263,10 @@ export async function executeBridge({
         amountWei,
         destinationDomain,
         mintRecipient as `0x${string}`,
-        token.address as `0x${string}`
+        token.address as `0x${string}`,
       ],
     });
   } else if (quote.provider === "ccip") {
-    // Execute CCIP bridge
     const ccipRouters: Record<string, string> = {
       ETHEREUM: "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D",
       ARBITRUM: "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
@@ -298,7 +283,6 @@ export async function executeBridge({
       POLYGON: "4051577828743386545",
     }[toChain];
 
-    // CCIP Router ABI (complete production ABI)
     const ccipAbi = CCIP_ROUTER_ABI;
 
     const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
@@ -312,36 +296,39 @@ export async function executeBridge({
         {
           receiver: fromAddress as `0x${string}`,
           data: "0x" as `0x${string}`,
-          tokenAmounts: [{
-            token: token.address as `0x${string}`,
-            amount: amountWei
-          }],
+          tokenAmounts: [
+            {
+              token: token.address as `0x${string}`,
+              amount: amountWei,
+            },
+          ],
           feeToken: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-          extraArgs: "0x" as `0x${string}`
-        }
+          extraArgs: "0x" as `0x${string}`,
+        },
       ],
     });
   } else if (quote.provider === "lifi") {
-    // Execute Li.Fi bridge
     if (!quote.data?.transactionRequest) {
       throw new Error("Li.Fi route data incomplete");
     }
 
     const txData = quote.data.transactionRequest;
-    
+
     if (!txData.to || !txData.data) {
       throw new Error("Invalid Li.Fi transaction data");
     }
 
     await writeContract({
       address: txData.to as `0x${string}`,
-      abi: [{
-        type: "function",
-        name: "executeRoute",
-        stateMutability: "payable",
-        inputs: [],
-        outputs: []
-      }] as const,
+      abi: [
+        {
+          type: "function",
+          name: "executeRoute",
+          stateMutability: "payable",
+          inputs: [],
+          outputs: [],
+        },
+      ] as const,
       functionName: "executeRoute",
       value: BigInt(txData.value || 0),
     });

@@ -51,6 +51,7 @@ export default function Swap() {
     chainId: number;
     timestamp: number;
   }[]>([]);
+  const [lastNotifiedSwapHash, setLastNotifiedSwapHash] = useState<string | null>(null);
 
   const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance, isError: isBalanceError } = useBalance({
     address,
@@ -137,34 +138,42 @@ export default function Swap() {
   }, [approveError]);
 
   useEffect(() => {
-    if (isSwapSuccess && swapHash) {
-      refetchBalance();
-      const explorers: Record<ChainKey, string> = {
-        ETHEREUM: "https://etherscan.io",
-        ARBITRUM: "https://arbiscan.io",
-        AVALANCHE: "https://snowtrace.io",
-        BASE: "https://basescan.org",
-        OPTIMISM: "https://optimistic.etherscan.io",
-        POLYGON: "https://polygonscan.com",
-      };
-      const explorerUrl = `${explorers[fromChain]}/tx/${swapHash}`;
-      toast.success("Swap successful!", { 
-        description: (
-          <div className="flex flex-col gap-1">
-            <span>Your tokens have been swapped</span>
-            <a
-              href={explorerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
-            >
-              View on explorer
-            </a>
-          </div>
-        )
-      });
+    const txHash = routerSwapHash || swapHash;
+    const isSuccess = isRouterSwapSuccess || isSwapSuccess;
+    if (!isSuccess || !txHash) {
+      return;
     }
-  }, [isSwapSuccess, swapHash, refetchBalance, fromChain]);
+    if (lastNotifiedSwapHash === txHash) {
+      return;
+    }
+
+    setLastNotifiedSwapHash(txHash);
+    refetchBalance();
+    const explorers: Record<ChainKey, string> = {
+      ETHEREUM: "https://etherscan.io",
+      ARBITRUM: "https://arbiscan.io",
+      AVALANCHE: "https://snowtrace.io",
+      BASE: "https://basescan.org",
+      OPTIMISM: "https://optimistic.etherscan.io",
+      POLYGON: "https://polygonscan.com",
+    };
+    const explorerUrl = `${explorers[fromChain]}/tx/${txHash}`;
+    toast.success("Swap successful!", {
+      description: (
+        <div className="flex flex-col gap-1">
+          <span>Your tokens have been swapped</span>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+          >
+            View on explorer
+          </a>
+        </div>
+      ),
+    });
+  }, [isSwapSuccess, isRouterSwapSuccess, swapHash, routerSwapHash, refetchBalance, fromChain, lastNotifiedSwapHash]);
 
   useEffect(() => {
     if (isSwapError) {
@@ -180,35 +189,6 @@ export default function Swap() {
     }
   }, [swapError]);
 
-  useEffect(() => {
-    if (isRouterSwapSuccess && routerSwapHash) {
-      refetchBalance();
-      const explorers: Record<ChainKey, string> = {
-        ETHEREUM: "https://etherscan.io",
-        ARBITRUM: "https://arbiscan.io",
-        AVALANCHE: "https://snowtrace.io",
-        BASE: "https://basescan.org",
-        OPTIMISM: "https://optimistic.etherscan.io",
-        POLYGON: "https://polygonscan.com",
-      };
-      const explorerUrl = `${explorers[fromChain]}/tx/${routerSwapHash}`;
-      toast.success("Swap successful!", { 
-        description: (
-          <div className="flex flex-col gap-1">
-            <span>Your tokens have been swapped</span>
-            <a
-              href={explorerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
-            >
-              View on explorer
-            </a>
-          </div>
-        )
-      });
-    }
-  }, [isRouterSwapSuccess, routerSwapHash, refetchBalance, fromChain]);
 
   useEffect(() => {
     if (isRouterSwapError) {
