@@ -672,7 +672,7 @@ export default function Swap() {
           <Info size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-300">
             <p className="font-medium mb-1">Cross-Chain Swap Detected</p>
-            <p className="text-xs">For cross-chain transfers, use the Bridge tab (CCTP/CCIP/Socket).</p>
+            <p className="text-xs">For cross-chain transfers, use the Bridge tab (CCTP/CCIP/Li.Fi).</p>
           </div>
         </div>
       )}

@@ -23,7 +23,7 @@ export default function Bridge() {
   const [toChain, setToChain] = useState<ChainKey>("ARBITRUM");
   const [token, setToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]); // USDC
   const [amount, setAmount] = useState("");
-  const [selectedRoute, setSelectedRoute] = useState<"auto" | "cctp" | "ccip" | "socket">("auto");
+  const [selectedRoute, setSelectedRoute] = useState<"auto" | "cctp" | "ccip" | "lifi">("auto");
   const [quote, setQuote] = useState<BridgeQuote | null>(null);
   const [allQuotes, setAllQuotes] = useState<BridgeQuote[]>([]);
   const [isQuoting, setIsQuoting] = useState(false);
@@ -236,7 +236,7 @@ export default function Bridge() {
               <TabsTrigger value="auto" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">Auto</TabsTrigger>
               <TabsTrigger value="cctp" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">CCTP</TabsTrigger>
               <TabsTrigger value="ccip" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">CCIP</TabsTrigger>
-              <TabsTrigger value="socket" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">Socket</TabsTrigger>
+              <TabsTrigger value="lifi" className="data-[state=active]:bg-[#47A1FF] data-[state=active]:text-white">Li.Fi</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -349,10 +349,7 @@ export default function Bridge() {
             <span className="text-[#47A1FF] mt-0.5">•</span>
             <span><strong className="text-white">CCIP:</strong> Chainlink's secure cross-chain protocol</span>
           </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[#47A1FF] mt-0.5">•</span>
-            <span><strong className="text-white">Socket:</strong> Fallback aggregator for edge cases</span>
-          </li>
+
         </ul>
       </div>
     </div>
