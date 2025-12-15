@@ -8,6 +8,8 @@ import { useUniswapV3LP, PoolData } from '@/hooks/useUniswapV3LP';
 import { useAccount, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { LP_FEE_MANAGER_ADDRESSES } from '@/lib/uniswapV3Lp';
+import { TokenSelector } from '@/components/TokenSelector';
+import { TOKENS_BY_CHAIN, type Token } from '@/lib/constants';
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -26,22 +28,51 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
   const [token0Approved, setToken0Approved] = useState(false);
   const [token1Approved, setToken1Approved] = useState(false);
   const [checkingApprovals, setCheckingApprovals] = useState(false);
-  
+  const [manualFee, setManualFee] = useState(3000);
+
+  const availableTokens = TOKENS_BY_CHAIN[chainId] || [];
+  const [manualToken0, setManualToken0] = useState<Token | null>(availableTokens[0] || null);
+  const [manualToken1, setManualToken1] = useState<Token | null>(availableTokens[1] || availableTokens[0] || null);
+
+  const token0Meta = selectedPool?.token0 || manualToken0;
+  const token1Meta = selectedPool?.token1 || manualToken1;
+
   const token0Balance = useBalance({
     address,
-    token: selectedPool?.token0.address as `0x${string}`,
+    token: token0Meta?.address as `0x${string}` | undefined,
+    chainId,
+    enabled: !!address && !!token0Meta,
   });
 
   const token1Balance = useBalance({
     address,
-    token: selectedPool?.token1.address as `0x${string}`,
+    token: token1Meta?.address as `0x${string}` | undefined,
+    chainId,
+    enabled: !!address && !!token1Meta,
   });
 
   const lpFeeManagerAddress = LP_FEE_MANAGER_ADDRESSES[chainId];
 
-  // Check allowances when amounts change
+  const resetState = () => {
+    setToken0Amount('');
+    setToken1Amount('');
+    setToken0Approved(false);
+    setToken1Approved(false);
+    setCheckingApprovals(false);
+    setManualFee(3000);
+    setManualToken0(availableTokens[0] || null);
+    setManualToken1(availableTokens[1] || availableTokens[0] || null);
+  };
+
   useEffect(() => {
-    if (!selectedPool || !address || !lpFeeManagerAddress || !token0Amount || !token1Amount) {
+    if (!isOpen) {
+      resetState();
+    }
+  }, [isOpen]);
+
+  // Check allowances when amounts or tokens change
+  useEffect(() => {
+    if (!address || !lpFeeManagerAddress || !token0Amount || !token1Amount || !token0Meta || !token1Meta) {
       setToken0Approved(false);
       setToken1Approved(false);
       return;
@@ -50,12 +81,12 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
     const checkApprovals = async () => {
       setCheckingApprovals(true);
       try {
-        const amount0Wei = parseUnits(token0Amount, selectedPool.token0.decimals);
-        const amount1Wei = parseUnits(token1Amount, selectedPool.token1.decimals);
+        const amount0Wei = parseUnits(token0Amount, token0Meta.decimals);
+        const amount1Wei = parseUnits(token1Amount, token1Meta.decimals);
 
         const [allowance0, allowance1] = await Promise.all([
-          checkAllowance(selectedPool.token0.address, lpFeeManagerAddress),
-          checkAllowance(selectedPool.token1.address, lpFeeManagerAddress)
+          checkAllowance(token0Meta.address, lpFeeManagerAddress),
+          checkAllowance(token1Meta.address, lpFeeManagerAddress),
         ]);
 
         setToken0Approved(allowance0 >= amount0Wei);
@@ -68,60 +99,51 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
     };
 
     checkApprovals();
-  }, [token0Amount, token1Amount, selectedPool, address, lpFeeManagerAddress, checkAllowance]);
+  }, [token0Amount, token1Amount, token0Meta, token1Meta, address, lpFeeManagerAddress, checkAllowance]);
 
   const handleApproveToken0 = async () => {
-    if (!selectedPool || !lpFeeManagerAddress) return;
-    
-    const amount0Wei = parseUnits(token0Amount, selectedPool.token0.decimals);
-    // Approve 10x the amount for future use
+    if (!token0Meta || !lpFeeManagerAddress || !token0Amount) return;
+    const amount0Wei = parseUnits(token0Amount, token0Meta.decimals);
     const approvalAmount = amount0Wei * BigInt(10);
-    
-    const success = await approveToken(selectedPool.token0.address, lpFeeManagerAddress, approvalAmount);
+    const success = await approveToken(token0Meta.address, lpFeeManagerAddress, approvalAmount);
     if (success) {
-      // Wait a bit then recheck
       setTimeout(async () => {
-        const allowance = await checkAllowance(selectedPool.token0.address, lpFeeManagerAddress);
+        const allowance = await checkAllowance(token0Meta.address, lpFeeManagerAddress);
         setToken0Approved(allowance >= amount0Wei);
       }, 3000);
     }
   };
 
   const handleApproveToken1 = async () => {
-    if (!selectedPool || !lpFeeManagerAddress) return;
-    
-    const amount1Wei = parseUnits(token1Amount, selectedPool.token1.decimals);
-    // Approve 10x the amount for future use
+    if (!token1Meta || !lpFeeManagerAddress || !token1Amount) return;
+    const amount1Wei = parseUnits(token1Amount, token1Meta.decimals);
     const approvalAmount = amount1Wei * BigInt(10);
-    
-    const success = await approveToken(selectedPool.token1.address, lpFeeManagerAddress, approvalAmount);
+    const success = await approveToken(token1Meta.address, lpFeeManagerAddress, approvalAmount);
     if (success) {
-      // Wait a bit then recheck
       setTimeout(async () => {
-        const allowance = await checkAllowance(selectedPool.token1.address, lpFeeManagerAddress);
+        const allowance = await checkAllowance(token1Meta.address, lpFeeManagerAddress);
         setToken1Approved(allowance >= amount1Wei);
       }, 3000);
     }
   };
 
   const handleAddLiquidity = async () => {
-    if (!selectedPool || !address) return;
+    if (!address || !token0Meta || !token1Meta) return;
 
     try {
-      const amount0Wei = parseUnits(token0Amount || '0', selectedPool.token0.decimals);
-      const amount1Wei = parseUnits(token1Amount || '0', selectedPool.token1.decimals);
+      const amount0Wei = parseUnits(token0Amount || '0', token0Meta.decimals);
+      const amount1Wei = parseUnits(token1Amount || '0', token1Meta.decimals);
 
       await addLiquidity({
-        poolAddress: selectedPool.address,
-        token0: selectedPool.token0.address,
-        token1: selectedPool.token1.address,
-        fee: selectedPool.fee,
+        poolAddress: selectedPool?.address || '0x0000000000000000000000000000000000000000',
+        token0: token0Meta.address,
+        token1: token1Meta.address,
+        fee: selectedPool?.fee || manualFee,
         amount0: amount0Wei.toString(),
         amount1: amount1Wei.toString(),
       });
 
-      setToken0Amount('');
-      setToken1Amount('');
+      resetState();
       setTimeout(() => onClose(), 2000);
     } catch (error) {
       console.error('Add liquidity failed:', error);
@@ -129,26 +151,25 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
   };
 
   const handleMaxToken0 = () => {
-    if (token0Balance.data) {
-      setToken0Amount(formatUnits(token0Balance.data.value, token0Balance.data.decimals));
+    if (token0Balance.data && token0Meta) {
+      setToken0Amount(formatUnits(token0Balance.data.value, token0Meta.decimals));
     }
   };
 
   const handleMaxToken1 = () => {
-    if (token1Balance.data) {
-      setToken1Amount(formatUnits(token1Balance.data.value, token1Balance.data.decimals));
+    if (token1Balance.data && token1Meta) {
+      setToken1Amount(formatUnits(token1Balance.data.value, token1Meta.decimals));
     }
   };
 
-  if (!selectedPool) return null;
+  const canAddLiquidity = !!token0Meta && !!token1Meta && !!token0Amount && !!token1Amount && token0Approved && token1Approved && !isProcessing;
 
-  const canAddLiquidity = token0Amount && token1Amount && token0Approved && token1Approved && !isProcessing;
-
-  // Calculate fee amounts
   const feeAmount0 = token0Amount ? (parseFloat(token0Amount) * lpFeeRate / 10000).toFixed(6) : '0';
   const feeAmount1 = token1Amount ? (parseFloat(token1Amount) * lpFeeRate / 10000).toFixed(6) : '0';
   const netAmount0 = token0Amount ? (parseFloat(token0Amount) - parseFloat(feeAmount0)).toFixed(6) : '0';
   const netAmount1 = token1Amount ? (parseFloat(token1Amount) - parseFloat(feeAmount1)).toFixed(6) : '0';
+
+  const isManual = !selectedPool;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -156,32 +177,80 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Add Liquidity</DialogTitle>
           <DialogDescription className="text-gray-400">
-            Add liquidity to {selectedPool.token0.symbol}/{selectedPool.token1.symbol} pool
+            {isManual
+              ? 'Select a token pair and amount to provide liquidity to a Uniswap V3 pool.'
+              : `Add liquidity to ${selectedPool?.token0.symbol}/${selectedPool?.token1.symbol} pool`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Pool Info */}
+          {/* Pool / Pair Info */}
           <div className="rounded-xl bg-[#1A1F2E] border border-[#47A1FF]/20 p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="font-semibold">
-                {selectedPool.token0.symbol} / {selectedPool.token1.symbol}
+                {token0Meta && token1Meta
+                  ? `${token0Meta.symbol} / ${token1Meta.symbol}`
+                  : 'Select tokens'}
               </div>
               <div className="text-sm text-[#47A1FF]">
-                Fee: {(selectedPool.fee / 10000).toFixed(2)}%
+                Fee: {( (selectedPool?.fee || manualFee) / 10000).toFixed(2)}%
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <div className="text-gray-400">TVL</div>
-                <div className="font-medium">${parseFloat(selectedPool.tvl).toLocaleString()}</div>
+            {!isManual && selectedPool ? (
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-gray-400">TVL</div>
+                  <div className="font-medium">${parseFloat(selectedPool.tvl).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">APR</div>
+                  <div className="font-medium text-green-400">{selectedPool.apr}%</div>
+                </div>
               </div>
-              <div>
-                <div className="text-gray-400">APR</div>
-                <div className="font-medium text-green-400">{selectedPool.apr}%</div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Mode</span>
+                  <span className="font-medium text-[#47A1FF]">Manual Pool Selection</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Fee Tier</span>
+                  <select
+                    value={manualFee}
+                    onChange={(e) => setManualFee(Number(e.target.value))}
+                    className="bg-[#0D1624] border border-[#1E2940] rounded-lg text-xs px-2 py-1"
+                  >
+                    <option value={100}>0.01%</option>
+                    <option value={500}>0.05%</option>
+                    <option value={3000}>0.30%</option>
+                    <option value={10000}>1.00%</option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
           </div>
+
+          {/* Token selectors in manual mode */}
+          {isManual && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-400">Token 0</Label>
+                <TokenSelector
+                  selectedToken={manualToken0 || availableTokens[0]}
+                  onSelect={setManualToken0}
+                  tokens={availableTokens}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-400">Token 1</Label>
+                <TokenSelector
+                  selectedToken={manualToken1 || availableTokens[1] || availableTokens[0]}
+                  onSelect={setManualToken1}
+                  tokens={availableTokens}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Full Range Toggle */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-[#1A1F2E] border border-[#47A1FF]/10">
@@ -195,16 +264,18 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                 useFullRange ? 'bg-[#47A1FF]' : 'bg-gray-600'
               }`}
             >
-              <div className={`w-5 h-5 rounded-full bg-white transition ${
-                useFullRange ? 'ml-6' : 'ml-1'
-              }`} />
+              <div
+                className={`w-5 h-5 rounded-full bg-white transition ${
+                  useFullRange ? 'ml-6' : 'ml-1'
+                }`}
+              />
             </button>
           </div>
 
           {/* Token 0 Amount */}
           <div className="space-y-2">
             <Label className="text-sm text-gray-400">
-              {selectedPool.token0.symbol} Amount
+              {token0Meta ? `${token0Meta.symbol} Amount` : 'Token 0 Amount'}
             </Label>
             <div className="relative">
               <Input
@@ -221,29 +292,27 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                 MAX
               </button>
             </div>
-            {token0Balance.data && (
+            {token0Balance.data && token0Meta && (
               <div className="text-xs text-gray-400">
-                Balance: {formatUnits(token0Balance.data.value, token0Balance.data.decimals)} {selectedPool.token0.symbol}
+                Balance: {formatUnits(token0Balance.data.value, token0Meta.decimals)} {token0Meta.symbol}
               </div>
             )}
-            {token0Amount && (
+            {token0Amount && token0Meta && (
               <div className="flex items-center justify-between">
                 <Button
                   onClick={handleApproveToken0}
                   disabled={token0Approved || isProcessing || checkingApprovals}
                   size="sm"
-                  variant={token0Approved ? "outline" : "default"}
-                  className={token0Approved ? "border-green-500 text-green-400" : ""}
+                  variant={token0Approved ? 'outline' : 'default'}
+                  className={token0Approved ? 'border-green-500 text-green-400' : ''}
                 >
                   {token0Approved ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 mr-1" />
-                      {selectedPool.token0.symbol} Approved
+                      {token0Meta.symbol} Approved
                     </>
                   ) : (
-                    <>
-                      Approve {selectedPool.token0.symbol}
-                    </>
+                    <>Approve {token0Meta.symbol}</>
                   )}
                 </Button>
               </div>
@@ -253,7 +322,7 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
           {/* Token 1 Amount */}
           <div className="space-y-2">
             <Label className="text-sm text-gray-400">
-              {selectedPool.token1.symbol} Amount
+              {token1Meta ? `${token1Meta.symbol} Amount` : 'Token 1 Amount'}
             </Label>
             <div className="relative">
               <Input
@@ -270,29 +339,27 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                 MAX
               </button>
             </div>
-            {token1Balance.data && (
+            {token1Balance.data && token1Meta && (
               <div className="text-xs text-gray-400">
-                Balance: {formatUnits(token1Balance.data.value, token1Balance.data.decimals)} {selectedPool.token1.symbol}
+                Balance: {formatUnits(token1Balance.data.value, token1Meta.decimals)} {token1Meta.symbol}
               </div>
             )}
-            {token1Amount && (
+            {token1Amount && token1Meta && (
               <div className="flex items-center justify-between">
                 <Button
                   onClick={handleApproveToken1}
                   disabled={token1Approved || isProcessing || checkingApprovals}
                   size="sm"
-                  variant={token1Approved ? "outline" : "default"}
-                  className={token1Approved ? "border-green-500 text-green-400" : ""}
+                  variant={token1Approved ? 'outline' : 'default'}
+                  className={token1Approved ? 'border-green-500 text-green-400' : ''}
                 >
                   {token1Approved ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 mr-1" />
-                      {selectedPool.token1.symbol} Approved
+                      {token1Meta.symbol} Approved
                     </>
                   ) : (
-                    <>
-                      Approve {selectedPool.token1.symbol}
-                    </>
+                    <>Approve {token1Meta.symbol}</>
                   )}
                 </Button>
               </div>
@@ -300,25 +367,25 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
           </div>
 
           {/* Fee Breakdown */}
-          {token0Amount && token1Amount && (
+          {token0Amount && token1Amount && token0Meta && token1Meta && (
             <div className="rounded-xl bg-[#1A1F2E] border border-orange-500/30 p-4">
               <div className="text-sm font-medium mb-3 text-orange-400">Platform Fee (3%)</div>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Fee deducted ({selectedPool.token0.symbol})</span>
+                  <span className="text-gray-400">Fee deducted ({token0Meta.symbol})</span>
                   <span className="font-medium text-orange-300">{feeAmount0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Fee deducted ({selectedPool.token1.symbol})</span>
+                  <span className="text-gray-400">Fee deducted ({token1Meta.symbol})</span>
                   <span className="font-medium text-orange-300">{feeAmount1}</span>
                 </div>
                 <div className="border-t border-orange-500/20 pt-2 mt-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">You will deposit ({selectedPool.token0.symbol})</span>
+                    <span className="text-gray-400">You will deposit ({token0Meta.symbol})</span>
                     <span className="font-medium">{netAmount0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">You will deposit ({selectedPool.token1.symbol})</span>
+                    <span className="text-gray-400">You will deposit ({token1Meta.symbol})</span>
                     <span className="font-medium">{netAmount1}</span>
                   </div>
                 </div>
