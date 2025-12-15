@@ -243,3 +243,98 @@ export function getTickSpacing(fee: number): number {
     default: return 60;
   }
 }
+
+// LPFeeManager ABI for revenue-generating LP operations
+export const LP_FEE_MANAGER_ABI = [
+  {
+    inputs: [
+      { internalType: "address", name: "token0", type: "address" },
+      { internalType: "address", name: "token1", type: "address" },
+      { internalType: "uint24", name: "fee", type: "uint24" },
+      { internalType: "int24", name: "tickLower", type: "int24" },
+      { internalType: "int24", name: "tickUpper", type: "int24" },
+      { internalType: "uint256", name: "amount0Desired", type: "uint256" },
+      { internalType: "uint256", name: "amount1Desired", type: "uint256" },
+      { internalType: "uint256", name: "amount0Min", type: "uint256" },
+      { internalType: "uint256", name: "amount1Min", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" }
+    ],
+    name: "mintWithFee",
+    outputs: [
+      { internalType: "uint256", name: "tokenId", type: "uint256" },
+      { internalType: "uint128", name: "liquidity", type: "uint128" },
+      { internalType: "uint256", name: "amount0", type: "uint256" },
+      { internalType: "uint256", name: "amount1", type: "uint256" }
+    ],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "tokenId", type: "uint256" },
+      { internalType: "uint256", name: "amount0Desired", type: "uint256" },
+      { internalType: "uint256", name: "amount1Desired", type: "uint256" },
+      { internalType: "uint256", name: "amount0Min", type: "uint256" },
+      { internalType: "uint256", name: "amount1Min", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+      { internalType: "address", name: "token0", type: "address" },
+      { internalType: "address", name: "token1", type: "address" }
+    ],
+    name: "increaseLiquidityWithFee",
+    outputs: [
+      { internalType: "uint128", name: "liquidity", type: "uint128" },
+      { internalType: "uint256", name: "amount0", type: "uint256" },
+      { internalType: "uint256", name: "amount1", type: "uint256" }
+    ],
+    stateMutability: "payable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "lpFeeRate",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "treasury",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
+// LPFeeManager contract addresses (charges 3% on LP operations)
+export const LP_FEE_MANAGER_ADDRESSES: Record<number, `0x${string}`> = {
+  1: "0xA2fdf81b7967e7FA7610DeBe1901A40686c48992",      // Ethereum
+  8453: "0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3",   // Base
+  42161: "0x4dfDD027e8fDb8196254E8e368802Dc5add4DCb4",  // Arbitrum
+  10: "0x9543E639A3DF48851d3Baae90754083E8B1A20CC",     // Optimism
+  137: "0x3AbEEDE86067494770a0a6a0BE801fe78502602e",    // Polygon
+  // 43114: "0x...",  // Avalanche - Pending deployment (need more gas funds)
+};
+
+// ERC20 ABI for token approvals
+export const ERC20_ABI = [
+  {
+    inputs: [
+      { internalType: "address", name: "spender", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" }
+    ],
+    name: "approve",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "address", name: "spender", type: "address" }
+    ],
+    name: "allowance",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;

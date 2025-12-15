@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TokenSelector } from '@/components/TokenSelector';
-import { Loader2, Plus, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useUniswapV3LP, PoolData } from '@/hooks/useUniswapV3LP';
 import { useAccount, useBalance } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
+import { LP_FEE_MANAGER_ADDRESSES } from '@/lib/uniswapV3Lp';
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -18,11 +18,14 @@ interface AddLiquidityModalProps {
 
 export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: AddLiquidityModalProps) {
   const { address } = useAccount();
-  const { addLiquidity, isProcessing } = useUniswapV3LP(chainId);
+  const { addLiquidity, checkAllowance, approveToken, isProcessing, lpFeeRate } = useUniswapV3LP(chainId);
   
   const [token0Amount, setToken0Amount] = useState('');
   const [token1Amount, setToken1Amount] = useState('');
   const [useFullRange, setUseFullRange] = useState(true);
+  const [token0Approved, setToken0Approved] = useState(false);
+  const [token1Approved, setToken1Approved] = useState(false);
+  const [checkingApprovals, setCheckingApprovals] = useState(false);
   
   const token0Balance = useBalance({
     address,
@@ -33,6 +36,73 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
     address,
     token: selectedPool?.token1.address as `0x${string}`,
   });
+
+  const lpFeeManagerAddress = LP_FEE_MANAGER_ADDRESSES[chainId];
+
+  // Check allowances when amounts change
+  useEffect(() => {
+    if (!selectedPool || !address || !lpFeeManagerAddress || !token0Amount || !token1Amount) {
+      setToken0Approved(false);
+      setToken1Approved(false);
+      return;
+    }
+
+    const checkApprovals = async () => {
+      setCheckingApprovals(true);
+      try {
+        const amount0Wei = parseUnits(token0Amount, selectedPool.token0.decimals);
+        const amount1Wei = parseUnits(token1Amount, selectedPool.token1.decimals);
+
+        const [allowance0, allowance1] = await Promise.all([
+          checkAllowance(selectedPool.token0.address, lpFeeManagerAddress),
+          checkAllowance(selectedPool.token1.address, lpFeeManagerAddress)
+        ]);
+
+        setToken0Approved(allowance0 >= amount0Wei);
+        setToken1Approved(allowance1 >= amount1Wei);
+      } catch (error) {
+        console.error('Failed to check approvals:', error);
+      } finally {
+        setCheckingApprovals(false);
+      }
+    };
+
+    checkApprovals();
+  }, [token0Amount, token1Amount, selectedPool, address, lpFeeManagerAddress, checkAllowance]);
+
+  const handleApproveToken0 = async () => {
+    if (!selectedPool || !lpFeeManagerAddress) return;
+    
+    const amount0Wei = parseUnits(token0Amount, selectedPool.token0.decimals);
+    // Approve 10x the amount for future use
+    const approvalAmount = amount0Wei * BigInt(10);
+    
+    const success = await approveToken(selectedPool.token0.address, lpFeeManagerAddress, approvalAmount);
+    if (success) {
+      // Wait a bit then recheck
+      setTimeout(async () => {
+        const allowance = await checkAllowance(selectedPool.token0.address, lpFeeManagerAddress);
+        setToken0Approved(allowance >= amount0Wei);
+      }, 3000);
+    }
+  };
+
+  const handleApproveToken1 = async () => {
+    if (!selectedPool || !lpFeeManagerAddress) return;
+    
+    const amount1Wei = parseUnits(token1Amount, selectedPool.token1.decimals);
+    // Approve 10x the amount for future use
+    const approvalAmount = amount1Wei * BigInt(10);
+    
+    const success = await approveToken(selectedPool.token1.address, lpFeeManagerAddress, approvalAmount);
+    if (success) {
+      // Wait a bit then recheck
+      setTimeout(async () => {
+        const allowance = await checkAllowance(selectedPool.token1.address, lpFeeManagerAddress);
+        setToken1Approved(allowance >= amount1Wei);
+      }, 3000);
+    }
+  };
 
   const handleAddLiquidity = async () => {
     if (!selectedPool || !address) return;
@@ -72,9 +142,17 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
 
   if (!selectedPool) return null;
 
+  const canAddLiquidity = token0Amount && token1Amount && token0Approved && token1Approved && !isProcessing;
+
+  // Calculate fee amounts
+  const feeAmount0 = token0Amount ? (parseFloat(token0Amount) * lpFeeRate / 10000).toFixed(6) : '0';
+  const feeAmount1 = token1Amount ? (parseFloat(token1Amount) * lpFeeRate / 10000).toFixed(6) : '0';
+  const netAmount0 = token0Amount ? (parseFloat(token0Amount) - parseFloat(feeAmount0)).toFixed(6) : '0';
+  const netAmount1 = token1Amount ? (parseFloat(token1Amount) - parseFloat(feeAmount1)).toFixed(6) : '0';
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0D1624] border-[#1E2940] text-white max-w-md">
+      <DialogContent className="bg-[#0D1624] border-[#1E2940] text-white max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Add Liquidity</DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -148,6 +226,28 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                 Balance: {formatUnits(token0Balance.data.value, token0Balance.data.decimals)} {selectedPool.token0.symbol}
               </div>
             )}
+            {token0Amount && (
+              <div className="flex items-center justify-between">
+                <Button
+                  onClick={handleApproveToken0}
+                  disabled={token0Approved || isProcessing || checkingApprovals}
+                  size="sm"
+                  variant={token0Approved ? "outline" : "default"}
+                  className={token0Approved ? "border-green-500 text-green-400" : ""}
+                >
+                  {token0Approved ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      {selectedPool.token0.symbol} Approved
+                    </>
+                  ) : (
+                    <>
+                      Approve {selectedPool.token0.symbol}
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Token 1 Amount */}
@@ -175,7 +275,56 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                 Balance: {formatUnits(token1Balance.data.value, token1Balance.data.decimals)} {selectedPool.token1.symbol}
               </div>
             )}
+            {token1Amount && (
+              <div className="flex items-center justify-between">
+                <Button
+                  onClick={handleApproveToken1}
+                  disabled={token1Approved || isProcessing || checkingApprovals}
+                  size="sm"
+                  variant={token1Approved ? "outline" : "default"}
+                  className={token1Approved ? "border-green-500 text-green-400" : ""}
+                >
+                  {token1Approved ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      {selectedPool.token1.symbol} Approved
+                    </>
+                  ) : (
+                    <>
+                      Approve {selectedPool.token1.symbol}
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
+
+          {/* Fee Breakdown */}
+          {token0Amount && token1Amount && (
+            <div className="rounded-xl bg-[#1A1F2E] border border-orange-500/30 p-4">
+              <div className="text-sm font-medium mb-3 text-orange-400">Platform Fee (3%)</div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fee deducted ({selectedPool.token0.symbol})</span>
+                  <span className="font-medium text-orange-300">{feeAmount0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fee deducted ({selectedPool.token1.symbol})</span>
+                  <span className="font-medium text-orange-300">{feeAmount1}</span>
+                </div>
+                <div className="border-t border-orange-500/20 pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">You will deposit ({selectedPool.token0.symbol})</span>
+                    <span className="font-medium">{netAmount0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">You will deposit ({selectedPool.token1.symbol})</span>
+                    <span className="font-medium">{netAmount1}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Warning */}
           {!useFullRange && (
@@ -200,7 +349,7 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
             </Button>
             <Button
               onClick={handleAddLiquidity}
-              disabled={!token0Amount || !token1Amount || isProcessing}
+              disabled={!canAddLiquidity}
               className="flex-1 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90"
             >
               {isProcessing ? (
@@ -208,6 +357,13 @@ export function AddLiquidityModal({ isOpen, onClose, selectedPool, chainId }: Ad
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Processing...
                 </>
+              ) : !token0Amount || !token1Amount ? (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Liquidity
+                </>
+              ) : !token0Approved || !token1Approved ? (
+                'Approve tokens first'
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-2" />
