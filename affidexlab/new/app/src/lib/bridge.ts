@@ -1,4 +1,4 @@
-import { SOCKET_API_BASE, CHAIN_IDS, BACKEND_API_BASE } from "./constants";
+import { CHAIN_IDS } from "./constants";
 import { CCTP_TOKEN_MESSENGER_ABI, CCIP_ROUTER_ABI } from "./bridgeAbis";
 import { logger } from "./logger";
 
@@ -11,7 +11,7 @@ export type BridgeParams = {
 };
 
 export type BridgeQuote = {
-  provider: "cctp" | "ccip" | "socket" | "lifi";
+  provider: "cctp" | "ccip" | "lifi";
   path: string;
   eta: string;
   feeEstimate: string;
@@ -116,88 +116,45 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
   }
 }
 
-// Socket: Aggregator fallback for all routes
-export async function quoteSocket(params: BridgeParams): Promise<BridgeQuote> {
-  // Use backend proxy to protect API key
-  if (!BACKEND_API_BASE) {
-    throw new Error("Bridge service unavailable. Please try again later.");
-  }
 
-  try {
-    const url = `${BACKEND_API_BASE}/api/socket/quote?${new URLSearchParams({
-      fromChainId: CHAIN_IDS[params.fromChain].toString(),
-      toChainId: CHAIN_IDS[params.toChain].toString(),
-      fromTokenAddress: params.token,
-      toTokenAddress: params.token, // Same token on dest
-      fromAmount: params.amount,
-      userAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
-      uniqueRoutesPerBridge: "true",
-      sort: "output",
-    })}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error("Bridge quote failed");
-    }
-
-    const data = await response.json();
-    const bestRoute = data.result?.routes?.[0];
-
-    if (!bestRoute) {
-      throw new Error("No routes found");
-    }
-
-    return {
-      provider: "socket",
-      path: `Socket (${bestRoute.usedBridgeNames?.join(", ") || "Multi-bridge"})`,
-      eta: `${Math.ceil(bestRoute.serviceTime / 60)} min`,
-      feeEstimate: `$${(Number(bestRoute.totalGasFeesInUsd) || 0).toFixed(2)}`,
-      data: bestRoute,
-    };
-  } catch (error) {
-    logger.error("Socket quote error", error);
-    throw error;
-  }
-}
 
 // Smart routing: Choose best bridge based on token and chains
 export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
   // Priority:
   // 1. CCTP for USDC (fastest, cheapest)
-  // 2. Li.Fi for best aggregated rates
-  // 3. CCIP for supported tokens
-  // 4. Socket for everything else
+  // 2. Li.Fi for best aggregated rates (primary bridge aggregator)
+  // 3. CCIP for supported tokens as fallback
 
-  // Check if it's USDC
+  // Check if it's USDC - use CCTP for fastest/cheapest route
   if (params.token.toLowerCase().includes("usdc")) {
     try {
       return await quoteCCTP(params);
     } catch (error) {
-      console.warn("CCTP failed, trying CCIP:", error);
+      logger.warn("CCTP failed, trying Li.Fi", error);
     }
   }
 
-  // Try Li.Fi for best aggregated rates
+  // Try Li.Fi for best aggregated rates (primary option)
   try {
     return await quoteLiFi(params);
   } catch (error) {
     logger.warn("Li.Fi failed, trying CCIP", error);
   }
 
-  // Try CCIP for major tokens
+  // Try CCIP as final fallback for major tokens
   const ccipSupportedTokens = ["weth", "link", "usdc"];
   const tokenSymbol = params.token.toLowerCase();
   if (ccipSupportedTokens.some(t => tokenSymbol.includes(t))) {
     try {
       return await quoteCCIP(params);
     } catch (error) {
-      logger.warn("CCIP failed, falling back to Socket", error);
+      logger.error("CCIP failed", error);
+      throw new Error("Unable to find bridge route. Please try again later.");
     }
   }
 
-  // Fallback to Socket for all other cases
-  return await quoteSocket(params);
+  // If no CCIP support, throw error
+  throw new Error("Unable to find bridge route for this token. Please try USDC or WETH.");
 }
 
 // Get all available routes and compare
@@ -213,7 +170,7 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
     }
   }
 
-  // Try Li.Fi (prioritize for best rates)
+  // Try Li.Fi (primary aggregator)
   try {
     quotes.push(await quoteLiFi(params));
   } catch (e) {
@@ -227,11 +184,8 @@ export async function compareAllRoutes(params: BridgeParams): Promise<BridgeQuot
     console.warn("CCIP not available");
   }
 
-  // Always include Socket
-  try {
-    quotes.push(await quoteSocket(params));
-  } catch (e) {
-    logger.error("Socket failed", e);
+  if (quotes.length === 0) {
+    throw new Error("No bridge routes available. Please try again later.");
   }
 
   return quotes;
@@ -357,35 +311,6 @@ export async function executeBridge({
       throw new Error("Invalid Li.Fi transaction data");
     }
 
-    await writeContract({
-      address: txData.to as `0x${string}`,
-      abi: [{
-        type: "function",
-        name: "executeRoute",
-        stateMutability: "payable",
-        inputs: [],
-        outputs: []
-      }] as const,
-      functionName: "executeRoute",
-      value: BigInt(txData.value || 0),
-    });
-  } else if (quote.provider === "socket") {
-    // Execute Socket bridge using their API route data
-    if (!quote.data?.txData) {
-      throw new Error("Bridge route data incomplete");
-    }
-
-    // Socket provides ready-to-use transaction data
-    const txData = quote.data.txData;
-    
-    // Socket returns complete transaction object - send as raw transaction
-    // Note: Socket API provides the complete calldata and target contract
-    if (!txData.to || !txData.data) {
-      throw new Error("Invalid Socket transaction data");
-    }
-
-    // For Socket, we need to send the transaction using their prepared data
-    // The data already includes the correct function signature and parameters
     await writeContract({
       address: txData.to as `0x${string}`,
       abi: [{

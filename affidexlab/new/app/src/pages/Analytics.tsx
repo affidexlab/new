@@ -260,10 +260,9 @@ export default function Analytics() {
           <h2 className="text-xl font-bold mb-4">Bridge Providers</h2>
           <div className="space-y-3">
             {[
-              { name: "Li.Fi", usage: "42%", color: "text-purple-400" },
+              { name: "Li.Fi", usage: "58%", color: "text-purple-400" },
               { name: "CCTP", usage: "28%", color: "text-blue-400" },
-              { name: "CCIP", usage: "18%", color: "text-green-400" },
-              { name: "Socket", usage: "12%", color: "text-orange-400" },
+              { name: "CCIP", usage: "14%", color: "text-green-400" },
             ].map(provider => (
               <div key={provider.name} className="flex items-center justify-between p-3 rounded-xl bg-[#0F1419] border border-white/5">
                 <span className="font-medium">{provider.name}</span>
