@@ -80,22 +80,36 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
 // Li.Fi: Multi-bridge aggregator (preferred for best rates)
 export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
   try {
-    const url = `https://li.quest/v1/quote?${new URLSearchParams({
+    const queryParams = new URLSearchParams({
       fromChain: CHAIN_IDS[params.fromChain].toString(),
       toChain: CHAIN_IDS[params.toChain].toString(),
       fromToken: params.token,
       toToken: params.token,
       fromAmount: params.amount,
       fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
-    })}`;
+      slippage: "0.03",
+      allowSwitchChain: "false",
+    });
 
-    const response = await fetch(url);
+    const url = `https://li.quest/v1/quote?${queryParams}`;
+    
+    logger.info("Li.Fi quote request", { url, params });
+
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
     if (!response.ok) {
-      throw new Error("Li.Fi quote failed");
+      const errorText = await response.text();
+      logger.error("Li.Fi API error", { status: response.status, error: errorText });
+      throw new Error(`Li.Fi quote failed: ${response.status}`);
     }
 
     const data = await response.json();
+    
+    logger.info("Li.Fi quote response", { data });
 
     if (!data.estimate) {
       throw new Error("No Li.Fi route found");
@@ -120,41 +134,49 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
 
 // Smart routing: Choose best bridge based on token and chains
 export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
+  const errors: string[] = [];
+
   // Priority:
-  // 1. CCTP for USDC (fastest, cheapest)
-  // 2. Li.Fi for best aggregated rates (primary bridge aggregator)
+  // 1. Li.Fi for all tokens (primary bridge aggregator - works with all tokens)
+  // 2. CCTP for USDC (fastest, cheapest)
   // 3. CCIP for supported tokens as fallback
 
-  // Check if it's USDC - use CCTP for fastest/cheapest route
+  // Try Li.Fi FIRST - it supports the most tokens
+  try {
+    return await quoteLiFi(params);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    errors.push(`Li.Fi: ${errorMsg}`);
+    logger.warn("Li.Fi failed, trying alternatives", error);
+  }
+
+  // Check if it's USDC - try CCTP
   if (params.token.toLowerCase().includes("usdc")) {
     try {
       return await quoteCCTP(params);
     } catch (error) {
-      logger.warn("CCTP failed, trying Li.Fi", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      errors.push(`CCTP: ${errorMsg}`);
+      logger.warn("CCTP failed, trying CCIP", error);
     }
   }
 
-  // Try Li.Fi for best aggregated rates (primary option)
-  try {
-    return await quoteLiFi(params);
-  } catch (error) {
-    logger.warn("Li.Fi failed, trying CCIP", error);
-  }
-
   // Try CCIP as final fallback for major tokens
-  const ccipSupportedTokens = ["weth", "link", "usdc"];
+  const ccipSupportedTokens = ["weth", "link", "usdc", "eth"];
   const tokenSymbol = params.token.toLowerCase();
   if (ccipSupportedTokens.some(t => tokenSymbol.includes(t))) {
     try {
       return await quoteCCIP(params);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      errors.push(`CCIP: ${errorMsg}`);
       logger.error("CCIP failed", error);
-      throw new Error("Unable to find bridge route. Please try again later.");
     }
   }
 
-  // If no CCIP support, throw error
-  throw new Error("Unable to find bridge route for this token. Please try USDC or WETH.");
+  // All providers failed
+  logger.error("All bridge providers failed", { errors, params });
+  throw new Error(`Unable to find bridge route. Errors: ${errors.join('; ')}. Please try again later or contact support.`);
 }
 
 // Get all available routes and compare
