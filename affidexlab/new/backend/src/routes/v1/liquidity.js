@@ -2,8 +2,10 @@ import express from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { 
   getLiquidityPools, 
-  addLiquidity, 
-  removeLiquidity, 
+  addLiquidity,
+  increaseLiquidity, 
+  removeLiquidity,
+  collectFees, 
   getUserPositions 
 } from '../../services/liquidityService.js';
 
@@ -42,9 +44,11 @@ router.get('/pools', [
 });
 
 router.post('/add', [
-  body('poolId').isString().notEmpty(),
+  body('poolAddress').isString().isLength({ min: 42, max: 42 }),
   body('token0Amount').isString().notEmpty(),
   body('token1Amount').isString().notEmpty(),
+  body('tickLower').isInt(),
+  body('tickUpper').isInt(),
   body('chainId').isInt({ min: 1 }),
   body('walletAddress').isString().isLength({ min: 42, max: 42 }),
   body('deadline').optional().isInt(),
@@ -78,12 +82,49 @@ router.post('/add', [
   }
 });
 
+router.post('/increase', [
+  body('tokenId').isString().notEmpty(),
+  body('token0Amount').isString().notEmpty(),
+  body('token1Amount').isString().notEmpty(),
+  body('chainId').isInt({ min: 1 }),
+  body('deadline').optional().isInt(),
+  body('slippage').optional().isFloat({ min: 0, max: 50 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: errors.array()
+    });
+  }
+
+  try {
+    const result = await increaseLiquidity(req.body, req.partner);
+    
+    res.json({
+      success: true,
+      data: result,
+      meta: {
+        partnerId: req.partner?.id,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Increase liquidity error:', error);
+    res.status(500).json({
+      error: 'Failed to increase liquidity',
+      message: error.message
+    });
+  }
+});
+
 router.post('/remove', [
-  body('positionId').isString().notEmpty(),
+  body('tokenId').isString().notEmpty(),
   body('liquidity').isString().notEmpty(),
   body('chainId').isInt({ min: 1 }),
   body('walletAddress').isString().isLength({ min: 42, max: 42 }),
-  body('deadline').optional().isInt()
+  body('deadline').optional().isInt(),
+  body('slippage').optional().isFloat({ min: 0, max: 50 })
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -141,6 +182,39 @@ router.get('/positions', [
     console.error('Get positions error:', error);
     res.status(500).json({
       error: 'Failed to get user positions',
+      message: error.message
+    });
+  }
+});
+
+router.post('/collect', [
+  body('tokenId').isString().notEmpty(),
+  body('chainId').isInt({ min: 1 }),
+  body('walletAddress').isString().isLength({ min: 42, max: 42 })
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      details: errors.array()
+    });
+  }
+
+  try {
+    const result = await collectFees(req.body, req.partner);
+    
+    res.json({
+      success: true,
+      data: result,
+      meta: {
+        partnerId: req.partner?.id,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Collect fees error:', error);
+    res.status(500).json({
+      error: 'Failed to collect fees',
       message: error.message
     });
   }
