@@ -232,15 +232,17 @@ export function useUniswapV3LP(chainId: number) {
     tokenId: string;
     amount0: string;
     amount1: string;
+    token0Address: string;
+    token1Address: string;
   }) => {
     if (!address) {
       toast.error('Wallet not connected');
       return;
     }
 
-    const nftManagerAddress = NONFUNGIBLE_POSITION_MANAGER_ADDRESSES[chainId];
-    if (!nftManagerAddress) {
-      toast.error('Uniswap V3 not available on this chain');
+    const lpFeeManagerAddress = LP_FEE_MANAGER_ADDRESSES[chainId];
+    if (!lpFeeManagerAddress) {
+      toast.error('LP Fee Manager not deployed on this chain yet');
       return;
     }
 
@@ -251,21 +253,23 @@ export function useUniswapV3LP(chainId: number) {
       const amount1Min = (BigInt(params.amount1) * BigInt(95)) / BigInt(100);
 
       await writeContract({
-        address: nftManagerAddress,
-        abi: NONFUNGIBLE_POSITION_MANAGER_ABI,
-        functionName: 'increaseLiquidity',
-        args: [{
-          tokenId: BigInt(params.tokenId),
-          amount0Desired: BigInt(params.amount0),
-          amount1Desired: BigInt(params.amount1),
+        address: lpFeeManagerAddress,
+        abi: LP_FEE_MANAGER_ABI,
+        functionName: 'increaseLiquidityWithFee',
+        args: [
+          BigInt(params.tokenId),
+          BigInt(params.amount0),
+          BigInt(params.amount1),
           amount0Min,
           amount1Min,
-          deadline: BigInt(deadline)
-        }]
+          BigInt(deadline),
+          params.token0Address as `0x${string}`,
+          params.token1Address as `0x${string}`
+        ]
       });
 
       toast.success('Increasing liquidity...', {
-        description: 'Transaction submitted to blockchain'
+        description: 'Transaction submitted. 3% fee will be deducted.'
       });
     } catch (error) {
       logger.error('Increase liquidity error', error);

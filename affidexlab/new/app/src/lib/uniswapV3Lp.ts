@@ -306,14 +306,13 @@ export const LP_FEE_MANAGER_ABI = [
 ] as const;
 
 // LPFeeManager contract addresses (charges 3% on LP operations)
-// DEPLOY THESE FIRST before using in production!
 export const LP_FEE_MANAGER_ADDRESSES: Record<number, `0x${string}`> = {
-  // 1: "0x...",      // Ethereum - DEPLOY FIRST
-  // 8453: "0x...",   // Base - DEPLOY FIRST
-  // 42161: "0x...",  // Arbitrum - DEPLOY FIRST
-  // 10: "0x...",     // Optimism - DEPLOY FIRST
-  // 137: "0x...",    // Polygon - DEPLOY FIRST
-  // 43114: "0x...",  // Avalanche - DEPLOY FIRST
+  1: "0xA2fdf81b7967e7FA7610DeBe1901A40686c48992",      // Ethereum
+  8453: "0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3",   // Base
+  42161: "0x4dfDD027e8fDb8196254E8e368802Dc5add4DCb4",  // Arbitrum
+  10: "0x9543E639A3DF48851d3Baae90754083E8B1A20CC",     // Optimism
+  137: "0x3AbEEDE86067494770a0a6a0BE801fe78502602e",    // Polygon
+  // 43114: "0x...",  // Avalanche - Pending deployment (need more gas funds)
 };
 
 // ERC20 ABI for token approvals

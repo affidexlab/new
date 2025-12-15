@@ -1,7 +1,10 @@
 require('@nomicfoundation/hardhat-toolbox');
+require('dotenv').config();
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || '';
 const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY || '';
+
+console.log('Config loaded - Private key present:', !!DEPLOYER_PRIVATE_KEY);
 
 module.exports = {
   solidity: {
@@ -44,9 +47,10 @@ module.exports = {
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
     base: {
-      url: 'https://mainnet.base.org',
+      url: process.env.BASE_RPC_URL || 'https://base.drpc.org',
       chainId: 8453,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+      timeout: 120000,
     },
     optimism: {
       url: 'https://mainnet.optimism.io',
