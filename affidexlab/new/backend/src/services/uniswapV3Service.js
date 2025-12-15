@@ -122,7 +122,7 @@ export async function getTopPools(chainId, limit = 20) {
         first: $limit
         orderBy: totalValueLockedUSD
         orderDirection: desc
-        where: { totalValueLockedUSD_gt: "1000" }
+        where: { totalValueLockedUSD_gt: "100" }
       ) {
         id
         token0 {
