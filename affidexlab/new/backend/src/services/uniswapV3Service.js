@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 const UNISWAP_V3_SUBGRAPH_URLS = {
   1: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
-  8453: 'https://api.studio.thegraph.com/query/48211/uniswap-v3-base/version/latest',
+  8453: 'https://gateway.thegraph.com/api/subgraphs/id/HMuAwufqZ1YCRmzL2SfHTVkzZovC9VL2UAKhjvRqKiR1',
   42161: 'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-arbitrum-one',
   10: 'https://api.thegraph.com/subgraphs/name/ianlapham/optimism-post-regenesis',
   137: 'https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-polygon',
