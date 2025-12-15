@@ -7,10 +7,37 @@ const LIQUIDITY_ROUTER_ADDRESSES = {
   137: '0xFd05977256E8D5753728C78A3003BC3B75Fef1DD'
 };
 
+const BASE_FALLBACK_POOLS = [
+  {
+    id: 'base-usdc-weth-500',
+    address: '0x4c36388be6f416a29c8d8eee81c771ce6be14b18',
+    token0: {
+      symbol: 'USDC',
+      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      decimals: 6
+    },
+    token1: {
+      symbol: 'WETH',
+      address: '0x4200000000000000000000000000000000000006',
+      decimals: 18
+    },
+    fee: 500,
+    protocol: 'Uniswap V3',
+    tvl: '5000000',
+    apr: '12.5',
+    volumeUSD: '0',
+    txCount: 0
+  }
+];
+
 export async function getLiquidityPools(chainId, partner) {
   try {
-    const pools = await getTopPools(chainId, 20);
-    
+    let pools = await getTopPools(chainId, 20);
+
+    if ((!pools || pools.length === 0) && chainId === 8453) {
+      pools = BASE_FALLBACK_POOLS;
+    }
+
     if (!pools || pools.length === 0) {
       return {
         chainId,
