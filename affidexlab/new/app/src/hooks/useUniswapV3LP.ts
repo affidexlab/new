@@ -15,6 +15,11 @@ import { readContract } from 'wagmi/actions';
 import { config } from '@/wagmi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+const PARTNER_ID = import.meta.env.VITE_PARTNER_ID || 'tychi_prod_pk_live_8x9y2z3a4b5c6d7e';
+const defaultHeaders: HeadersInit = {
+  'Content-Type': 'application/json',
+  'X-Partner-ID': PARTNER_ID
+};
 
 // 3% LP fee (300 basis points)
 const LP_FEE_BPS = 300;
@@ -82,15 +87,23 @@ export function useUniswapV3LP(chainId: number) {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/v1/liquidity/pools?chainId=${chainId}`);
+      const response = await fetch(`${API_BASE}/v1/liquidity/pools?chainId=${chainId}`, {
+        headers: defaultHeaders
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
       const data = await response.json();
       
       if (data.success && data.data?.pools) {
         setPools(data.data.pools);
+      } else {
+        setPools([]);
       }
     } catch (error) {
       logger.error('Failed to fetch pools', error);
       toast.error('Failed to load pools');
+      setPools([]);
     } finally {
       setLoading(false);
     }
@@ -101,14 +114,22 @@ export function useUniswapV3LP(chainId: number) {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/v1/liquidity/positions?wallet=${address}&chainId=${chainId}`);
+      const response = await fetch(`${API_BASE}/v1/liquidity/positions?wallet=${address}&chainId=${chainId}`, {
+        headers: defaultHeaders
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
       const data = await response.json();
       
       if (data.success && data.data?.positions) {
         setPositions(data.data.positions);
+      } else {
+        setPositions([]);
       }
     } catch (error) {
       logger.error('Failed to fetch positions', error);
+      setPositions([]);
     } finally {
       setLoading(false);
     }
