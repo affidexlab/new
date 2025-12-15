@@ -10,7 +10,7 @@ const POSITION_MANAGERS = {
 };
 
 const TREASURY_WALLET = process.env.TREASURY_WALLET || "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901";
-const LP_FEE_RATE = 30;
+const LP_FEE_RATE = 300; // 3% fee (300 basis points)
 
 async function main() {
   const network = hre.network.name;

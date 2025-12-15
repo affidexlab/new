@@ -1,10 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { NONFUNGIBLE_POSITION_MANAGER_ABI, NONFUNGIBLE_POSITION_MANAGER_ADDRESSES, nearestUsableTick, getTickSpacing } from '@/lib/uniswapV3Lp';
+import { 
+  NONFUNGIBLE_POSITION_MANAGER_ABI, 
+  NONFUNGIBLE_POSITION_MANAGER_ADDRESSES, 
+  LP_FEE_MANAGER_ABI,
+  LP_FEE_MANAGER_ADDRESSES,
+  ERC20_ABI,
+  nearestUsableTick, 
+  getTickSpacing 
+} from '@/lib/uniswapV3Lp';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { readContract } from 'wagmi/actions';
+import { config } from '@/wagmi';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+
+// 3% LP fee (300 basis points)
+const LP_FEE_BPS = 300;
 
 export interface LPPosition {
   tokenId: string;
@@ -126,9 +139,12 @@ export function useUniswapV3LP(chainId: number) {
       return;
     }
 
-    const nftManagerAddress = NONFUNGIBLE_POSITION_MANAGER_ADDRESSES[chainId];
-    if (!nftManagerAddress) {
-      toast.error('Uniswap V3 not available on this chain');
+    // Check if LPFeeManager is deployed for this chain
+    const lpFeeManagerAddress = LP_FEE_MANAGER_ADDRESSES[chainId];
+    if (!lpFeeManagerAddress) {
+      toast.error('LP Fee Manager not deployed on this chain yet', {
+        description: 'Please contact support'
+      });
       return;
     }
 
@@ -139,36 +155,76 @@ export function useUniswapV3LP(chainId: number) {
 
       const deadline = Math.floor(Date.now() / 1000) + 1200;
 
+      // Calculate amounts with 5% slippage
       const amount0Min = (BigInt(params.amount0) * BigInt(95)) / BigInt(100);
       const amount1Min = (BigInt(params.amount1) * BigInt(95)) / BigInt(100);
 
+      // Call LPFeeManager which will charge 3% fee
       await writeContract({
-        address: nftManagerAddress,
-        abi: NONFUNGIBLE_POSITION_MANAGER_ABI,
-        functionName: 'mint',
-        args: [{
-          token0: params.token0 as `0x${string}`,
-          token1: params.token1 as `0x${string}`,
-          fee: params.fee,
+        address: lpFeeManagerAddress,
+        abi: LP_FEE_MANAGER_ABI,
+        functionName: 'mintWithFee',
+        args: [
+          params.token0 as `0x${string}`,
+          params.token1 as `0x${string}`,
+          params.fee,
           tickLower,
           tickUpper,
-          amount0Desired: BigInt(params.amount0),
-          amount1Desired: BigInt(params.amount1),
+          BigInt(params.amount0),
+          BigInt(params.amount1),
           amount0Min,
           amount1Min,
-          recipient: address as `0x${string}`,
-          deadline: BigInt(deadline)
-        }]
+          BigInt(deadline)
+        ]
       });
 
       toast.success('Adding liquidity...', {
-        description: 'Transaction submitted to blockchain'
+        description: 'Transaction submitted. 3% fee will be deducted.'
       });
     } catch (error) {
       logger.error('Add liquidity error', error);
       toast.error('Failed to add liquidity', {
         description: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  };
+
+  // Check token allowance
+  const checkAllowance = async (tokenAddress: string, spender: string): Promise<bigint> => {
+    try {
+      const allowance = await readContract(config, {
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [address as `0x${string}`, spender as `0x${string}`]
+      });
+      return allowance as bigint;
+    } catch (error) {
+      logger.error('Check allowance error', error);
+      return BigInt(0);
+    }
+  };
+
+  // Approve token
+  const approveToken = async (tokenAddress: string, spender: string, amount: bigint): Promise<boolean> => {
+    try {
+      await writeContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spender as `0x${string}`, amount]
+      });
+      
+      toast.success('Approval requested', {
+        description: 'Please confirm the transaction'
+      });
+      return true;
+    } catch (error) {
+      logger.error('Approve token error', error);
+      toast.error('Failed to approve token', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return false;
     }
   };
 
@@ -346,9 +402,12 @@ export function useUniswapV3LP(chainId: number) {
     removeLiquidity,
     collectFees,
     burnPosition,
+    checkAllowance,
+    approveToken,
     isProcessing: isPending || isConfirming,
     txHash,
     refetchPositions: fetchPositions,
-    refetchPools: fetchPools
+    refetchPools: fetchPools,
+    lpFeeRate: LP_FEE_BPS
   };
 }

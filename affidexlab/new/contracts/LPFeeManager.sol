@@ -63,7 +63,7 @@ contract LPFeeManager is ReentrancyGuard, Ownable {
     ) Ownable(msg.sender) {
         require(_positionManager != address(0), "Invalid position manager");
         require(_treasury != address(0), "Invalid treasury");
-        require(_lpFeeRate <= 1000, "Fee rate too high");
+        require(_lpFeeRate <= 1000, "Fee rate too high (max 10%)");
 
         positionManager = _positionManager;
         treasury = _treasury;
@@ -199,7 +199,7 @@ contract LPFeeManager is ReentrancyGuard, Ownable {
     }
 
     function updateLPFeeRate(uint256 _newFeeRate) external onlyOwner {
-        require(_newFeeRate <= 1000, "Fee rate too high");
+        require(_newFeeRate <= 1000, "Fee rate too high (max 10%)");
         lpFeeRate = _newFeeRate;
         emit LPFeeRateUpdated(_newFeeRate);
     }
