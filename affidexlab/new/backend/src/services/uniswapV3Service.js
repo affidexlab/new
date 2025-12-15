@@ -18,11 +18,18 @@ const NONFUNGIBLE_POSITION_MANAGER_ADDRESSES = {
   43114: '0x655C406EBFa14EE2006250925e54ec43AD184f8B'
 };
 
+const GRAPH_API_KEY = process.env.THEGRAPH_API_KEY || process.env.GRAPH_API_KEY || '';
+
 async function fetchSubgraph(subgraphUrl, body, context = {}) {
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (GRAPH_API_KEY) {
+      headers['Authorization'] = `Bearer ${GRAPH_API_KEY}`;
+    }
+
     const response = await fetch(subgraphUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body)
     });
 
