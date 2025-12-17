@@ -66,6 +66,10 @@ export default function Landing() {
               <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
               <a href="#CardCCIP" className="text-gray-400 hover:text-[#47A1FF] transition">CCIP</a>
               <a href="#CardCCTP" className="text-gray-400 hover:text-[#47A1FF] transition">CCTP</a>
+              <a href="/staking" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
+                <span>VDM Staking</span>
+                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <div className="relative">
                 <Button 
@@ -78,6 +82,12 @@ export default function Landing() {
                   <div className="absolute top-full right-0 mt-2 w-48 bg-[#1A1F2E] border border-[#47A1FF]/20 rounded-lg shadow-xl overflow-hidden z-50">
                     <a href="/app" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Enter Dapp</a>
                     <a href="/app/privacy" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Privacy Swap</a>
+                    <a href="/staking" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition border-t border-[#FF6B35]/30">
+                      <span className="flex items-center gap-2">
+                        <span>VDM Staking</span>
+                        <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+                      </span>
+                    </a>
                   </div>
                 )}
               </div>
@@ -100,6 +110,10 @@ export default function Landing() {
               <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
               <a href="#CardCCIP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCIP</a>
               <a href="#CardCCTP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCTP</a>
+              <a href="/staking" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
+                <span>VDM Staking</span>
+                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <div className="space-y-2">
                 <Button 
