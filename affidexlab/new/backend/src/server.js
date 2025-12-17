@@ -12,6 +12,7 @@ import bridgeRoutes from './routes/v1/bridge.js';
 import webhooksRoutes from './routes/v1/webhooks.js';
 import pointsRoutes from './routes/v1/points.js';
 import leaderboardRoutes from './routes/v1/leaderboard.js';
+import solanaStakingRoutes from './routes/v1/solana-staking.js';
 
 dotenv.config();
 
@@ -150,6 +151,7 @@ app.use('/v1/bridge', authenticatePartner, bridgeRoutes);
 app.use('/v1/webhooks', webhooksRoutes);
 app.use('/v1/points', pointsRoutes);
 app.use('/v1/leaderboard', leaderboardRoutes);
+app.use('/v1/solana-staking', solanaStakingRoutes);
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {

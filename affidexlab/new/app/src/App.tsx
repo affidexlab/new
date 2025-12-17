@@ -4,12 +4,16 @@ import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
 import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
+import SolanaStaking from "./pages/SolanaStaking";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/staking") || hash === "#staking") {
+    return "staking";
+  }
   if (path.startsWith("/leaderboard") || hash === "#leaderboard") {
     return "leaderboard";
   }
@@ -45,6 +49,7 @@ export default function App() {
   return (
     <TransactionEventsProvider>
       {currentPage === "home" && <Landing />}
+      {currentPage === "staking" && <SolanaStaking />}
       {currentPage === "leaderboard" && <Leaderboard />}
       {currentPage === "admin" && <Admin />}
       {currentPage === "privacy" && (
