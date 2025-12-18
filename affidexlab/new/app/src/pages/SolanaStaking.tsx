@@ -218,12 +218,16 @@ export default function SolanaStaking() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#F7931E] flex items-center justify-center text-2xl font-bold text-white">
-                V
-              </div>
-              <div>
+              <a href="/" className="block" style={{ maxWidth: '140px' }}>
+                <img
+                  src="/images/branding/wordmark-1120.png"
+                  alt="DecaFlow"
+                  className="w-full h-auto"
+                />
+              </a>
+              <div className="ml-2">
                 <h1 className="text-3xl font-bold text-white">VDM Staking</h1>
-                <p className="text-sm text-gray-400">Powered by DecaFlow x VDM</p>
+                <p className="text-sm text-gray-400">Partnership: DecaFlow × VDM</p>
               </div>
             </div>
           </div>
@@ -242,13 +246,13 @@ export default function SolanaStaking() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-[#FF6B35]/20 to-[#F7931E]/10 backdrop-blur-xl border border-[#FF6B35]/30 rounded-2xl p-6">
+          <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 backdrop-blur-xl border border-[#3396FF]/30 rounded-2xl p-6">
             <p className="text-sm text-gray-400 mb-2">Total Staked Value</p>
             <p className="text-3xl font-bold text-white">${totalStakedValue.toFixed(2)}</p>
             <p className="text-xs text-green-400 mt-1">↑ Across all pools</p>
           </div>
           
-          <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/10 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6">
+          <div className="bg-gradient-to-br from-[#47A1FF]/20 to-purple-500/10 backdrop-blur-xl border border-[#47A1FF]/30 rounded-2xl p-6">
             <p className="text-sm text-gray-400 mb-2">Pending Rewards</p>
             <p className="text-3xl font-bold text-white">{totalPendingRewards.toFixed(4)} VDM</p>
             <p className="text-xs text-yellow-400 mt-1">Daily compounding active</p>
@@ -276,7 +280,7 @@ export default function SolanaStaking() {
                     onClick={() => setSelectedPool(pool)}
                     className={`w-full p-4 rounded-xl border-2 transition-all ${
                       selectedPool.id === pool.id
-                        ? 'border-[#FF6B35] bg-[#FF6B35]/10'
+                        ? 'border-[#47A1FF] bg-[#47A1FF]/10'
                         : 'border-gray-700 hover:border-gray-600 bg-[#0A0E27]/50'
                     }`}
                   >
@@ -286,7 +290,7 @@ export default function SolanaStaking() {
                         <p className="text-xs text-gray-400">TVL: ${stats.tvl?.toFixed(0) || '0'}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-[#FF6B35]">{netApy.toFixed(1)}%</p>
+                        <p className="text-2xl font-bold text-[#47A1FF]">{netApy.toFixed(1)}%</p>
                         <p className="text-xs text-gray-400">Net APY</p>
                       </div>
                     </div>
@@ -305,7 +309,7 @@ export default function SolanaStaking() {
                   onClick={() => setActiveTab('stake')}
                   className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                     activeTab === 'stake'
-                      ? 'bg-[#FF6B35] text-white'
+                      ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                       : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50'
                   }`}
                 >
@@ -315,7 +319,7 @@ export default function SolanaStaking() {
                   onClick={() => setActiveTab('unstake')}
                   className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
                     activeTab === 'unstake'
-                      ? 'bg-[#FF6B35] text-white'
+                      ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                       : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50'
                   }`}
                 >
@@ -332,7 +336,7 @@ export default function SolanaStaking() {
                       value={vdmAmount}
                       onChange={(e) => setVdmAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#FF6B35] focus:outline-none"
+                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Balance: {vdmBalance.toFixed(4)} VDM
@@ -348,7 +352,7 @@ export default function SolanaStaking() {
                       value={pairAmount}
                       onChange={(e) => setPairAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#FF6B35] focus:outline-none"
+                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {selectedPool.pairToken === 'SOL' ? `Balance: ${solBalance.toFixed(4)} SOL` : 'Balance: 0.00 USDC'}
@@ -375,7 +379,7 @@ export default function SolanaStaking() {
                   <button
                     onClick={handleStake}
                     disabled={loading || !publicKey}
-                    className="w-full py-3 bg-gradient-to-r from-[#FF6B35] to-[#F7931E] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Stake Tokens'}
                   </button>
@@ -450,8 +454,8 @@ export default function SolanaStaking() {
               
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#FF6B35]/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[#FF6B35]">📊</span>
+                  <div className="w-8 h-8 rounded-lg bg-[#47A1FF]/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#47A1FF]">📊</span>
                   </div>
                   <div>
                     <p className="text-white font-medium">High APY Returns</p>
@@ -510,25 +514,31 @@ export default function SolanaStaking() {
                   <span className="text-white font-medium">10% of rewards</span>
                 </div>
                 
-                <div className="mt-4 p-3 bg-gradient-to-r from-[#FF6B35]/10 to-[#F7931E]/10 rounded-lg border border-[#FF6B35]/30">
+                <div className="mt-4 p-3 bg-gradient-to-r from-[#3396FF]/10 to-[#47A1FF]/10 rounded-lg border border-[#47A1FF]/30">
                   <p className="text-xs text-gray-400 mb-1">Performance fee split:</p>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-300">Affidex Lab: 7%</span>
-                    <span className="text-[#FF6B35]">VDM Treasury: 3%</span>
+                    <span className="text-[#47A1FF]">VDM Treasury: 3%</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-[#FF6B35]/20 to-[#F7931E]/10 backdrop-blur-xl border border-[#FF6B35]/30 rounded-2xl p-6">
+            <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 backdrop-blur-xl border border-[#47A1FF]/30 rounded-2xl p-6">
               <h3 className="text-lg font-bold text-white mb-2">Partnership</h3>
               <p className="text-sm text-gray-300 mb-4">
-                This staking pool is a collaboration between VDM and Affidex Lab through the DecaFlow Protocol, bringing DeFi opportunities to the VDM community.
+                This staking pool is a collaboration between DecaFlow (Affidex Lab) and VDM, bringing DeFi opportunities to the VDM community.
               </p>
-              <div className="flex items-center gap-4">
-                <img src="/vdm-logo.png" alt="VDM" className="w-10 h-10 rounded-full" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-                <span className="text-2xl">×</span>
-                <img src="/logo.png" alt="DecaFlow" className="w-10 h-10 rounded-full" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+              <div className="flex items-center justify-center gap-4">
+                <div className="flex flex-col items-center gap-2">
+                  <img src="/images/branding/wordmark-1120.png" alt="DecaFlow" className="h-10 w-auto" />
+                  <span className="text-xs text-gray-400">DecaFlow Protocol</span>
+                </div>
+                <span className="text-2xl text-[#47A1FF]">×</span>
+                <div className="flex flex-col items-center gap-2">
+                  <img src="/images/vdm-logo.jpg" alt="VDM" className="w-12 h-12 object-contain" />
+                  <span className="text-xs text-gray-400">VDM Token</span>
+                </div>
               </div>
             </div>
           </div>
