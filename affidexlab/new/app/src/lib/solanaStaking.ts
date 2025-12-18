@@ -1,69 +1,77 @@
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
 
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
+export const PROGRAM_ID = 'VDMStakingProgramXXXXXXXXXXXXXXXXXXXXXXXXXX';
+export const AFFIDEX_FEE_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
-export const RAYDIUM_POOL_IDS = {
-  'VDM-SOL': 'TBD',
-  'VDM-USDC': 'TBD',
-};
+export const MIN_STAKE_AMOUNT = 1_000;
+export const MAX_STAKE_AMOUNT = 10_000_000;
 
 export const STAKING_FEES = {
   depositFeeBps: 250,
   withdrawalFeeBps: 150,
-  performanceFeeBps: 1000,
-  affidexShareBps: 700,
-  vdmShareBps: 300,
 };
 
-export interface StakingPool {
-  id: string;
-  name: string;
-  pairToken: string;
-  baseApy: number;
-  tvl: number;
-  totalStakers: number;
-  poolAddress?: string;
+export enum LockPeriod {
+  SixMonths = 'SixMonths',
+  NineMonths = 'NineMonths',
+  TwelveMonths = 'TwelveMonths',
 }
 
-export interface UserStakingPosition {
-  poolId: string;
-  stakedAmount: number;
-  lpTokens: number;
-  pendingRewards: number;
-  stakedAt: number;
-  lastClaimAt: number;
-  estimatedApy: number;
+export interface LockPeriodOption {
+  id: LockPeriod;
+  label: string;
+  months: number;
+  apy: number;
+  seconds: number;
 }
 
-export const STAKING_POOLS: StakingPool[] = [
+export const LOCK_PERIODS: LockPeriodOption[] = [
   {
-    id: 'vdm-sol',
-    name: 'VDM/SOL',
-    pairToken: 'SOL',
-    baseApy: 18.5,
-    tvl: 0,
-    totalStakers: 0,
-    poolAddress: RAYDIUM_POOL_IDS['VDM-SOL'],
+    id: LockPeriod.SixMonths,
+    label: '6 Months',
+    months: 6,
+    apy: 8.0,
+    seconds: 15_768_000,
   },
   {
-    id: 'vdm-usdc',
-    name: 'VDM/USDC',
-    pairToken: 'USDC',
-    baseApy: 15.2,
-    tvl: 0,
-    totalStakers: 0,
-    poolAddress: RAYDIUM_POOL_IDS['VDM-USDC'],
+    id: LockPeriod.NineMonths,
+    label: '9 Months',
+    months: 9,
+    apy: 12.0,
+    seconds: 23_652_000,
+  },
+  {
+    id: LockPeriod.TwelveMonths,
+    label: '12 Months',
+    months: 12,
+    apy: 16.0,
+    seconds: 31_536_000,
   },
 ];
 
-export const calculateNetApy = (baseApy: number): number => {
-  const depositFeeImpact = (STAKING_FEES.depositFeeBps / 10000) * 0.2;
-  const withdrawalFeeImpact = (STAKING_FEES.withdrawalFeeBps / 10000) * 0.1;
-  const performanceFeeImpact = baseApy * (STAKING_FEES.performanceFeeBps / 10000);
-  
-  return baseApy - depositFeeImpact - withdrawalFeeImpact - performanceFeeImpact;
-};
+export interface UserStake {
+  user: string;
+  amountStaked: number;
+  rewardsAllocated: number;
+  lockPeriod: LockPeriod;
+  startTimestamp: number;
+  unlockTimestamp: number;
+  hasStaked: boolean;
+  hasClaimed: boolean;
+  apy: number;
+  daysRemaining: number;
+  canClaim: boolean;
+}
+
+export interface PoolStats {
+  totalStaked: number;
+  totalRewardsDistributed: number;
+  rewardsPoolRemaining: number;
+  totalStakers: number;
+}
 
 export const calculateDepositFee = (amount: number): number => {
   return amount * (STAKING_FEES.depositFeeBps / 10000);
@@ -73,14 +81,22 @@ export const calculateWithdrawalFee = (amount: number): number => {
   return amount * (STAKING_FEES.withdrawalFeeBps / 10000);
 };
 
-export const calculateRewards = (
-  stakedAmount: number,
-  stakedDays: number,
-  baseApy: number
-): number => {
-  const netApy = calculateNetApy(baseApy);
-  const dailyRate = netApy / 365 / 100;
-  return stakedAmount * dailyRate * stakedDays;
+export const calculateRewards = (amount: number, lockPeriod: LockPeriod): number => {
+  const period = LOCK_PERIODS.find(p => p.id === lockPeriod);
+  if (!period) return 0;
+  
+  const depositFee = calculateDepositFee(amount);
+  const netAmount = amount - depositFee;
+  return netAmount * (period.apy / 100);
+};
+
+export const calculateNetReturn = (amount: number, lockPeriod: LockPeriod): number => {
+  const depositFee = calculateDepositFee(amount);
+  const netAmount = amount - depositFee;
+  const rewards = calculateRewards(amount, lockPeriod);
+  const withdrawalFee = calculateWithdrawalFee(netAmount);
+  
+  return netAmount - withdrawalFee + rewards;
 };
 
 export async function getVDMTokenBalance(
@@ -99,55 +115,72 @@ export async function getVDMTokenBalance(
   }
 }
 
-export async function getSOLBalance(
+export async function getUserStake(
   connection: Connection,
   walletAddress: PublicKey
-): Promise<number> {
+): Promise<UserStake | null> {
   try {
-    const balance = await connection.getBalance(walletAddress);
-    return balance / LAMPORTS_PER_SOL;
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+    const response = await fetch(`${API_BASE}/v1/solana-staking/stake-info?wallet=${walletAddress.toString()}`);
+    const data = await response.json();
+    
+    if (!data.success || !data.data) {
+      return null;
+    }
+    
+    const stake = data.data;
+    const now = Math.floor(Date.now() / 1000);
+    const daysRemaining = Math.max(0, Math.ceil((stake.unlockTimestamp - now) / 86400));
+    const canClaim = now >= stake.unlockTimestamp && stake.hasStaked && !stake.hasClaimed;
+    
+    const period = LOCK_PERIODS.find(p => p.id === stake.lockPeriod);
+    
+    return {
+      ...stake,
+      daysRemaining,
+      canClaim,
+      apy: period?.apy || 0,
+    };
   } catch (error) {
-    console.error('Error fetching SOL balance:', error);
-    return 0;
+    console.error('Error fetching user stake:', error);
+    return null;
   }
 }
 
-export async function getUserStakingPositions(
-  connection: Connection,
-  walletAddress: PublicKey
-): Promise<UserStakingPosition[]> {
+export async function getPoolStats(): Promise<PoolStats | null> {
   try {
-    const response = await fetch(`/api/v1/solana-staking/positions?wallet=${walletAddress.toString()}`);
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+    const response = await fetch(`${API_BASE}/v1/solana-staking/pool-stats`);
     const data = await response.json();
     
     if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch positions');
+      return null;
     }
     
-    return data.data.positions || [];
+    return data.data;
   } catch (error) {
-    console.error('Error fetching staking positions:', error);
-    return [];
+    console.error('Error fetching pool stats:', error);
+    return null;
   }
 }
 
 export async function stakeTokens(
   connection: Connection,
   walletAddress: PublicKey,
-  poolId: string,
-  vdmAmount: number,
-  pairTokenAmount: number,
+  amount: number,
+  lockPeriod: LockPeriod,
   signTransaction: (tx: Transaction) => Promise<Transaction>
 ): Promise<string> {
   try {
-    const response = await fetch('/api/v1/solana-staking/stake', {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+    
+    const response = await fetch(`${API_BASE}/v1/solana-staking/stake`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         wallet: walletAddress.toString(),
-        poolId,
-        vdmAmount,
-        pairTokenAmount,
+        amount,
+        lockPeriod,
       }),
     });
 
@@ -163,15 +196,14 @@ export async function stakeTokens(
     
     await connection.confirmTransaction(signature, 'confirmed');
 
-    await fetch('/api/v1/solana-staking/confirm', {
+    await fetch(`${API_BASE}/v1/solana-staking/confirm-stake`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         wallet: walletAddress.toString(),
         signature,
-        poolId,
-        vdmAmount,
-        pairTokenAmount,
+        amount,
+        lockPeriod,
       }),
     });
 
@@ -182,67 +214,19 @@ export async function stakeTokens(
   }
 }
 
-export async function unstakeTokens(
+export async function claimStake(
   connection: Connection,
   walletAddress: PublicKey,
-  poolId: string,
-  lpTokenAmount: number,
   signTransaction: (tx: Transaction) => Promise<Transaction>
 ): Promise<string> {
   try {
-    const response = await fetch('/api/v1/solana-staking/unstake', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: walletAddress.toString(),
-        poolId,
-        lpTokenAmount,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to prepare unstake transaction');
-    }
-
-    const transaction = Transaction.from(Buffer.from(data.data.transaction, 'base64'));
-    const signedTx = await signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(signedTx.serialize());
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
     
-    await connection.confirmTransaction(signature, 'confirmed');
-
-    await fetch('/api/v1/solana-staking/confirm-unstake', {
+    const response = await fetch(`${API_BASE}/v1/solana-staking/claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         wallet: walletAddress.toString(),
-        signature,
-        poolId,
-        lpTokenAmount,
-      }),
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error unstaking tokens:', error);
-    throw error;
-  }
-}
-
-export async function claimRewards(
-  connection: Connection,
-  walletAddress: PublicKey,
-  poolId: string,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<string> {
-  try {
-    const response = await fetch('/api/v1/solana-staking/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: walletAddress.toString(),
-        poolId,
       }),
     });
 
@@ -260,23 +244,7 @@ export async function claimRewards(
 
     return signature;
   } catch (error) {
-    console.error('Error claiming rewards:', error);
+    console.error('Error claiming stake:', error);
     throw error;
-  }
-}
-
-export async function getPoolStats(poolId: string) {
-  try {
-    const response = await fetch(`/api/v1/solana-staking/pool-stats?poolId=${poolId}`);
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch pool stats');
-    }
-    
-    return data.data;
-  } catch (error) {
-    console.error('Error fetching pool stats:', error);
-    return null;
   }
 }

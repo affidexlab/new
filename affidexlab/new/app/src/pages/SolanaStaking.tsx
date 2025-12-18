@@ -1,89 +1,57 @@
 import { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PublicKey } from '@solana/web3.js';
 import { toast } from 'sonner';
 import {
-  STAKING_POOLS,
-  calculateNetApy,
+  LOCK_PERIODS,
+  LockPeriod,
+  MIN_STAKE_AMOUNT,
+  MAX_STAKE_AMOUNT,
   calculateDepositFee,
   calculateWithdrawalFee,
   calculateRewards,
+  calculateNetReturn,
   getVDMTokenBalance,
-  getSOLBalance,
-  getUserStakingPositions,
-  stakeTokens,
-  unstakeTokens,
-  claimRewards,
+  getUserStake,
   getPoolStats,
-  UserStakingPosition,
-  StakingPool,
-  STAKING_FEES,
+  stakeTokens,
+  claimStake,
+  UserStake,
+  PoolStats,
 } from '../lib/solanaStaking';
 
 export default function SolanaStaking() {
   const { publicKey, signTransaction } = useWallet();
   const { connection } = useConnection();
   
-  const [selectedPool, setSelectedPool] = useState<StakingPool>(STAKING_POOLS[0]);
-  const [vdmAmount, setVdmAmount] = useState('');
-  const [pairAmount, setPairAmount] = useState('');
+  const [selectedLockPeriod, setSelectedLockPeriod] = useState<LockPeriod>(LockPeriod.TwelveMonths);
+  const [stakeAmount, setStakeAmount] = useState('');
   const [vdmBalance, setVdmBalance] = useState(0);
-  const [solBalance, setSOLBalance] = useState(0);
-  const [positions, setPositions] = useState<UserStakingPosition[]>([]);
+  const [userStake, setUserStake] = useState<UserStake | null>(null);
+  const [poolStats, setPoolStats] = useState<PoolStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'stake' | 'unstake'>('stake');
-  const [poolStats, setPoolStats] = useState<any>({});
 
   useEffect(() => {
     if (publicKey) {
-      loadBalances();
-      loadPositions();
-      loadPoolStats();
+      loadData();
     }
   }, [publicKey]);
 
-  const loadBalances = async () => {
+  const loadData = async () => {
     if (!publicKey) return;
     
     try {
-      const [vdm, sol] = await Promise.all([
+      const [balance, stake, stats] = await Promise.all([
         getVDMTokenBalance(connection, publicKey),
-        getSOLBalance(connection, publicKey),
+        getUserStake(connection, publicKey),
+        getPoolStats(),
       ]);
       
-      setVdmBalance(vdm);
-      setSOLBalance(sol);
+      setVdmBalance(balance);
+      setUserStake(stake);
+      setPoolStats(stats);
     } catch (error) {
-      console.error('Error loading balances:', error);
-    }
-  };
-
-  const loadPositions = async () => {
-    if (!publicKey) return;
-    
-    try {
-      const userPositions = await getUserStakingPositions(connection, publicKey);
-      setPositions(userPositions);
-    } catch (error) {
-      console.error('Error loading positions:', error);
-    }
-  };
-
-  const loadPoolStats = async () => {
-    try {
-      const stats = await Promise.all(
-        STAKING_POOLS.map(pool => getPoolStats(pool.id))
-      );
-      
-      const statsMap: any = {};
-      STAKING_POOLS.forEach((pool, idx) => {
-        statsMap[pool.id] = stats[idx];
-      });
-      
-      setPoolStats(statsMap);
-    } catch (error) {
-      console.error('Error loading pool stats:', error);
+      console.error('Error loading data:', error);
     }
   };
 
@@ -93,47 +61,54 @@ export default function SolanaStaking() {
       return;
     }
 
-    const vdm = parseFloat(vdmAmount);
-    const pair = parseFloat(pairAmount);
+    const amount = parseFloat(stakeAmount);
 
-    if (!vdm || !pair || vdm <= 0 || pair <= 0) {
-      toast.error('Please enter valid amounts');
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
       return;
     }
 
-    if (vdm > vdmBalance) {
+    if (amount < MIN_STAKE_AMOUNT) {
+      toast.error(`Minimum stake is ${MIN_STAKE_AMOUNT.toLocaleString()} VDM`);
+      return;
+    }
+
+    if (amount > MAX_STAKE_AMOUNT) {
+      toast.error(`Maximum stake is ${MAX_STAKE_AMOUNT.toLocaleString()} VDM`);
+      return;
+    }
+
+    if (amount > vdmBalance) {
       toast.error('Insufficient VDM balance');
       return;
     }
 
-    if (selectedPool.pairToken === 'SOL' && pair > solBalance) {
-      toast.error('Insufficient SOL balance');
+    if (userStake?.hasStaked && !userStake?.hasClaimed) {
+      toast.error('You already have an active stake. One stake per wallet.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const depositFee = calculateDepositFee(vdm);
-      const netVdm = vdm - depositFee;
+      const depositFee = calculateDepositFee(amount);
+      const netStake = amount - depositFee;
+      const rewards = calculateRewards(amount, selectedLockPeriod);
 
-      toast.info(`Staking ${netVdm.toFixed(4)} VDM (${depositFee.toFixed(4)} VDM fee)`);
+      toast.info(`Staking ${netStake.toFixed(2)} VDM (${depositFee.toFixed(2)} VDM fee)`);
 
       const signature = await stakeTokens(
         connection,
         publicKey,
-        selectedPool.id,
-        vdm,
-        pair,
+        amount,
+        selectedLockPeriod,
         signTransaction
       );
 
       toast.success(`Successfully staked! TX: ${signature.substring(0, 8)}...`);
       
-      setVdmAmount('');
-      setPairAmount('');
-      
-      await Promise.all([loadBalances(), loadPositions(), loadPoolStats()]);
+      setStakeAmount('');
+      await loadData();
     } catch (error: any) {
       console.error('Stake error:', error);
       toast.error(error?.message || 'Failed to stake tokens');
@@ -142,73 +117,36 @@ export default function SolanaStaking() {
     }
   };
 
-  const handleUnstake = async (position: UserStakingPosition) => {
+  const handleClaim = async () => {
     if (!publicKey || !signTransaction) {
       toast.error('Please connect your Solana wallet');
+      return;
+    }
+
+    if (!userStake?.canClaim) {
+      toast.error('Your stake is not ready to claim yet');
       return;
     }
 
     setLoading(true);
 
     try {
-      const withdrawalFee = calculateWithdrawalFee(position.stakedAmount);
-      const netAmount = position.stakedAmount - withdrawalFee;
+      const signature = await claimStake(connection, publicKey, signTransaction);
 
-      toast.info(`Unstaking ${netAmount.toFixed(4)} VDM (${withdrawalFee.toFixed(4)} VDM fee)`);
-
-      const signature = await unstakeTokens(
-        connection,
-        publicKey,
-        position.poolId,
-        position.lpTokens,
-        signTransaction
-      );
-
-      toast.success(`Successfully unstaked! TX: ${signature.substring(0, 8)}...`);
+      toast.success(`Successfully claimed! TX: ${signature.substring(0, 8)}...`);
       
-      await Promise.all([loadBalances(), loadPositions(), loadPoolStats()]);
-    } catch (error: any) {
-      console.error('Unstake error:', error);
-      toast.error(error?.message || 'Failed to unstake tokens');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClaim = async (position: UserStakingPosition) => {
-    if (!publicKey || !signTransaction) {
-      toast.error('Please connect your Solana wallet');
-      return;
-    }
-
-    if (position.pendingRewards <= 0) {
-      toast.error('No rewards to claim');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const signature = await claimRewards(
-        connection,
-        publicKey,
-        position.poolId,
-        signTransaction
-      );
-
-      toast.success(`Rewards claimed! TX: ${signature.substring(0, 8)}...`);
-      
-      await Promise.all([loadBalances(), loadPositions()]);
+      await loadData();
     } catch (error: any) {
       console.error('Claim error:', error);
-      toast.error(error?.message || 'Failed to claim rewards');
+      toast.error(error?.message || 'Failed to claim stake');
     } finally {
       setLoading(false);
     }
   };
 
-  const totalStakedValue = positions.reduce((sum, pos) => sum + pos.stakedAmount, 0);
-  const totalPendingRewards = positions.reduce((sum, pos) => sum + pos.pendingRewards, 0);
+  const selectedPeriod = LOCK_PERIODS.find(p => p.id === selectedLockPeriod);
+  const estimatedRewards = stakeAmount ? calculateRewards(parseFloat(stakeAmount), selectedLockPeriod) : 0;
+  const estimatedNetReturn = stakeAmount ? calculateNetReturn(parseFloat(stakeAmount), selectedLockPeriod) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0E27] via-[#1a1f3a] to-[#0A0E27]">
@@ -237,7 +175,7 @@ export default function SolanaStaking() {
               {publicKey && (
                 <>
                   <p className="text-xs text-gray-400">VDM Balance</p>
-                  <p className="text-lg font-bold text-white">{vdmBalance.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-white">{vdmBalance.toLocaleString(undefined, {maximumFractionDigits: 2})}</p>
                 </>
               )}
             </div>
@@ -247,206 +185,197 @@ export default function SolanaStaking() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 backdrop-blur-xl border border-[#3396FF]/30 rounded-2xl p-6">
-            <p className="text-sm text-gray-400 mb-2">Total Staked Value</p>
-            <p className="text-3xl font-bold text-white">${totalStakedValue.toFixed(2)}</p>
-            <p className="text-xs text-green-400 mt-1">↑ Across all pools</p>
+            <p className="text-sm text-gray-400 mb-2">Total Staked</p>
+            <p className="text-3xl font-bold text-white">{poolStats?.totalStaked.toLocaleString() || '0'} VDM</p>
+            <p className="text-xs text-green-400 mt-1">↑ {poolStats?.totalStakers || 0} stakers</p>
           </div>
           
           <div className="bg-gradient-to-br from-[#47A1FF]/20 to-purple-500/10 backdrop-blur-xl border border-[#47A1FF]/30 rounded-2xl p-6">
-            <p className="text-sm text-gray-400 mb-2">Pending Rewards</p>
-            <p className="text-3xl font-bold text-white">{totalPendingRewards.toFixed(4)} VDM</p>
-            <p className="text-xs text-yellow-400 mt-1">Daily compounding active</p>
+            <p className="text-sm text-gray-400 mb-2">Rewards Pool Remaining</p>
+            <p className="text-3xl font-bold text-white">{poolStats?.rewardsPoolRemaining.toLocaleString() || '150M'} VDM</p>
+            <p className="text-xs text-yellow-400 mt-1">Available for distribution</p>
           </div>
           
           <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-2xl p-6">
-            <p className="text-sm text-gray-400 mb-2">Active Positions</p>
-            <p className="text-3xl font-bold text-white">{positions.length}</p>
-            <p className="text-xs text-gray-400 mt-1">Across {STAKING_POOLS.length} pools</p>
+            <p className="text-sm text-gray-400 mb-2">Total Rewards Distributed</p>
+            <p className="text-3xl font-bold text-white">{poolStats?.totalRewardsDistributed.toLocaleString() || '0'} VDM</p>
+            <p className="text-xs text-gray-400 mt-1">Since launch</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Staking Pools</h2>
-            
-            <div className="space-y-3 mb-6">
-              {STAKING_POOLS.map((pool) => {
-                const stats = poolStats[pool.id] || pool;
-                const netApy = calculateNetApy(pool.baseApy);
-                
-                return (
-                  <button
-                    key={pool.id}
-                    onClick={() => setSelectedPool(pool)}
-                    className={`w-full p-4 rounded-xl border-2 transition-all ${
-                      selectedPool.id === pool.id
-                        ? 'border-[#47A1FF] bg-[#47A1FF]/10'
-                        : 'border-gray-700 hover:border-gray-600 bg-[#0A0E27]/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-left">
-                        <p className="text-lg font-bold text-white">{pool.name}</p>
-                        <p className="text-xs text-gray-400">TVL: ${stats.tvl?.toFixed(0) || '0'}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-[#47A1FF]">{netApy.toFixed(1)}%</p>
-                        <p className="text-xs text-gray-400">Net APY</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                      <span>{stats.totalStakers || 0} stakers</span>
-                      <span>Base: {pool.baseApy}% APY</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          {!userStake?.hasStaked || userStake?.hasClaimed ? (
+            <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Stake VDM Tokens</h2>
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Select Lock Period</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {LOCK_PERIODS.map((period) => (
+                      <button
+                        key={period.id}
+                        onClick={() => setSelectedLockPeriod(period.id)}
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          selectedLockPeriod === period.id
+                            ? 'border-[#47A1FF] bg-[#47A1FF]/10'
+                            : 'border-gray-700 hover:border-gray-600 bg-[#0A0E27]/50'
+                        }`}
+                      >
+                        <p className="text-xs text-gray-400">{period.label}</p>
+                        <p className="text-2xl font-bold text-[#47A1FF]">{period.apy}%</p>
+                        <p className="text-xs text-gray-500">APY</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="border-t border-gray-700 pt-4 mb-6">
-              <div className="flex gap-2 mb-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">VDM Amount</label>
+                  <input
+                    type="number"
+                    value={stakeAmount}
+                    onChange={(e) => setStakeAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>Balance: {vdmBalance.toLocaleString()} VDM</span>
+                    <button
+                      onClick={() => setStakeAmount(vdmBalance.toString())}
+                      className="text-[#47A1FF] hover:underline"
+                    >
+                      Max
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Min: {MIN_STAKE_AMOUNT.toLocaleString()} VDM | Max: {MAX_STAKE_AMOUNT.toLocaleString()} VDM
+                  </p>
+                </div>
+
+                {stakeAmount && parseFloat(stakeAmount) > 0 && (
+                  <div className="bg-[#0A0E27]/50 rounded-lg p-4 space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-400">
+                      <span>Deposit Fee (2.5%)</span>
+                      <span className="text-red-400">-{calculateDepositFee(parseFloat(stakeAmount)).toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
+                      <span className="text-green-400">+{estimatedRewards.toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Withdrawal Fee (1.5%)</span>
+                      <span className="text-red-400">-{calculateWithdrawalFee(parseFloat(stakeAmount) - calculateDepositFee(parseFloat(stakeAmount))).toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
+                      <span>Estimated Net Return</span>
+                      <span className="text-green-400">{estimatedNetReturn.toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400 text-xs">
+                      <span>Lock Period</span>
+                      <span className="text-white">{selectedPeriod?.months} months</span>
+                    </div>
+                  </div>
+                )}
+
                 <button
-                  onClick={() => setActiveTab('stake')}
-                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                    activeTab === 'stake'
-                      ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
-                      : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50'
-                  }`}
+                  onClick={handleStake}
+                  disabled={loading || !publicKey}
+                  className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Stake
+                  {loading ? 'Processing...' : 'Stake Tokens'}
                 </button>
-                <button
-                  onClick={() => setActiveTab('unstake')}
-                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                    activeTab === 'unstake'
-                      ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
-                      : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50'
-                  }`}
-                >
-                  My Positions
-                </button>
+
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
+                  <p className="font-medium mb-1">⚠️ Important:</p>
+                  <p>• One stake per wallet</p>
+                  <p>• No early unstaking - locked until maturity</p>
+                  <p>• Claim your stake + rewards after lock period ends</p>
+                </div>
               </div>
-
-              {activeTab === 'stake' ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">VDM Amount</label>
-                    <input
-                      type="number"
-                      value={vdmAmount}
-                      onChange={(e) => setVdmAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Balance: {vdmBalance.toFixed(4)} VDM
-                    </p>
+            </div>
+          ) : (
+            <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Your Stake</h2>
+              
+              <div className="space-y-4">
+                <div className="bg-[#0A0E27]/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm text-gray-400">Staked Amount</p>
+                    <p className="text-2xl font-bold text-white">{userStake?.amountStaked.toLocaleString()} VDM</p>
                   </div>
-
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">
-                      {selectedPool.pairToken} Amount
-                    </label>
-                    <input
-                      type="number"
-                      value={pairAmount}
-                      onChange={(e) => setPairAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedPool.pairToken === 'SOL' ? `Balance: ${solBalance.toFixed(4)} SOL` : 'Balance: 0.00 USDC'}
-                    </p>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-gray-400">
+                      <span>Lock Period</span>
+                      <span className="text-white">{LOCK_PERIODS.find(p => p.id === userStake?.lockPeriod)?.label}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>APY</span>
+                      <span className="text-[#47A1FF] font-bold">{userStake?.apy}%</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Allocated Rewards</span>
+                      <span className="text-green-400">{userStake?.rewardsAllocated.toLocaleString()} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Start Date</span>
+                      <span className="text-white">{new Date(userStake?.startTimestamp * 1000).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Unlock Date</span>
+                      <span className="text-white">{new Date(userStake?.unlockTimestamp * 1000).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Days Remaining</span>
+                      <span className={userStake?.daysRemaining === 0 ? 'text-green-400 font-bold' : 'text-white'}>
+                        {userStake?.daysRemaining || 0} days
+                      </span>
+                    </div>
                   </div>
+                </div>
 
-                  {vdmAmount && parseFloat(vdmAmount) > 0 && (
-                    <div className="bg-[#0A0E27]/50 rounded-lg p-3 space-y-1 text-xs">
-                      <div className="flex justify-between text-gray-400">
-                        <span>Deposit Fee (2.5%)</span>
-                        <span className="text-red-400">-{calculateDepositFee(parseFloat(vdmAmount)).toFixed(4)} VDM</span>
-                      </div>
-                      <div className="flex justify-between text-gray-400">
-                        <span>Performance Fee (10% of rewards)</span>
-                        <span className="text-orange-400">Applied on rewards</span>
-                      </div>
-                      <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
-                        <span>Net APY</span>
-                        <span className="text-green-400">{calculateNetApy(selectedPool.baseApy).toFixed(2)}%</span>
+                {userStake?.canClaim ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                      <p className="text-green-400 font-medium mb-2">✅ Your stake is ready to claim!</p>
+                      <p className="text-sm text-gray-300">You will receive:</p>
+                      <div className="mt-2 space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Principal (minus withdrawal fee)</span>
+                          <span className="text-white">
+                            {(userStake.amountStaked - calculateWithdrawalFee(userStake.amountStaked)).toLocaleString()} VDM
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Rewards</span>
+                          <span className="text-green-400">{userStake.rewardsAllocated.toLocaleString()} VDM</span>
+                        </div>
+                        <div className="flex justify-between font-bold pt-2 border-t border-green-500/30">
+                          <span className="text-white">Total</span>
+                          <span className="text-green-400">
+                            {(userStake.amountStaked - calculateWithdrawalFee(userStake.amountStaked) + userStake.rewardsAllocated).toLocaleString()} VDM
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  <button
-                    onClick={handleStake}
-                    disabled={loading || !publicKey}
-                    className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Processing...' : 'Stake Tokens'}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {positions.length === 0 ? (
-                    <p className="text-center text-gray-400 py-8">No active positions</p>
-                  ) : (
-                    positions.map((position, idx) => {
-                      const pool = STAKING_POOLS.find(p => p.id === position.poolId);
-                      const stakedDays = Math.floor((Date.now() - position.stakedAt) / (1000 * 60 * 60 * 24));
-                      
-                      return (
-                        <div key={idx} className="bg-[#0A0E27]/50 rounded-lg p-4 border border-gray-700">
-                          <div className="flex items-center justify-between mb-3">
-                            <p className="font-bold text-white">{pool?.name}</p>
-                            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                              {position.estimatedApy.toFixed(1)}% APY
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2 text-sm mb-3">
-                            <div className="flex justify-between text-gray-400">
-                              <span>Staked</span>
-                              <span className="text-white">{position.stakedAmount.toFixed(4)} VDM</span>
-                            </div>
-                            <div className="flex justify-between text-gray-400">
-                              <span>Pending Rewards</span>
-                              <span className="text-yellow-400">{position.pendingRewards.toFixed(4)} VDM</span>
-                            </div>
-                            <div className="flex justify-between text-gray-400">
-                              <span>Staked Duration</span>
-                              <span className="text-white">{stakedDays} days</span>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleClaim(position)}
-                              disabled={loading || position.pendingRewards <= 0}
-                              className="flex-1 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Claim
-                            </button>
-                            <button
-                              onClick={() => handleUnstake(position)}
-                              disabled={loading}
-                              className="flex-1 py-2 bg-red-600/80 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Unstake
-                            </button>
-                          </div>
-                          
-                          {position.stakedAmount > 0 && (
-                            <p className="text-xs text-gray-500 mt-2">
-                              Withdrawal fee: {calculateWithdrawalFee(position.stakedAmount).toFixed(4)} VDM (1.5%)
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
+                    <button
+                      onClick={handleClaim}
+                      disabled={loading}
+                      className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? 'Processing...' : 'Claim Stake + Rewards'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-sm text-blue-300">
+                    <p className="font-medium mb-1">🔒 Stake Locked</p>
+                    <p>Your stake will be available to claim after {userStake?.daysRemaining} days.</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-6">
             <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
@@ -459,17 +388,17 @@ export default function SolanaStaking() {
                   </div>
                   <div>
                     <p className="text-white font-medium">High APY Returns</p>
-                    <p className="text-gray-400 text-xs">Earn up to 16% net APY on your VDM tokens through liquidity provision</p>
+                    <p className="text-gray-400 text-xs">Earn 8-16% APY based on your chosen lock period</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-400">🔄</span>
+                    <span className="text-blue-400">🔒</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Daily Auto-Compound</p>
-                    <p className="text-gray-400 text-xs">Rewards automatically compound daily to maximize your returns</p>
+                    <p className="text-white font-medium">Time-Locked Security</p>
+                    <p className="text-gray-400 text-xs">Choose 6, 9, or 12 month lock periods - no early unstaking</p>
                   </div>
                 </div>
                 
@@ -478,8 +407,8 @@ export default function SolanaStaking() {
                     <span className="text-green-400">💰</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Flexible Staking</p>
-                    <p className="text-gray-400 text-xs">No lock periods - stake and unstake anytime with instant settlement</p>
+                    <p className="text-white font-medium">Simple Single-Token Staking</p>
+                    <p className="text-gray-400 text-xs">Stake only VDM - no need for SOL or USDC pairs</p>
                   </div>
                 </div>
                 
@@ -489,7 +418,7 @@ export default function SolanaStaking() {
                   </div>
                   <div>
                     <p className="text-white font-medium">Audited & Secure</p>
-                    <p className="text-gray-400 text-xs">Built on Raydium's battle-tested liquidity pools with robust security</p>
+                    <p className="text-gray-400 text-xs">Built on Solana with battle-tested smart contracts</p>
                   </div>
                 </div>
               </div>
@@ -509,17 +438,9 @@ export default function SolanaStaking() {
                   <span className="text-white font-medium">1.5%</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-[#0A0E27]/50 rounded-lg">
-                  <span className="text-gray-400 text-sm">Performance Fee</span>
-                  <span className="text-white font-medium">10% of rewards</span>
-                </div>
-                
                 <div className="mt-4 p-3 bg-gradient-to-r from-[#3396FF]/10 to-[#47A1FF]/10 rounded-lg border border-[#47A1FF]/30">
-                  <p className="text-xs text-gray-400 mb-1">Performance fee split:</p>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-gray-300">Affidex Lab: 7%</span>
-                    <span className="text-[#47A1FF]">VDM Treasury: 3%</span>
-                  </div>
+                  <p className="text-xs text-gray-400 mb-1">Fees collected by:</p>
+                  <p className="text-xs text-gray-300">Affidex Lab (DecaFlow Protocol)</p>
                 </div>
               </div>
             </div>
