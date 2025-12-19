@@ -52,6 +52,7 @@ export default function Swap() {
     timestamp: number;
   }[]>([]);
   const [lastNotifiedSwapHash, setLastNotifiedSwapHash] = useState<string | null>(null);
+  const [lastToastHash, setLastToastHash] = useState<string | null>(null);
 
   const { data: balance, isLoading: isBalanceLoading, refetch: refetchBalance, isError: isBalanceError } = useBalance({
     address,
@@ -143,11 +144,11 @@ export default function Swap() {
     if (!isSuccess || !txHash) {
       return;
     }
-    if (lastNotifiedSwapHash === txHash) {
+    if (lastToastHash === txHash) {
       return;
     }
 
-    setLastNotifiedSwapHash(txHash);
+    setLastToastHash(txHash);
     refetchBalance();
     const explorers: Record<ChainKey, string> = {
       ETHEREUM: "https://etherscan.io",
@@ -173,7 +174,7 @@ export default function Swap() {
         </div>
       ),
     });
-  }, [isSwapSuccess, isRouterSwapSuccess, swapHash, routerSwapHash, refetchBalance, fromChain, lastNotifiedSwapHash]);
+  }, [isSwapSuccess, isRouterSwapSuccess, swapHash, routerSwapHash, refetchBalance, fromChain, lastToastHash]);
 
   useEffect(() => {
     if (isSwapError) {

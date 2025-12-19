@@ -66,6 +66,7 @@ export default function SwapApp() {
     chainId: number;
     timestamp: number;
   }[]>([]);
+  const [lastToastHash, setLastToastHash] = useState<string | null>(null);
 
   const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
 
@@ -325,24 +326,27 @@ export default function SwapApp() {
   useEffect(() => {
     if (isSwapSuccess || isDirectRouterSwapSuccess) {
       const txHash = directRouterHash || swapHash;
-      toast.success("Swap successful!", {
-        description: (
-          <div className="flex flex-col gap-1">
-            <span>{`Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`}</span>
-            {txHash && (
-              <a
-                href={getExplorerUrl(txHash)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
-              >
-                View on explorer
-              </a>
-            )}
-          </div>
-        ),
-      });
-      if (txHash) {
+      
+      if (txHash && txHash !== lastToastHash) {
+        setLastToastHash(txHash);
+        toast.success("Swap successful!", {
+          description: (
+            <div className="flex flex-col gap-1">
+              <span>{`Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`}</span>
+              {txHash && (
+                <a
+                  href={getExplorerUrl(txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+                >
+                  View on explorer
+                </a>
+              )}
+            </div>
+          ),
+        });
+
         const now = Date.now();
         const entry = {
           hash: txHash,
@@ -373,7 +377,7 @@ export default function SwapApp() {
               address,
               type: "swap",
               amount: fromAmount,
-              amountUSD: undefined, // will be filled below when we compute USD
+              amountUSD: undefined,
               timestamp: now,
               fromToken: fromToken.symbol,
               chainId: selectedChainId,
@@ -385,14 +389,12 @@ export default function SwapApp() {
           console.error("Failed to persist decaflow_swaps entry", e);
         }
 
-        // Emit transaction event for real-time updates
         emitTransactionComplete({
           type: 'swap',
           txHash,
           timestamp: Date.now(),
         });
 
-        // Track points for this swap transaction
         (async () => {
           try {
             const amountNum = parseFloat(fromAmount || "0");
@@ -402,7 +404,6 @@ export default function SwapApp() {
               : await getTokenPriceUSD(selectedChainId, fromToken.address);
             const amountUSD = amountNum * (priceUSD || 0);
 
-            // Update last decaflow_swaps entry with computed USD amount
             try {
               if (typeof window !== "undefined") {
                 const key = "decaflow_swaps";
@@ -436,7 +437,7 @@ export default function SwapApp() {
       setFromAmount("");
       setQuote(null);
     }
-  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, fromAmount, fromToken.address, toToken.address, fromToken.symbol, toToken.symbol, selectedChainId, emitTransactionComplete, trackSwap]);
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, lastToastHash, fromAmount, fromToken.symbol, fromToken.address, toToken.symbol, toToken.address, selectedChainId, address, emitTransactionComplete, trackSwap]);
 
   const requestCountRef = { current: 0 } as { current: number };
   const lastResetRef = { current: Date.now() } as { current: number };
@@ -1031,6 +1032,29 @@ export default function SwapApp() {
             </Dialog>
           </div>
         </div>
+
+        {quote?.routerData && getLiquidityRouterAddress(selectedChainId) && (
+          <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <Shield size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-sm">
+                <p className="text-blue-300 font-medium mb-1">DecaFlow Router Contract</p>
+                <p className="text-gray-300 text-xs leading-relaxed mb-2">
+                  If your wallet shows a security warning, you can safely proceed. This is our verified DEX aggregator contract.
+                </p>
+                <a
+                  href={`https://basescan.org/address/${getLiquidityRouterAddress(selectedChainId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#47A1FF] text-xs hover:underline underline-offset-2 flex items-center gap-1"
+                >
+                  Verify contract on BaseScan
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-2 rounded-2xl bg-[#0D1624] border border-[#1E2940] p-4">
           <div className="mb-4 flex items-center justify-between">
