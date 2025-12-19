@@ -108,7 +108,7 @@ export default function SolanaStaking() {
         depositSignature.trim(),
       );
 
-      toast.success('Stake registered successfully. Your deposit will be verified off-chain.');
+      toast.success('Stake registered successfully. Your deposit will be verified by the staking team.');
       
       setStakeAmount('');
       setDepositSignature('');
@@ -170,7 +170,7 @@ export default function SolanaStaking() {
               </a>
               <div className="ml-2">
                 <h1 className="text-3xl font-bold text-white">VDM Staking</h1>
-                <p className="text-sm text-gray-400">Off-chain custodial staking by DecaFlow × VDM</p>
+                <p className="text-sm text-gray-400">VDM staking powered by DecaFlow × VDM</p>
               </div>
             </div>
           </div>
@@ -211,16 +211,16 @@ export default function SolanaStaking() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {!userStake?.hasStaked || userStake?.hasClaimed ? (
             <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Stake VDM Tokens (Off-Chain)</h2>
+              <h2 className="text-xl font-bold text-white mb-4">Stake VDM Tokens</h2>
               
               <div className="space-y-4 mb-6">
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-xs text-blue-100 mb-4">
-                  <p className="font-semibold mb-1">Important: Off-chain custodial staking</p>
+                  <p className="font-semibold mb-1">Important staking information</p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>VDM tokens are held in an Affidex-controlled custody wallet.</li>
-                    <li>Staking logic and rewards are tracked off-chain in DecaFlow databases.</li>
-                    <li>No on-chain staking program is used for this version.</li>
-                    <li>Payouts are processed manually by the VDM / Affidex team.</li>
+                    <li>VDM tokens are held in the official VDM staking wallet during the lock period.</li>
+                    <li>Staking logic and rewards are managed by DecaFlow infrastructure.</li>
+                    <li>This version is fully managed by the DecaFlow × VDM team.</li>
+                    <li>Payouts are processed by the VDM / Affidex team.</li>
                   </ul>
                 </div>
 
@@ -325,10 +325,10 @@ export default function SolanaStaking() {
                 </button>
 
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
-                  <p className="font-medium mb-1">⚠️ Off-chain staking disclaimer</p>
-                  <p>• This is an off-chain custodial staking system.</p>
-                  <p>• Affidex Lab / VDM control the custody wallet and payouts.</p>
-                  <p>• There is no on-chain staking contract; all logic is enforced off-chain.</p>
+                  <p className="font-medium mb-1">⚠️ Staking information</p>
+                  <p>• Staked VDM is held in the official VDM staking wallet during the lock period.</p>
+                  <p>• Affidex Lab / VDM control the staking wallet and payouts.</p>
+                  <p>• All staking logic and rewards are managed by DecaFlow infrastructure.</p>
                 </div>
               </div>
             </div>
@@ -376,8 +376,8 @@ export default function SolanaStaking() {
                 {userStake?.canClaim ? (
                   <div className="space-y-3">
                     <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                      <p className="text-green-400 font-medium mb-2">✅ Eligible for claim (off-chain)</p>
-                      <p className="text-xs text-gray-300">Your claim request will be processed off-chain by Affidex Lab / VDM. You will receive principal minus withdrawal fee plus rewards directly to your wallet.</p>
+                      <p className="text-green-400 font-medium mb-2">✅ Eligible for claim</p>
+                      <p className="text-xs text-gray-300">Your claim request will be processed by Affidex Lab / VDM. You will receive principal minus withdrawal fee plus rewards directly to your wallet.</p>
                     </div>
                     <button
                       onClick={handleClaim}
@@ -389,7 +389,7 @@ export default function SolanaStaking() {
                   </div>
                 ) : (
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-sm text-blue-300">
-                    <p className="font-medium mb-1">🔒 Stake Locked (Off-Chain)</p>
+                    <p className="font-medium mb-1">🔒 Stake Locked</p>
                     <p>Your stake is locked until the unlock date. Claim requests will be available once the lock period ends.</p>
                   </div>
                 )}
@@ -427,8 +427,8 @@ export default function SolanaStaking() {
                     <span className="text-green-400">💰</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Custodial Model</p>
-                    <p className="text-gray-400 text-xs">VDM tokens are held in an Affidex-controlled wallet during the lock period.</p>
+                    <p className="text-white font-medium">Staking Wallet</p>
+                    <p className="text-gray-400 text-xs">VDM tokens are held in the official VDM staking wallet during the lock period.</p>
                   </div>
                 </div>
                 
@@ -437,8 +437,8 @@ export default function SolanaStaking() {
                     <span className="text-purple-400">🛡️</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Off-Chain Accounting</p>
-                    <p className="text-gray-400 text-xs">All staking logic and balances are tracked off-chain in DecaFlow infrastructure.</p>
+                    <p className="text-white font-medium">Staking Management</p>
+                    <p className="text-gray-400 text-xs">All staking logic and balances are managed by DecaFlow infrastructure.</p>
                   </div>
                 </div>
               </div>
@@ -468,7 +468,7 @@ export default function SolanaStaking() {
             <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 backdrop-blur-xl border border-[#47A1FF]/30 rounded-2xl p-6">
               <h3 className="text-lg font-bold text-white mb-2">Partnership</h3>
               <p className="text-sm text-gray-300 mb-4">
-                This staking program is a collaboration between DecaFlow (Affidex Lab) and VDM, using an off-chain custodial model powered by DecaFlow infrastructure.
+                This staking program is a collaboration between DecaFlow (Affidex Lab) and VDM, powered by DecaFlow staking infrastructure.
               </p>
               <div className="flex items-center justify-center gap-4">
                 <div className="flex flex-col items-center gap-2">
