@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Wallet, TrendingUp, DollarSign, ExternalLink } from 'lucide-react';
 import { LPPosition } from '@/hooks/useUniswapV3LP';
 import { RemoveLiquidityModal } from './RemoveLiquidityModal';
-import { formatUnits } from 'viem';
 
 interface LPPositionsListProps {
   positions: LPPosition[];
@@ -99,7 +98,11 @@ export function LPPositionsList({
 
         <div className="space-y-3">
           {positions.map((position) => {
-            const hasUnclaimedFees = parseFloat(position.feesEarned0) > 0 || parseFloat(position.feesEarned1) > 0;
+            const currentToken0 = Number(position.currentToken0 ?? 0);
+            const currentToken1 = Number(position.currentToken1 ?? 0);
+            const fees0 = Number(position.feesEarned0 ?? 0);
+            const fees1 = Number(position.feesEarned1 ?? 0);
+            const hasUnclaimedFees = fees0 > 0 || fees1 > 0;
             
             return (
               <div 
@@ -132,13 +135,13 @@ export function LPPositionsList({
                   <div className="rounded-lg bg-[#1A1F2E] p-3">
                     <div className="text-xs text-gray-400 mb-1">{position.token0.symbol}</div>
                     <div className="text-sm font-medium">
-                      {parseFloat(formatUnits(BigInt(position.currentToken0), position.token0.decimals)).toFixed(4)}
+                      {currentToken0.toFixed(4)}
                     </div>
                   </div>
                   <div className="rounded-lg bg-[#1A1F2E] p-3">
                     <div className="text-xs text-gray-400 mb-1">{position.token1.symbol}</div>
                     <div className="text-sm font-medium">
-                      {parseFloat(formatUnits(BigInt(position.currentToken1), position.token1.decimals)).toFixed(4)}
+                      {currentToken1.toFixed(4)}
                     </div>
                   </div>
                 </div>
@@ -153,11 +156,11 @@ export function LPPositionsList({
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-gray-400">{position.token0.symbol}: </span>
-                        <span className="font-medium">{parseFloat(formatUnits(BigInt(position.feesEarned0), position.token0.decimals)).toFixed(6)}</span>
+                        <span className="font-medium">{fees0.toFixed(6)}</span>
                       </div>
                       <div>
                         <span className="text-gray-400">{position.token1.symbol}: </span>
-                        <span className="font-medium">{parseFloat(formatUnits(BigInt(position.feesEarned1), position.token1.decimals)).toFixed(6)}</span>
+                        <span className="font-medium">{fees1.toFixed(6)}</span>
                       </div>
                     </div>
                   </div>

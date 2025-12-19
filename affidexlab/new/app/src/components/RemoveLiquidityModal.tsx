@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Minus, DollarSign } from 'lucide-react';
 import { LPPosition } from '@/hooks/useUniswapV3LP';
-import { formatUnits } from 'viem';
 
 interface RemoveLiquidityModalProps {
   isOpen: boolean;
@@ -28,6 +27,11 @@ export function RemoveLiquidityModal({
 
   if (!position) return null;
 
+  const currentToken0 = Number(position.currentToken0 ?? 0);
+  const currentToken1 = Number(position.currentToken1 ?? 0);
+  const fees0 = Number(position.feesEarned0 ?? 0);
+  const fees1 = Number(position.feesEarned1 ?? 0);
+
   const handleRemove = async () => {
     const percentage = parseFloat(removePercentage) / 100;
     const liquidityToRemove = (BigInt(position.liquidity) * BigInt(Math.floor(percentage * 10000)) / BigInt(10000)).toString();
@@ -41,7 +45,7 @@ export function RemoveLiquidityModal({
     setTimeout(() => onClose(), 2000);
   };
 
-  const hasUnclaimedFees = parseFloat(position.feesEarned0) > 0 || parseFloat(position.feesEarned1) > 0;
+  const hasUnclaimedFees = fees0 > 0 || fees1 > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -61,13 +65,13 @@ export function RemoveLiquidityModal({
               <div>
                 <div className="text-gray-400 text-xs mb-1">{position.token0.symbol}</div>
                 <div className="font-medium">
-                  {parseFloat(formatUnits(BigInt(position.currentToken0), position.token0.decimals)).toFixed(4)}
+                  {currentToken0.toFixed(4)}
                 </div>
               </div>
               <div>
                 <div className="text-gray-400 text-xs mb-1">{position.token1.symbol}</div>
                 <div className="font-medium">
-                  {parseFloat(formatUnits(BigInt(position.currentToken1), position.token1.decimals)).toFixed(4)}
+                  {currentToken1.toFixed(4)}
                 </div>
               </div>
             </div>
@@ -89,13 +93,13 @@ export function RemoveLiquidityModal({
                 <div>
                   <div className="text-gray-400 text-xs mb-1">{position.token0.symbol}</div>
                   <div className="font-medium">
-                    {parseFloat(formatUnits(BigInt(position.feesEarned0), position.token0.decimals)).toFixed(6)}
+                    {fees0.toFixed(6)}
                   </div>
                 </div>
                 <div>
                   <div className="text-gray-400 text-xs mb-1">{position.token1.symbol}</div>
                   <div className="font-medium">
-                    {parseFloat(formatUnits(BigInt(position.feesEarned1), position.token1.decimals)).toFixed(6)}
+                    {fees1.toFixed(6)}
                   </div>
                 </div>
               </div>
@@ -153,13 +157,13 @@ export function RemoveLiquidityModal({
                   <div className="flex justify-between">
                     <span className="text-gray-400">{position.token0.symbol}</span>
                     <span className="font-medium">
-                      {(parseFloat(formatUnits(BigInt(position.currentToken0), position.token0.decimals)) * parseFloat(removePercentage) / 100).toFixed(4)}
+                      {(currentToken0 * parseFloat(removePercentage) / 100).toFixed(4)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">{position.token1.symbol}</span>
                     <span className="font-medium">
-                      {(parseFloat(formatUnits(BigInt(position.currentToken1), position.token1.decimals)) * parseFloat(removePercentage) / 100).toFixed(4)}
+                      {(currentToken1 * parseFloat(removePercentage) / 100).toFixed(4)}
                     </span>
                   </div>
                 </div>
