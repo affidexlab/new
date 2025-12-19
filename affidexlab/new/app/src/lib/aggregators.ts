@@ -136,6 +136,12 @@ export async function bestRoute(params: QuoteParams): Promise<QuoteResponse> {
       };
     } catch (error) {
       console.error("Direct router quote failed, falling back to 0x:", error);
+      try {
+        return await quote0x(params);
+      } catch (fallbackError) {
+        console.error("0x quote also failed:", fallbackError);
+        throw new Error("Unable to fetch quote. Please try again or adjust the amount.");
+      }
     }
   }
 
