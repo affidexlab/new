@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS solana_staking_positions (
   staked_at BIGINT NOT NULL,
   last_claim_at BIGINT NOT NULL,
   status VARCHAR(50) NOT NULL DEFAULT 'active',
+  lock_period VARCHAR(32) NOT NULL DEFAULT 'TwelveMonths',
+  unlock_timestamp BIGINT NOT NULL DEFAULT 0,
   created_at BIGINT NOT NULL,
   updated_at BIGINT NOT NULL,
   UNIQUE(wallet, pool_id, status)
@@ -172,6 +174,25 @@ CREATE TABLE IF NOT EXISTS solana_staking_transactions (
   timestamp BIGINT NOT NULL,
   created_at BIGINT NOT NULL
 );
+
+-- Off-chain staking claims table (records manual payouts from custody wallet)
+CREATE TABLE IF NOT EXISTS solana_staking_claims (
+  id SERIAL PRIMARY KEY,
+  wallet VARCHAR(255) NOT NULL,
+  pool_id VARCHAR(100) NOT NULL,
+  position_id INTEGER NOT NULL,
+  principal_amount DECIMAL(20, 8) NOT NULL,
+  rewards_amount DECIMAL(20, 8) NOT NULL,
+  payout_signature VARCHAR(255),
+  status VARCHAR(50) NOT NULL DEFAULT 'requested',
+  requested_at BIGINT NOT NULL,
+  processed_at BIGINT,
+  created_at BIGINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_solana_claims_wallet ON solana_staking_claims(wallet);
+CREATE INDEX IF NOT EXISTS idx_solana_claims_pool ON solana_staking_claims(pool_id);
+CREATE INDEX IF NOT EXISTS idx_solana_claims_status ON solana_staking_claims(status);
 
 CREATE INDEX IF NOT EXISTS idx_solana_tx_wallet ON solana_staking_transactions(wallet);
 CREATE INDEX IF NOT EXISTS idx_solana_tx_pool ON solana_staking_transactions(pool_id);

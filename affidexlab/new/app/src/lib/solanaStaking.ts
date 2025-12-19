@@ -1,10 +1,8 @@
-import { Connection, PublicKey, Transaction } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
-import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
 
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
-export const PROGRAM_ID = 'VDMStakingProgramXXXXXXXXXXXXXXXXXXXXXXXXXX';
-export const AFFIDEX_FEE_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
+export const AFFIDEX_CUSTODY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
 export const MIN_STAKE_AMOUNT = 1_000;
 export const MAX_STAKE_AMOUNT = 10_000_000;
@@ -87,7 +85,10 @@ export const calculateRewards = (amount: number, lockPeriod: LockPeriod): number
   
   const depositFee = calculateDepositFee(amount);
   const netAmount = amount - depositFee;
-  return netAmount * (period.apy / 100);
+  const annualRate = period.apy / 100;
+  const secondsInYear = 31_536_000;
+  const lockRatio = period.seconds / secondsInYear;
+  return netAmount * annualRate * lockRatio;
 };
 
 export const calculateNetReturn = (amount: number, lockPeriod: LockPeriod): number => {
@@ -131,7 +132,9 @@ export async function getUserStake(
     const stake = data.data;
     const now = Math.floor(Date.now() / 1000);
     const daysRemaining = Math.max(0, Math.ceil((stake.unlockTimestamp - now) / 86400));
-    const canClaim = now >= stake.unlockTimestamp && stake.hasStaked && !stake.hasClaimed;
+    const hasStaked = !!stake;
+    const hasClaimed = stake.hasClaimed || false;
+    const canClaim = now >= stake.unlockTimestamp && hasStaked && !hasClaimed;
     
     const period = LOCK_PERIODS.find(p => p.id === stake.lockPeriod);
     
@@ -164,87 +167,50 @@ export async function getPoolStats(): Promise<PoolStats | null> {
   }
 }
 
-export async function stakeTokens(
-  connection: Connection,
+export async function registerOffchainStake(
   walletAddress: PublicKey,
   amount: number,
   lockPeriod: LockPeriod,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<string> {
-  try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
-    
-    const response = await fetch(`${API_BASE}/v1/solana-staking/stake`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: walletAddress.toString(),
-        amount,
-        lockPeriod,
-      }),
-    });
+  depositSignature: string,
+): Promise<void> {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+  
+  const response = await fetch(`${API_BASE}/v1/solana-staking/stake`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      wallet: walletAddress.toString(),
+      amount,
+      lockPeriod,
+      depositSignature,
+    }),
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to prepare stake transaction');
-    }
-
-    const transaction = Transaction.from(Buffer.from(data.data.transaction, 'base64'));
-    const signedTx = await signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(signedTx.serialize());
-    
-    await connection.confirmTransaction(signature, 'confirmed');
-
-    await fetch(`${API_BASE}/v1/solana-staking/confirm-stake`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: walletAddress.toString(),
-        signature,
-        amount,
-        lockPeriod,
-      }),
-    });
-
-    return signature;
-  } catch (error) {
-    console.error('Error staking tokens:', error);
-    throw error;
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to register stake');
   }
 }
 
-export async function claimStake(
-  connection: Connection,
+export async function requestOffchainClaim(
   walletAddress: PublicKey,
-  signTransaction: (tx: Transaction) => Promise<Transaction>
-): Promise<string> {
-  try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
-    
-    const response = await fetch(`${API_BASE}/v1/solana-staking/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet: walletAddress.toString(),
-      }),
-    });
+): Promise<{ principalAmount: number; rewardsAmount: number; withdrawalFee: number }> {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+  
+  const response = await fetch(`${API_BASE}/v1/solana-staking/claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      wallet: walletAddress.toString(),
+    }),
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to prepare claim transaction');
-    }
-
-    const transaction = Transaction.from(Buffer.from(data.data.transaction, 'base64'));
-    const signedTx = await signTransaction(transaction);
-    const signature = await connection.sendRawTransaction(signedTx.serialize());
-    
-    await connection.confirmTransaction(signature, 'confirmed');
-
-    return signature;
-  } catch (error) {
-    console.error('Error claiming stake:', error);
-    throw error;
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to request claim');
   }
+
+  return data.data;
 }
