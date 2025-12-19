@@ -485,6 +485,23 @@ export default function SwapApp() {
         setNetAmountWei(net);
         const slippagePercentage = getSlippagePercentage(slippageConfig);
         const hasDirectRouter = !!LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
+        
+        const WETH_ADDRESSES: Record<number, string> = {
+          1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+          42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+          10: "0x4200000000000000000000000000000000000006",
+          8453: "0x4200000000000000000000000000000000000006",
+          137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+          43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+        };
+        
+        const fromIsETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+        const toIsETH = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+        const fromIsWETH = fromToken.address.toLowerCase() === WETH_ADDRESSES[selectedChainId]?.toLowerCase();
+        const toIsWETH = toToken.address.toLowerCase() === WETH_ADDRESSES[selectedChainId]?.toLowerCase();
+        
+        const isWrapUnwrap = (fromIsWETH && toIsETH) || (fromIsETH && toIsWETH);
+        
         const quoteResult = await bestRoute({
           fromToken: fromToken.address,
           toToken: toToken.address,
@@ -494,7 +511,7 @@ export default function SwapApp() {
           privacy: !hasDirectRouter && privacyMode && cowSupported,
           slippagePercentage,
           timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
-          useDirectRouter: hasDirectRouter,
+          useDirectRouter: hasDirectRouter && !isWrapUnwrap,
         });
         setQuote(quoteResult);
       } catch (error) {
