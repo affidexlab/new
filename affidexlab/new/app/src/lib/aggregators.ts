@@ -27,8 +27,15 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
   const apiEndpoint = API_ENDPOINTS[params.chainId]?.zeroX;
   if (!apiEndpoint) throw new Error(`0x API not supported on chain ${params.chainId}`);
 
-  const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
-  const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
+  const ETHEREUM_MAINNET = 1;
+  const isMainnet = params.chainId === ETHEREUM_MAINNET;
+  
+  const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+    ? (isMainnet ? "ETH" : "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
+    : params.fromToken;
+  const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+    ? (isMainnet ? "ETH" : "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE")
+    : params.toToken;
 
   const urlParams: Record<string, string> = {
     sellToken,
