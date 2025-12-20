@@ -11,11 +11,22 @@ export default function Landing() {
   const [activeTab, setActiveTab] = useState(0);
   const [enterDappOpen, setEnterDappOpen] = useState(false);
   const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const { subscribeToTransactions } = useTransactionEvents();
 
   const fetchGlobalStats = async () => {
     try {
-      const response = await fetch(`${API_BASE}/v1/points/metrics`);
+      setStatsLoading(true);
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_BASE}/v1/points/metrics`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       const data = await response.json();
       if (data.success && data.data) {
         setStats({
@@ -26,6 +37,9 @@ export default function Landing() {
       }
     } catch (error) {
       console.error('Failed to fetch global stats:', error);
+      // Keep showing previous stats or zeros if first load
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -207,9 +221,9 @@ export default function Landing() {
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <StatsCard number={stats.trades > 0 ? stats.trades.toLocaleString() + '+' : 'Loading...'} label="Total Trades" />
-            <StatsCard number={stats.volumeUSD > 0 ? ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+') : 'Loading...'} label="Total Volume" />
-            <StatsCard number={stats.wallets > 0 ? stats.wallets.toLocaleString() + '+' : 'Loading...'} label="Total Wallets" />
+            <StatsCard number={statsLoading && stats.trades === 0 ? 'Loading...' : stats.trades.toLocaleString() + '+'} label="Total Trades" />
+            <StatsCard number={statsLoading && stats.volumeUSD === 0 ? 'Loading...' : ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+')} label="Total Volume" />
+            <StatsCard number={statsLoading && stats.wallets === 0 ? 'Loading...' : stats.wallets.toLocaleString() + '+'} label="Total Wallets" />
           </div>
 
           {/* Partner Logos Carousel */}
