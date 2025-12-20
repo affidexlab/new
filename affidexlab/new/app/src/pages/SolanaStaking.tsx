@@ -14,17 +14,17 @@ import {
   getVDMTokenBalance,
   getUserStake,
   getPoolStats,
-  registerOffchainStake,
+  transferVDMAndStake,
   requestOffchainClaim,
 } from '../lib/solanaStaking';
 
 export default function SolanaStaking() {
-  const { publicKey } = useWallet();
+  const wallet = useWallet();
+  const { publicKey } = wallet;
   const { connection } = useConnection();
   
   const [selectedLockPeriod, setSelectedLockPeriod] = useState<LockPeriod>(LockPeriod.TwelveMonths);
   const [stakeAmount, setStakeAmount] = useState('');
-  const [depositSignature, setDepositSignature] = useState('');
   const [vdmBalance, setVdmBalance] = useState(0);
   const [userStake, setUserStake] = useState<any | null>(null);
   const [poolStats, setPoolStatsState] = useState<any | null>(null);
@@ -82,11 +82,6 @@ export default function SolanaStaking() {
       return;
     }
 
-    if (!depositSignature.trim()) {
-      toast.error('Please paste the transaction signature of your VDM transfer to the staking wallet');
-      return;
-    }
-
     if (userStake?.hasStaked && !userStake?.hasClaimed) {
       toast.error('You already have an active stake. One stake per wallet.');
       return;
@@ -99,23 +94,22 @@ export default function SolanaStaking() {
       const netStake = amount - depositFee;
       const rewards = calculateRewards(amount, selectedLockPeriod);
 
-      toast.info(`Registering stake of ${netStake.toFixed(2)} VDM (${depositFee.toFixed(2)} VDM fee)`);
+      toast.info(`Transferring ${amount.toFixed(2)} VDM to staking wallet. Please approve the transaction in your wallet.`);
 
-      await registerOffchainStake(
-        publicKey,
+      const signature = await transferVDMAndStake(
+        connection,
+        wallet,
         amount,
-        selectedLockPeriod,
-        depositSignature.trim(),
+        selectedLockPeriod
       );
 
-      toast.success('Stake registered successfully. Your deposit will be verified by the staking team.');
+      toast.success(`Stake successful! Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`);
       
       setStakeAmount('');
-      setDepositSignature('');
       await loadData();
     } catch (error: any) {
       console.error('Stake error:', error);
-      toast.error(error?.message || 'Failed to register stake');
+      toast.error(error?.message || 'Failed to stake VDM');
     } finally {
       setLoading(false);
     }
@@ -268,29 +262,6 @@ export default function SolanaStaking() {
                   </p>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Step 1 – Send VDM to staking wallet</label>
-                  <div className="bg-[#0A0E27]/50 rounded-lg p-3 text-xs text-gray-300 space-y-1">
-                    <p>Send your chosen VDM amount from your connected wallet to:</p>
-                    <p className="font-mono text-[11px] break-all text-white">3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk</p>
-                    <p className="text-gray-400">This is the official VDM staking custody wallet controlled by Affidex Lab.</p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm text-gray-400 mb-2 block">Step 2 – Paste deposit transaction signature</label>
-                  <input
-                    type="text"
-                    value={depositSignature}
-                    onChange={(e) => setDepositSignature(e.target.value)}
-                    placeholder="Transaction signature from your wallet"
-                    className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none text-xs"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    After sending VDM, copy the transaction signature from your wallet (Phantom/Solflare) and paste it here.
-                  </p>
-                </div>
-
                 {amountNumber > 0 && (
                   <div className="bg-[#0A0E27]/50 rounded-lg p-4 space-y-2 text-sm">
                     <div className="flex justify-between text-gray-400">
@@ -318,11 +289,18 @@ export default function SolanaStaking() {
 
                 <button
                   onClick={handleStake}
-                  disabled={loading || !publicKey}
+                  disabled={loading || !publicKey || !amountNumber || amountNumber < MIN_STAKE_AMOUNT}
                   className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Processing...' : 'Register Stake'}
+                  {loading ? 'Processing...' : 'Stake Now'}
                 </button>
+
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs text-blue-100">
+                  <p className="font-semibold mb-1">ℹ️ How it works</p>
+                  <p>• Click "Stake Now" and approve the transaction in your wallet popup</p>
+                  <p>• VDM will be transferred directly to the official staking wallet</p>
+                  <p>• Your stake will be registered automatically after confirmation</p>
+                </div>
 
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
                   <p className="font-medium mb-1">⚠️ Staking information</p>
@@ -409,6 +387,16 @@ export default function SolanaStaking() {
                   <div>
                     <p className="text-white font-medium">High APY Returns</p>
                     <p className="text-gray-400 text-xs">Earn 8–16% APY (annualized) based on your chosen lock period.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-cyan-400">⚡</span>
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">One-Click Staking</p>
+                    <p className="text-gray-400 text-xs">Just approve the transaction in your wallet. VDM transfers directly to staking wallet.</p>
                   </div>
                 </div>
                 
