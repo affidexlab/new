@@ -2,29 +2,29 @@ import { query } from '../db/connection.js';
 
 const POINTS_CONFIG = {
   swap: {
-    baseRate: 1.0,
-    minAmount: 5,
+    baseRate: 2.0,
+    minAmount: 10,
   },
   bridge: {
-    baseRate: 2.0,
+    baseRate: 4.0,
     minAmount: 5,
   },
   liquidity: {
     add: {
-      baseRate: 5.0,
+      baseRate: 7.0,
       minAmount: 50,
     },
     remove: {
-      baseRate: 0.5,
+      baseRate: 1.5,
       minAmount: 0,
     },
   },
   privacy_swap: {
-    baseRate: 1.5,
-    minAmount: 5,
+    baseRate: 2.5,
+    minAmount: 10,
   },
   vdm_staking: {
-    baseRate: 3.0,
+    baseRate: 2.5,
     minAmount: 10,
   },
 };
