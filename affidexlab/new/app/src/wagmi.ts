@@ -1,31 +1,63 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { createConfig, http } from 'wagmi';
 import { mainnet, arbitrum, avalanche, base, optimism, polygon } from 'wagmi/chains';
-import { http } from 'wagmi';
+import { connectorsForWallets } from '@rainbow-me/rainbowkit';
+import {
+  metaMaskWallet,
+  coinbaseWallet,
+  walletConnectWallet,
+  rainbowWallet,
+  trustWallet,
+  ledgerWallet,
+} from '@rainbow-me/rainbowkit/wallets';
 
 // Get WalletConnect Project ID from environment
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string;
 
-if (!projectId || projectId === 'YOUR_PROJECT_ID_HERE') {
-  console.warn('⚠️  WalletConnect Project ID not properly configured');
-  console.info('💡 Get a free project ID at https://cloud.walletconnect.com');
-  console.info('📝 Add it to your .env file as VITE_WALLETCONNECT_PROJECT_ID');
+if (!projectId) {
+  console.error('❌ VITE_WALLETCONNECT_PROJECT_ID is not set!');
+} else {
+  console.log('✅ WalletConnect Project ID:', projectId.substring(0, 10) + '...');
 }
 
-// Configure supported chains
+// Supported chains
 const chains = [base, mainnet, arbitrum, avalanche, optimism, polygon] as const;
 
-// Create wagmi config with all wallet support
-export const config = getDefaultConfig({
-  appName: 'DecaFlow',
-  projectId: projectId || 'c3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3',
+// Explicitly configure connectors with proper metadata
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: 'Recommended',
+      wallets: [
+        metaMaskWallet,
+        coinbaseWallet,
+        walletConnectWallet,
+        rainbowWallet,
+      ],
+    },
+    {
+      groupName: 'Others',
+      wallets: [
+        trustWallet,
+        ledgerWallet,
+      ],
+    },
+  ],
+  {
+    appName: 'DecaFlow',
+    projectId,
+  }
+);
+
+// Create wagmi config with explicit settings
+export const config = createConfig({
   chains,
-  ssr: false,
+  connectors,
   
-  // Custom RPC transports for better reliability
+  // Custom RPC endpoints
   transports: {
     [base.id]: http('https://mainnet.base.org'),
     [mainnet.id]: http('https://eth.llamarpc.com'),
-    [arbitrum.id]: http('https://arbitrum.llamarpc.com'), 
+    [arbitrum.id]: http('https://arbitrum.llamarpc.com'),
     [avalanche.id]: http('https://api.avax.network/ext/bc/C/rpc'),
     [optimism.id]: http('https://mainnet.optimism.io'),
     [polygon.id]: http('https://polygon-rpc.com'),
@@ -35,4 +67,11 @@ export const config = getDefaultConfig({
   batch: {
     multicall: true,
   },
+  
+  ssr: false,
 });
+
+// Debug logging
+console.log('🔧 Wagmi config initialized with explicit connectors');
+console.log('📱 Chains:', chains.map(c => c.name).join(', '));
+console.log('🔌 Connectors:', connectors.length, 'configured');
