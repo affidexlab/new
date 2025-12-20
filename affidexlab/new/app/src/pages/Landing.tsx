@@ -18,16 +18,24 @@ export default function Landing() {
     try {
       setStatsLoading(true);
       
-      // Add timeout to prevent hanging
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       
       const response = await fetch(`${API_BASE}/v1/points/metrics`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
       });
       clearTimeout(timeoutId);
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('📊 Landing page stats loaded:', data);
+      
       if (data.success && data.data) {
         setStats({
           trades: data.data.totalTrades || 0,
@@ -35,10 +43,12 @@ export default function Landing() {
           wallets: data.data.uniqueWallets || 0,
           tvl: data.data.tvl || 0,
         });
+      } else {
+        console.warn('⚠️ API returned unsuccessful response:', data);
       }
     } catch (error) {
-      console.error('Failed to fetch global stats:', error);
-      // Keep showing previous stats or zeros if first load
+      console.error('❌ Failed to fetch global stats:', error);
+      console.error('API endpoint:', `${API_BASE}/v1/points/metrics`);
     } finally {
       setStatsLoading(false);
     }
@@ -222,10 +232,10 @@ export default function Landing() {
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <StatsCard number={statsLoading && stats.tvl === 0 ? 'Loading...' : ('$' + Math.round(stats.tvl).toLocaleString())} label="Total Value Locked" />
-            <StatsCard number={statsLoading && stats.volumeUSD === 0 ? 'Loading...' : ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+')} label="Total Volume" />
-            <StatsCard number={statsLoading && stats.trades === 0 ? 'Loading...' : stats.trades.toLocaleString() + '+'} label="Total Trades" />
-            <StatsCard number={statsLoading && stats.wallets === 0 ? 'Loading...' : stats.wallets.toLocaleString() + '+'} label="Total Wallets" />
+            <StatsCard number={statsLoading ? 'Loading...' : ('$' + Math.round(stats.tvl).toLocaleString())} label="Total Value Locked" />
+            <StatsCard number={statsLoading ? 'Loading...' : ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+')} label="Total Volume" />
+            <StatsCard number={statsLoading ? 'Loading...' : stats.trades.toLocaleString() + '+'} label="Total Trades" />
+            <StatsCard number={statsLoading ? 'Loading...' : stats.wallets.toLocaleString() + '+'} label="Total Wallets" />
           </div>
 
           {/* Partner Logos Carousel */}
