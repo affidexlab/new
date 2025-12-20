@@ -19,6 +19,14 @@ const POINTS_CONFIG = {
       minAmount: 0,
     },
   },
+  privacy_swap: {
+    baseRate: 1.5,
+    minAmount: 5,
+  },
+  vdm_staking: {
+    baseRate: 3.0,
+    minAmount: 10,
+  },
 };
 
 export const calculatePoints = async (transactionType, amountUSD, walletAddress) => {
@@ -43,6 +51,16 @@ export const calculatePoints = async (transactionType, amountUSD, walletAddress)
       break;
     case 'liquidity_remove':
       basePoints = amountUSD * POINTS_CONFIG.liquidity.remove.baseRate;
+      break;
+    case 'privacy_swap':
+      if (amountUSD >= POINTS_CONFIG.privacy_swap.minAmount) {
+        basePoints = amountUSD * POINTS_CONFIG.privacy_swap.baseRate;
+      }
+      break;
+    case 'vdm_staking':
+      if (amountUSD >= POINTS_CONFIG.vdm_staking.minAmount) {
+        basePoints = amountUSD * POINTS_CONFIG.vdm_staking.baseRate;
+      }
       break;
     default:
       basePoints = 0;
@@ -373,7 +391,7 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
 };
 
 export const getGlobalMetrics = async () => {
-  const result = await query(
+  const transactionsResult = await query(
     `SELECT 
       COUNT(*) as total_trades,
       COALESCE(SUM(amount_usd), 0) as total_volume_usd,
@@ -382,11 +400,30 @@ export const getGlobalMetrics = async () => {
      WHERE status = 'completed'`
   );
   
-  const metrics = result.rows[0];
+  const stakingResult = await query(
+    `SELECT 
+      COUNT(*) as total_stakes,
+      COALESCE(SUM(staked_amount), 0) as total_staking_volume,
+      COUNT(DISTINCT wallet) as unique_staking_wallets
+     FROM solana_staking_positions 
+     WHERE status IN ('active', 'completed')`
+  );
+  
+  const allWalletsResult = await query(
+    `SELECT COUNT(*) as total_wallets FROM users`
+  );
+  
+  const txMetrics = transactionsResult.rows[0];
+  const stakingMetrics = stakingResult.rows[0];
+  const walletMetrics = allWalletsResult.rows[0];
+  
+  const totalTrades = (parseInt(txMetrics.total_trades) || 0) + (parseInt(stakingMetrics.total_stakes) || 0);
+  const totalVolume = (parseFloat(txMetrics.total_volume_usd) || 0) + (parseFloat(stakingMetrics.total_staking_volume) || 0);
+  const uniqueWallets = parseInt(walletMetrics.total_wallets) || 0;
   
   return {
-    totalTrades: parseInt(metrics.total_trades) || 0,
-    totalVolumeUsd: parseFloat(metrics.total_volume_usd) || 0,
-    uniqueWallets: parseInt(metrics.unique_wallets) || 0
+    totalTrades,
+    totalVolumeUsd: totalVolume,
+    uniqueWallets
   };
 };
