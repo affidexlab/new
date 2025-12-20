@@ -29,6 +29,26 @@ const POINTS_CONFIG = {
   },
 };
 
+let stakingTableChecked = false;
+let stakingTableExistsCache = false;
+
+const hasStakingTable = async () => {
+  if (stakingTableChecked) {
+    return stakingTableExistsCache;
+  }
+
+  try {
+    const result = await query(`SELECT to_regclass('public.solana_staking_positions') as reg`);
+    stakingTableExistsCache = Boolean(result.rows[0]?.reg);
+  } catch (error) {
+    console.warn('⚠️  Failed to check staking table availability:', error.message);
+    stakingTableExistsCache = false;
+  }
+
+  stakingTableChecked = true;
+  return stakingTableExistsCache;
+};
+
 export const calculatePoints = async (transactionType, amountUSD, walletAddress) => {
   let basePoints = 0;
   let multiplier = 1.0;
@@ -392,6 +412,8 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
 
 export const getGlobalMetrics = async () => {
   try {
+    const stakingTableExists = await hasStakingTable();
+
     const [transactionsResult, stakingResult, allWalletsResult] = await Promise.all([
       query(
         `SELECT 
@@ -400,24 +422,24 @@ export const getGlobalMetrics = async () => {
          FROM transactions 
          WHERE status = 'completed'`
       ),
-      query(
-        `SELECT 
-          COUNT(*) as total_stakes,
-          COALESCE(SUM(staked_amount), 0) as total_staking_volume
-         FROM solana_staking_positions 
-         WHERE status IN ('active', 'completed')`
-      ).catch(() => ({ rows: [{ total_stakes: 0, total_staking_volume: 0 }] })),
+      stakingTableExists
+        ? query(
+            `SELECT 
+              COUNT(*) as total_stakes,
+              COALESCE(SUM(staked_amount), 0) as total_staking_volume
+             FROM solana_staking_positions 
+             WHERE status IN ('active', 'completed')`
+          ).catch(() => ({ rows: [{ total_stakes: 0, total_staking_volume: 0 }] }))
+        : Promise.resolve({ rows: [{ total_stakes: 0, total_staking_volume: 0 }] }),
       query(
         `SELECT COUNT(*) as total_wallets FROM users`
       )
     ]);
     
-    let stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
-    try {
-      const result = await query(`SELECT COUNT(*) as total_stakes, COALESCE(SUM(staked_amount), 0) as total_staking_volume FROM solana_staking_positions WHERE status IN ('active', 'completed')`);
-      stakingMetrics = result.rows[0];
-    } catch (e) {
-      console.log('Staking table query failed, using zero');
+    let stakingMetrics = stakingResult.rows[0] || { total_stakes: 0, total_staking_volume: 0 };
+    if (!stakingTableExists) {
+      stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
+      console.log('ℹ️  Staking table not present, skipping staking metrics');
     }
     
     const txMetrics = transactionsResult.rows[0];
