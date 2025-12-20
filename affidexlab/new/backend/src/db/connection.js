@@ -8,6 +8,9 @@ dotenv.config();
 
 const { Pool } = pg;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -40,36 +43,51 @@ export const getClient = async () => {
   return client;
 };
 
+const runSqlFile = async (relativePath) => {
+  const filePath = join(__dirname, relativePath);
+  const sql = readFileSync(filePath, 'utf8');
+  await query(sql);
+};
+
+const hasBaseSchema = async () => {
+  try {
+    const result = await query("SELECT to_regclass('public.users') as reg");
+    return Boolean(result.rows[0]?.reg);
+  } catch (error) {
+    console.warn('⚠️  Failed to check base schema:', error.message);
+    return false;
+  }
+};
+
 export const initializeDatabase = async () => {
   try {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const schemaPath = join(__dirname, 'schema.sql');
-    const schema = readFileSync(schemaPath, 'utf8');
-    
-    await query(schema);
-    console.log('✅ Database schema initialized successfully');
-    
-    const migrationPath = join(__dirname, 'migrations', '007_liquidity_tracking.sql');
-    try {
-      const migration = readFileSync(migrationPath, 'utf8');
-      await query(migration);
-      console.log('✅ Liquidity tracking migration applied successfully');
-    } catch (migrationError) {
-      if (migrationError.code === 'ENOENT') {
-        console.log('ℹ️  No liquidity tracking migration file found (may already be applied)');
-      } else if (migrationError.message?.includes('already exists')) {
-        console.log('ℹ️  Liquidity tracking tables already exist');
-      } else {
-        console.warn('⚠️  Migration warning:', migrationError.message);
-      }
+    const schemaExists = await hasBaseSchema();
+    if (!schemaExists) {
+      await runSqlFile('schema.sql');
+      console.log('✅ Database schema initialized successfully');
+    } else {
+      console.log('ℹ️  Base schema already initialized, skipping schema.sql');
     }
-    
-    return true;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Failed to initialize database schema:', error);
     throw error;
   }
+
+  try {
+    await runSqlFile('migrations/007_liquidity_tracking.sql');
+    console.log('✅ Liquidity tracking migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Liquidity tracking migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Liquidity tracking migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
+  return true;
 };
 
 export const healthCheck = async () => {
