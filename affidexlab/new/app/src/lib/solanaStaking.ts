@@ -1,5 +1,5 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token';
 
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
 export const AFFIDEX_CUSTODY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
@@ -165,6 +165,71 @@ export async function getPoolStats(): Promise<PoolStats | null> {
     console.error('Error fetching pool stats:', error);
     return null;
   }
+}
+
+export async function transferVDMAndStake(
+  connection: Connection,
+  walletAdapter: any,
+  amount: number,
+  lockPeriod: LockPeriod,
+): Promise<string> {
+  if (!walletAdapter.publicKey || !walletAdapter.signTransaction) {
+    throw new Error('Wallet not connected');
+  }
+
+  const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
+  const custodyWallet = new PublicKey(AFFIDEX_CUSTODY_WALLET);
+  
+  // Get token accounts
+  const fromTokenAccount = await getAssociatedTokenAddress(
+    vdmMint,
+    walletAdapter.publicKey
+  );
+  
+  const toTokenAccount = await getAssociatedTokenAddress(
+    vdmMint,
+    custodyWallet
+  );
+  
+  // Convert amount to token decimals (VDM has 9 decimals)
+  const amountInLamports = Math.floor(amount * 1_000_000_000);
+  
+  // Create transfer instruction
+  const transferInstruction = createTransferInstruction(
+    fromTokenAccount,
+    toTokenAccount,
+    walletAdapter.publicKey,
+    amountInLamports
+  );
+  
+  // Create transaction
+  const transaction = new Transaction().add(transferInstruction);
+  
+  // Get recent blockhash
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = walletAdapter.publicKey;
+  
+  // Sign and send transaction
+  const signed = await walletAdapter.signTransaction(transaction);
+  const signature = await connection.sendRawTransaction(signed.serialize());
+  
+  // Wait for confirmation
+  await connection.confirmTransaction({
+    signature,
+    blockhash,
+    lastValidBlockHeight,
+  }, 'confirmed');
+  
+  // Register stake with backend
+  await registerOffchainStake(
+    walletAdapter.publicKey,
+    amount,
+    lockPeriod,
+    signature
+  );
+  
+  return signature;
 }
 
 export async function registerOffchainStake(
