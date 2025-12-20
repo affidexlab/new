@@ -125,7 +125,7 @@ router.get('/user/:walletAddress/rewards', [
 router.post('/record', [
   body('txHash').isString().notEmpty(),
   body('walletAddress').isString().isLength({ min: 42, max: 42 }),
-  body('transactionType').isString().isIn(['swap', 'bridge', 'liquidity_add', 'liquidity_remove']),
+  body('transactionType').isString().isIn(['swap', 'bridge', 'liquidity_add', 'liquidity_remove', 'privacy_swap', 'vdm_staking']),
   body('amountUSD').isFloat({ min: 0 }),
   body('fromChainId').optional().isInt(),
   body('toChainId').optional().isInt(),
@@ -185,7 +185,7 @@ router.post('/admin/multiplier', [
   body('name').isString().notEmpty(),
   body('description').optional().isString(),
   body('multiplier').isFloat({ min: 0.1, max: 100 }),
-  body('transactionType').optional().isString().isIn(['swap', 'bridge', 'liquidity_add', 'liquidity_remove']),
+  body('transactionType').optional().isString().isIn(['swap', 'bridge', 'liquidity_add', 'liquidity_remove', 'privacy_swap', 'vdm_staking']),
   body('minAmountUSD').optional().isFloat({ min: 0 }),
   body('startDate').optional().isISO8601(),
   body('endDate').optional().isISO8601(),

@@ -6,7 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.
 interface TransactionData {
   txHash: string;
   walletAddress: string;
-  transactionType: 'swap' | 'bridge' | 'liquidity_add' | 'liquidity_remove';
+  transactionType: 'swap' | 'bridge' | 'liquidity_add' | 'liquidity_remove' | 'privacy_swap' | 'vdm_staking';
   amountUSD: number;
   fromChainId?: number;
   toChainId?: number;
@@ -175,10 +175,52 @@ export const usePointsTracking = () => {
     });
   };
 
+  const trackPrivacySwap = async (txHash: string, fromToken: string, toToken: string, amountUSD: number, chainId: number) => {
+    if (!address) {
+      console.warn('⚠️ No wallet address - cannot track privacy swap');
+      return;
+    }
+    
+    console.log('🔒 Tracking privacy swap:', { txHash, fromToken, toToken, amountUSD, chainId });
+    
+    return recordTransaction({
+      txHash,
+      walletAddress: address,
+      transactionType: 'privacy_swap',
+      amountUSD,
+      fromChainId: chainId,
+      toChainId: chainId,
+      fromToken,
+      toToken,
+    });
+  };
+
+  const trackVdmStaking = async (txHash: string, amountUSD: number, chainId: number) => {
+    if (!address) {
+      console.warn('⚠️ No wallet address - cannot track VDM staking');
+      return;
+    }
+    
+    console.log('🏦 Tracking VDM staking:', { txHash, amountUSD, chainId });
+    
+    return recordTransaction({
+      txHash,
+      walletAddress: address,
+      transactionType: 'vdm_staking',
+      amountUSD,
+      fromChainId: chainId,
+      toChainId: chainId,
+      fromToken: 'VDM',
+      toToken: 'VDM',
+    });
+  };
+
   return {
     trackSwap,
     trackBridge,
     trackLiquidityAdd,
     trackLiquidityRemove,
+    trackPrivacySwap,
+    trackVdmStaking,
   };
 };

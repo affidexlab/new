@@ -16,10 +16,14 @@ import { logger } from "@/lib/logger";
 import { usePointsTracking } from "@/hooks/usePointsTracking";
 import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
-export default function Swap() {
+interface SwapProps {
+  isPrivacySwap?: boolean;
+}
+
+export default function Swap({ isPrivacySwap = false }: SwapProps = {}) {
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
-  const { trackSwap } = usePointsTracking();
+  const { trackSwap, trackPrivacySwap } = usePointsTracking();
   const { emitTransactionComplete } = useTransactionEvents();
   
   const [fromChain, setFromChain] = useState<ChainKey>(() => {
@@ -477,17 +481,27 @@ export default function Swap() {
         localStorage.setItem(key, JSON.stringify(prev));
 
         // Track points for this swap transaction
-        await trackSwap(
-          txHash,
-          fromToken.address,
-          toToken.address,
-          amountUSD,
-          chainId
-        );
+        if (isPrivacySwap) {
+          await trackPrivacySwap(
+            txHash,
+            fromToken.address,
+            toToken.address,
+            amountUSD,
+            chainId
+          );
+        } else {
+          await trackSwap(
+            txHash,
+            fromToken.address,
+            toToken.address,
+            amountUSD,
+            chainId
+          );
+        }
 
         // Emit transaction event for real-time updates
         emitTransactionComplete({
-          type: 'swap',
+          type: isPrivacySwap ? 'privacy_swap' : 'swap',
           txHash,
           timestamp: Date.now(),
           amountUSD
