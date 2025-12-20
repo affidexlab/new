@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS liquidity_positions (
   FOREIGN KEY (wallet_address) REFERENCES users(wallet_address)
 );
 
-CREATE INDEX idx_lp_wallet ON liquidity_positions(wallet_address);
-CREATE INDEX idx_lp_chain ON liquidity_positions(chain_id);
-CREATE INDEX idx_lp_pool ON liquidity_positions(pool_address);
-CREATE INDEX idx_lp_status ON liquidity_positions(status);
-CREATE INDEX idx_lp_added_at ON liquidity_positions(added_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lp_wallet ON liquidity_positions(wallet_address);
+CREATE INDEX IF NOT EXISTS idx_lp_chain ON liquidity_positions(chain_id);
+CREATE INDEX IF NOT EXISTS idx_lp_pool ON liquidity_positions(pool_address);
+CREATE INDEX IF NOT EXISTS idx_lp_status ON liquidity_positions(status);
+CREATE INDEX IF NOT EXISTS idx_lp_added_at ON liquidity_positions(added_at DESC);
 
 -- Protocol revenue tracking table
 CREATE TABLE IF NOT EXISTS protocol_revenue (
@@ -43,9 +43,9 @@ CREATE TABLE IF NOT EXISTS protocol_revenue (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_revenue_type ON protocol_revenue(revenue_type);
-CREATE INDEX idx_revenue_source ON protocol_revenue(source);
-CREATE INDEX idx_revenue_created_at ON protocol_revenue(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_revenue_type ON protocol_revenue(revenue_type);
+CREATE INDEX IF NOT EXISTS idx_revenue_source ON protocol_revenue(source);
+CREATE INDEX IF NOT EXISTS idx_revenue_created_at ON protocol_revenue(created_at DESC);
 
 -- Daily metrics aggregation table
 CREATE TABLE IF NOT EXISTS daily_metrics (
@@ -63,4 +63,4 @@ CREATE TABLE IF NOT EXISTS daily_metrics (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_daily_metrics_date ON daily_metrics(metric_date DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_metrics(metric_date DESC);
