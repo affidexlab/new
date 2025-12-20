@@ -5,26 +5,41 @@ import { http } from 'wagmi';
 // Get WalletConnect Project ID from environment
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string;
 
-if (!projectId || projectId === 'YOUR_PROJECT_ID_HERE') {
-  console.warn('⚠️  WalletConnect Project ID not properly configured');
-  console.info('💡 Get a free project ID at https://cloud.walletconnect.com');
-  console.info('📝 Add it to your .env file as VITE_WALLETCONNECT_PROJECT_ID');
+// Validate project ID
+if (!projectId) {
+  console.error('❌ CRITICAL: VITE_WALLETCONNECT_PROJECT_ID is not set!');
+  console.error('This will cause WalletConnect to fail.');
+  console.error('Get your project ID from: https://cloud.walletconnect.com');
+} else {
+  console.log('✅ WalletConnect Project ID loaded:', projectId.substring(0, 10) + '...');
 }
 
-// Configure supported chains
+// Supported chains
 const chains = [base, mainnet, arbitrum, avalanche, optimism, polygon] as const;
 
-// Create wagmi config with complete metadata
-export const config = getDefaultConfig({
+// Application metadata
+const appInfo = {
   appName: 'DecaFlow',
-  appDescription: 'Multi-chain DEX aggregator and cross-chain bridge platform',
+  appDescription: 'Multi-chain DEX aggregator and cross-chain bridge platform powered by Base',
   appUrl: 'https://decaflow.xyz',
   appIcon: 'https://decaflow.xyz/images/branding/wordmark-500.png',
-  projectId: projectId || 'c3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3',
+};
+
+// Create wagmi configuration
+export const config = getDefaultConfig({
+  // App info
+  ...appInfo,
+  
+  // WalletConnect project ID
+  projectId: projectId,
+  
+  // Supported chains
   chains,
+  
+  // SSR config
   ssr: false,
   
-  // Custom RPC transports for better reliability
+  // Custom RPC endpoints for better reliability
   transports: {
     [base.id]: http('https://mainnet.base.org'),
     [mainnet.id]: http('https://eth.llamarpc.com'),
@@ -34,8 +49,16 @@ export const config = getDefaultConfig({
     [polygon.id]: http('https://polygon-rpc.com'),
   },
   
-  // Enable batch transactions
+  // Enable multicall for batch transactions
   batch: {
     multicall: true,
   },
 });
+
+// Debug logging
+if (typeof window !== 'undefined') {
+  console.log('🔧 Wagmi config initialized');
+  console.log('🌐 Current domain:', window.location.origin);
+  console.log('📱 Chains:', chains.map(c => c.name).join(', '));
+  console.log('🔑 Project ID:', projectId ? 'Set ✓' : 'Missing ✗');
+}
