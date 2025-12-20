@@ -413,8 +413,15 @@ export const getGlobalMetrics = async () => {
       )
     ]);
     
+    let stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
+    try {
+      const stakingResult = await query(`SELECT COUNT(*) as total_stakes, COALESCE(SUM(staked_amount), 0) as total_staking_volume FROM solana_staking_positions WHERE status IN ('active', 'completed')`);
+      stakingMetrics = stakingResult.rows[0];
+    } catch (e) {
+      console.log('Staking table query failed, using zero');
+    }
+    
     const txMetrics = transactionsResult.rows[0];
-    const stakingMetrics = stakingResult.rows[0];
     const walletMetrics = allWalletsResult.rows[0];
     
     const totalTrades = (parseInt(txMetrics.total_trades) || 0) + (parseInt(stakingMetrics.total_stakes) || 0);
@@ -429,7 +436,7 @@ export const getGlobalMetrics = async () => {
       uniqueWallets
     };
   } catch (error) {
-    console.error('❌ Error fetching global metrics:', error);
+    console.error('❌ Analytics fetch error:', error);
     throw error;
   }
 };
