@@ -5,12 +5,16 @@ import PrivacySwap from "./pages/PrivacySwap";
 import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
 import SolanaStaking from "./pages/SolanaStaking";
+import InvestorMetrics from "./pages/InvestorMetrics";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/investor-metrics") || hash === "#investor-metrics") {
+    return "investor-metrics";
+  }
   if (path.startsWith("/staking") || hash === "#staking") {
     return "staking";
   }
@@ -49,6 +53,11 @@ export default function App() {
   return (
     <TransactionEventsProvider>
       {currentPage === "home" && <Landing />}
+      {currentPage === "investor-metrics" && (
+        <div className="min-h-screen bg-[#0A0E27] text-white">
+          <InvestorMetrics />
+        </div>
+      )}
       {currentPage === "staking" && <SolanaStaking />}
       {currentPage === "leaderboard" && <Leaderboard />}
       {currentPage === "admin" && <Admin />}

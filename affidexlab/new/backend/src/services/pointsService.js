@@ -392,7 +392,6 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
 
 export const getGlobalMetrics = async () => {
   try {
-    // Run all queries in parallel for better performance
     const [transactionsResult, stakingResult, allWalletsResult] = await Promise.all([
       query(
         `SELECT 
@@ -415,8 +414,8 @@ export const getGlobalMetrics = async () => {
     
     let stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
     try {
-      const stakingResult = await query(`SELECT COUNT(*) as total_stakes, COALESCE(SUM(staked_amount), 0) as total_staking_volume FROM solana_staking_positions WHERE status IN ('active', 'completed')`);
-      stakingMetrics = stakingResult.rows[0];
+      const result = await query(`SELECT COUNT(*) as total_stakes, COALESCE(SUM(staked_amount), 0) as total_staking_volume FROM solana_staking_positions WHERE status IN ('active', 'completed')`);
+      stakingMetrics = result.rows[0];
     } catch (e) {
       console.log('Staking table query failed, using zero');
     }
@@ -428,12 +427,22 @@ export const getGlobalMetrics = async () => {
     const totalVolume = (parseFloat(txMetrics.total_volume_usd) || 0) + (parseFloat(stakingMetrics.total_staking_volume) || 0);
     const uniqueWallets = parseInt(walletMetrics.total_wallets) || 0;
     
-    console.log('📊 Analytics Data:', { totalTrades, totalVolume, uniqueWallets });
+    let tvl = 0;
+    try {
+      const { calculateTVL } = await import('./tvlService.js');
+      const tvlData = await calculateTVL();
+      tvl = tvlData.totalTVL || 0;
+    } catch (e) {
+      console.log('TVL calculation failed, using zero:', e.message);
+    }
+    
+    console.log('📊 Analytics Data:', { totalTrades, totalVolume, uniqueWallets, tvl });
     
     return {
       totalTrades,
       totalVolumeUsd: totalVolume,
-      uniqueWallets
+      uniqueWallets,
+      tvl
     };
   } catch (error) {
     console.error('❌ Analytics fetch error:', error);

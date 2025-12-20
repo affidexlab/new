@@ -13,6 +13,7 @@ import webhooksRoutes from './routes/v1/webhooks.js';
 import pointsRoutes from './routes/v1/points.js';
 import leaderboardRoutes from './routes/v1/leaderboard.js';
 import solanaStakingRoutes from './routes/v1/solana-staking.js';
+import investorMetricsRoutes from './routes/v1/investor-metrics.js';
 
 dotenv.config();
 
@@ -152,6 +153,7 @@ app.use('/v1/webhooks', webhooksRoutes);
 app.use('/v1/points', pointsRoutes);
 app.use('/v1/leaderboard', leaderboardRoutes);
 app.use('/v1/solana-staking', solanaStakingRoutes);
+app.use('/v1/investor-metrics', investorMetricsRoutes);
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
