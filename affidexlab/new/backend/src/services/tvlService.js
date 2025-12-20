@@ -14,6 +14,26 @@ const CHAIN_PLATFORMS = {
   43114: 'avalanche'
 };
 
+let stakingTableChecked = false;
+let stakingTableExistsCache = false;
+
+async function hasStakingTable() {
+  if (stakingTableChecked) {
+    return stakingTableExistsCache;
+  }
+
+  try {
+    const result = await query(`SELECT to_regclass('public.solana_staking_positions') as reg`);
+    stakingTableExistsCache = Boolean(result.rows[0]?.reg);
+  } catch (error) {
+    console.warn('⚠️  Failed to check staking table availability:', error.message);
+    stakingTableExistsCache = false;
+  }
+
+  stakingTableChecked = true;
+  return stakingTableExistsCache;
+}
+
 async function getTokenPrice(tokenAddress, chainId) {
   const cacheKey = `${chainId}-${tokenAddress.toLowerCase()}`;
   const cached = priceCache.get(cacheKey);
@@ -135,14 +155,19 @@ export async function calculateTVL() {
       tvlByChain[position.chain_id] += poolTVL;
     }
 
-    const stakingResult = await query(
-      `SELECT COALESCE(SUM(staked_amount), 0) as total_staked
-       FROM solana_staking_positions
-       WHERE status = 'active'`
-    ).catch(() => ({ rows: [{ total_staked: 0 }] }));
-
-    const stakingTVL = parseFloat(stakingResult.rows[0]?.total_staked || 0);
-    totalTVL += stakingTVL;
+    let stakingTVL = 0;
+    const stakingTableExists = await hasStakingTable();
+    if (stakingTableExists) {
+      const stakingResult = await query(
+        `SELECT COALESCE(SUM(staked_amount), 0) as total_staked
+         FROM solana_staking_positions
+         WHERE status = 'active'`
+      ).catch(() => ({ rows: [{ total_staked: 0 }] }));
+      stakingTVL = parseFloat(stakingResult.rows[0]?.total_staked || 0);
+      totalTVL += stakingTVL;
+    } else {
+      console.log('ℹ️  Staking table not present, skipping staking TVL');
+    }
 
     return {
       totalTVL,
