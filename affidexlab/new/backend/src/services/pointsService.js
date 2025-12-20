@@ -433,4 +433,3 @@ export const getGlobalMetrics = async () => {
     throw error;
   }
 };
-};
