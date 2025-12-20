@@ -14,9 +14,12 @@ if (!projectId || projectId === 'YOUR_PROJECT_ID_HERE') {
 // Configure supported chains
 const chains = [base, mainnet, arbitrum, avalanche, optimism, polygon] as const;
 
-// Create wagmi config with all wallet support
+// Create wagmi config with complete metadata
 export const config = getDefaultConfig({
   appName: 'DecaFlow',
+  appDescription: 'Multi-chain DEX aggregator and cross-chain bridge platform',
+  appUrl: 'https://decaflow.xyz',
+  appIcon: 'https://decaflow.xyz/images/branding/wordmark-500.png',
   projectId: projectId || 'c3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3',
   chains,
   ssr: false,
