@@ -430,6 +430,7 @@ export const getGlobalMetrics = async () => {
     };
   } catch (error) {
     console.error('❌ Error fetching global metrics:', error);
-    throw error; // Let the endpoint handle the error properly
+    throw error;
   }
+};
 };
