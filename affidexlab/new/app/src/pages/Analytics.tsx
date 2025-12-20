@@ -10,6 +10,7 @@ interface AnalyticsData {
   totalSwaps: number;
   uniqueWallets: number;
   avgSwapSize: string;
+  tvl: string;
   topTokens: Array<{symbol: string; volume: string; swaps: number}>;
   recentActivity: Array<{hash: string; type: string; amount: string; timestamp: number}>;
 }
@@ -23,6 +24,7 @@ export default function Analytics() {
     totalSwaps: 0,
     uniqueWallets: 0,
     avgSwapSize: "0",
+    tvl: "0",
     topTokens: [],
     recentActivity: [],
   });
@@ -45,6 +47,7 @@ export default function Analytics() {
         const totalVolume = data.data.totalVolumeUsd || 0;
         const totalSwaps = data.data.totalTrades || 0;
         const uniqueWallets = data.data.uniqueWallets || 0;
+        const tvl = data.data.tvl || 0;
         const avgSize = totalSwaps > 0 ? totalVolume / totalSwaps : 0;
 
         setAnalytics({
@@ -52,6 +55,7 @@ export default function Analytics() {
           totalSwaps,
           uniqueWallets,
           avgSwapSize: avgSize.toFixed(2),
+          tvl: tvl.toFixed(2),
           topTokens: [],
           recentActivity: [],
         });
@@ -61,6 +65,7 @@ export default function Analytics() {
           totalSwaps: 0,
           uniqueWallets: 0,
           avgSwapSize: "0",
+          tvl: "0",
           topTokens: [],
           recentActivity: [],
         });
@@ -72,6 +77,7 @@ export default function Analytics() {
         totalSwaps: 0,
         uniqueWallets: 0,
         avgSwapSize: "0",
+        tvl: "0",
         topTokens: [],
         recentActivity: [],
       });
@@ -114,7 +120,7 @@ export default function Analytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <div className="rounded-2xl bg-gradient-to-br from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-6">
           <div className="flex items-center justify-between mb-3">
             <TrendingUp className="text-[#47A1FF]" size={24} />
@@ -124,7 +130,19 @@ export default function Analytics() {
             </div>
           </div>
           <div className="text-3xl font-bold mb-1">${analytics.totalVolume}</div>
-          <div className="text-xs text-gray-400">Total Volume (24h)</div>
+          <div className="text-xs text-gray-400">Total Volume</div>
+        </div>
+
+        <div className="rounded-2xl bg-gradient-to-br from-[#1A1F2E] to-[#141824] border border-purple-500/15 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <TrendingUp className="text-purple-400" size={24} />
+            <div className="flex items-center gap-1 text-green-400 text-xs">
+              <ArrowUpRight size={14} />
+              <span>Live</span>
+            </div>
+          </div>
+          <div className="text-3xl font-bold mb-1">${analytics.tvl}</div>
+          <div className="text-xs text-gray-400">Total Value Locked</div>
         </div>
 
         <div className="rounded-2xl bg-gradient-to-br from-[#1A1F2E] to-[#141824] border border-[#47A1FF]/15 p-6">

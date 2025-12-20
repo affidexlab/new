@@ -49,6 +49,22 @@ export const initializeDatabase = async () => {
     
     await query(schema);
     console.log('✅ Database schema initialized successfully');
+    
+    const migrationPath = join(__dirname, 'migrations', '007_liquidity_tracking.sql');
+    try {
+      const migration = readFileSync(migrationPath, 'utf8');
+      await query(migration);
+      console.log('✅ Liquidity tracking migration applied successfully');
+    } catch (migrationError) {
+      if (migrationError.code === 'ENOENT') {
+        console.log('ℹ️  No liquidity tracking migration file found (may already be applied)');
+      } else if (migrationError.message?.includes('already exists')) {
+        console.log('ℹ️  Liquidity tracking tables already exist');
+      } else {
+        console.warn('⚠️  Migration warning:', migrationError.message);
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('Failed to initialize database:', error);

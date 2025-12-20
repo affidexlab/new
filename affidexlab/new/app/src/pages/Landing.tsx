@@ -10,7 +10,7 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [enterDappOpen, setEnterDappOpen] = useState(false);
-  const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
+  const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0, tvl: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const { subscribeToTransactions } = useTransactionEvents();
 
@@ -33,6 +33,7 @@ export default function Landing() {
           trades: data.data.totalTrades || 0,
           volumeUSD: data.data.totalVolumeUsd || 0,
           wallets: data.data.uniqueWallets || 0,
+          tvl: data.data.tvl || 0,
         });
       }
     } catch (error) {
@@ -220,9 +221,10 @@ export default function Landing() {
       {/* Stats Section */}
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <StatsCard number={statsLoading && stats.trades === 0 ? 'Loading...' : stats.trades.toLocaleString() + '+'} label="Total Trades" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            <StatsCard number={statsLoading && stats.tvl === 0 ? 'Loading...' : ('$' + Math.round(stats.tvl).toLocaleString())} label="Total Value Locked" />
             <StatsCard number={statsLoading && stats.volumeUSD === 0 ? 'Loading...' : ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+')} label="Total Volume" />
+            <StatsCard number={statsLoading && stats.trades === 0 ? 'Loading...' : stats.trades.toLocaleString() + '+'} label="Total Trades" />
             <StatsCard number={statsLoading && stats.wallets === 0 ? 'Loading...' : stats.wallets.toLocaleString() + '+'} label="Total Wallets" />
           </div>
 
