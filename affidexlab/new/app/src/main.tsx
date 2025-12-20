@@ -25,7 +25,12 @@ createRoot(document.getElementById('root')!).render(
     <SolanaWalletContextProvider>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>
+          <RainbowKitProvider 
+            modalSize="compact"
+            initialChain={config.chains[0]}
+            showRecentTransactions={true}
+            coolMode={false}
+          >
             <App />
             <Toaster theme="dark" position="top-right" richColors />
           </RainbowKitProvider>
