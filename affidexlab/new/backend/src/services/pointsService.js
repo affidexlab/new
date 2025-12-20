@@ -392,9 +392,25 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
 
 export const getGlobalMetrics = async () => {
   try {
-    const [transactionsResult, allWalletsResult] = await Promise.all([
-      query(`SELECT COUNT(*) as total_trades, COALESCE(SUM(amount_usd), 0) as total_volume_usd FROM transactions WHERE status = 'completed'`),
-      query(`SELECT COUNT(*) as total_wallets FROM users`)
+    // Run all queries in parallel for better performance
+    const [transactionsResult, stakingResult, allWalletsResult] = await Promise.all([
+      query(
+        `SELECT 
+          COUNT(*) as total_trades,
+          COALESCE(SUM(amount_usd), 0) as total_volume_usd
+         FROM transactions 
+         WHERE status = 'completed'`
+      ),
+      query(
+        `SELECT 
+          COUNT(*) as total_stakes,
+          COALESCE(SUM(staked_amount), 0) as total_staking_volume
+         FROM solana_staking_positions 
+         WHERE status IN ('active', 'completed')`
+      ).catch(() => ({ rows: [{ total_stakes: 0, total_staking_volume: 0 }] })),
+      query(
+        `SELECT COUNT(*) as total_wallets FROM users`
+      )
     ]);
     
     let stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
@@ -423,4 +439,5 @@ export const getGlobalMetrics = async () => {
     console.error('❌ Analytics fetch error:', error);
     throw error;
   }
+};
 };
