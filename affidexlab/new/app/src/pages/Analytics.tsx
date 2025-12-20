@@ -30,7 +30,15 @@ export default function Analytics() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/v1/points/metrics`);
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${API_BASE}/v1/points/metrics`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       const data = await response.json();
       
       if (data.success && data.data) {

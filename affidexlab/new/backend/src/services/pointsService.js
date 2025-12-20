@@ -390,40 +390,75 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
   return result.rows[0];
 };
 
+// Cache for global metrics (30 second TTL)
+let metricsCache = null;
+let metricsCacheTime = 0;
+const METRICS_CACHE_TTL = 30000; // 30 seconds
+
 export const getGlobalMetrics = async () => {
-  const transactionsResult = await query(
-    `SELECT 
-      COUNT(*) as total_trades,
-      COALESCE(SUM(amount_usd), 0) as total_volume_usd,
-      COUNT(DISTINCT wallet_address) as unique_wallets
-     FROM transactions 
-     WHERE status = 'completed'`
-  );
+  const now = Date.now();
   
-  const stakingResult = await query(
-    `SELECT 
-      COUNT(*) as total_stakes,
-      COALESCE(SUM(staked_amount), 0) as total_staking_volume,
-      COUNT(DISTINCT wallet) as unique_staking_wallets
-     FROM solana_staking_positions 
-     WHERE status IN ('active', 'completed')`
-  );
+  // Return cached data if still valid
+  if (metricsCache && (now - metricsCacheTime) < METRICS_CACHE_TTL) {
+    return metricsCache;
+  }
   
-  const allWalletsResult = await query(
-    `SELECT COUNT(*) as total_wallets FROM users`
-  );
-  
-  const txMetrics = transactionsResult.rows[0];
-  const stakingMetrics = stakingResult.rows[0];
-  const walletMetrics = allWalletsResult.rows[0];
-  
-  const totalTrades = (parseInt(txMetrics.total_trades) || 0) + (parseInt(stakingMetrics.total_stakes) || 0);
-  const totalVolume = (parseFloat(txMetrics.total_volume_usd) || 0) + (parseFloat(stakingMetrics.total_staking_volume) || 0);
-  const uniqueWallets = parseInt(walletMetrics.total_wallets) || 0;
-  
-  return {
-    totalTrades,
-    totalVolumeUsd: totalVolume,
-    uniqueWallets
-  };
+  try {
+    // Run all queries in parallel for better performance
+    const [transactionsResult, stakingResult, allWalletsResult] = await Promise.all([
+      query(
+        `SELECT 
+          COUNT(*) as total_trades,
+          COALESCE(SUM(amount_usd), 0) as total_volume_usd,
+          COUNT(DISTINCT wallet_address) as unique_wallets
+         FROM transactions 
+         WHERE status = 'completed'`
+      ),
+      query(
+        `SELECT 
+          COUNT(*) as total_stakes,
+          COALESCE(SUM(staked_amount), 0) as total_staking_volume,
+          COUNT(DISTINCT wallet) as unique_staking_wallets
+         FROM solana_staking_positions 
+         WHERE status IN ('active', 'completed')`
+      ),
+      query(
+        `SELECT COUNT(*) as total_wallets FROM users`
+      )
+    ]);
+    
+    const txMetrics = transactionsResult.rows[0];
+    const stakingMetrics = stakingResult.rows[0];
+    const walletMetrics = allWalletsResult.rows[0];
+    
+    const totalTrades = (parseInt(txMetrics.total_trades) || 0) + (parseInt(stakingMetrics.total_stakes) || 0);
+    const totalVolume = (parseFloat(txMetrics.total_volume_usd) || 0) + (parseFloat(stakingMetrics.total_staking_volume) || 0);
+    const uniqueWallets = parseInt(walletMetrics.total_wallets) || 0;
+    
+    const metrics = {
+      totalTrades,
+      totalVolumeUsd: totalVolume,
+      uniqueWallets
+    };
+    
+    // Cache the results
+    metricsCache = metrics;
+    metricsCacheTime = now;
+    
+    return metrics;
+  } catch (error) {
+    console.error('Error fetching global metrics:', error);
+    
+    // Return cached data if available, even if expired
+    if (metricsCache) {
+      return metricsCache;
+    }
+    
+    // Return zeros as fallback
+    return {
+      totalTrades: 0,
+      totalVolumeUsd: 0,
+      uniqueWallets: 0
+    };
+  }
 };
