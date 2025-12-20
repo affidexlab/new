@@ -393,30 +393,16 @@ export const updateRewardStatus = async (rewardId, status, paymentTxHash = null)
 export const getGlobalMetrics = async () => {
   try {
     const [transactionsResult, allWalletsResult] = await Promise.all([
-      query(
-        `SELECT 
-          COUNT(*) as total_trades,
-          COALESCE(SUM(amount_usd), 0) as total_volume_usd
-         FROM transactions 
-         WHERE status = 'completed'`
-      ),
-      query(
-        `SELECT COUNT(*) as total_wallets FROM users`
-      )
+      query(`SELECT COUNT(*) as total_trades, COALESCE(SUM(amount_usd), 0) as total_volume_usd FROM transactions WHERE status = 'completed'`),
+      query(`SELECT COUNT(*) as total_wallets FROM users`)
     ]);
     
     let stakingMetrics = { total_stakes: 0, total_staking_volume: 0 };
     try {
-      const stakingResult = await query(
-        `SELECT 
-          COUNT(*) as total_stakes,
-          COALESCE(SUM(staked_amount), 0) as total_staking_volume
-         FROM solana_staking_positions 
-         WHERE status IN ('active', 'completed')`
-      );
+      const stakingResult = await query(`SELECT COUNT(*) as total_stakes, COALESCE(SUM(staked_amount), 0) as total_staking_volume FROM solana_staking_positions WHERE status IN ('active', 'completed')`);
       stakingMetrics = stakingResult.rows[0];
     } catch (e) {
-      console.log('Staking table not available, using zeros');
+      console.log('Staking table query failed, using zero');
     }
     
     const txMetrics = transactionsResult.rows[0];
@@ -426,7 +412,7 @@ export const getGlobalMetrics = async () => {
     const totalVolume = (parseFloat(txMetrics.total_volume_usd) || 0) + (parseFloat(stakingMetrics.total_staking_volume) || 0);
     const uniqueWallets = parseInt(walletMetrics.total_wallets) || 0;
     
-    console.log('📊 Analytics:', { totalTrades, totalVolume, uniqueWallets });
+    console.log('📊 Analytics Data:', { totalTrades, totalVolume, uniqueWallets });
     
     return {
       totalTrades,
@@ -434,7 +420,7 @@ export const getGlobalMetrics = async () => {
       uniqueWallets
     };
   } catch (error) {
-    console.error('❌ Analytics error:', error);
+    console.error('❌ Analytics fetch error:', error);
     throw error;
   }
 };
