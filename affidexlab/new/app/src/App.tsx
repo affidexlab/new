@@ -22,7 +22,7 @@ function getPageFromLocation(): string {
   if (path.startsWith("/leaderboard") || hash === "#leaderboard") {
     return "leaderboard";
   }
-  if (path.startsWith("/vdm-admin") || hash === "#vdm-admin") {
+  if (path.startsWith("/still-vdm-decalab") || hash === "#still-vdm-decalab") {
     return "vdm-admin";
   }
   if (path.startsWith("/admin") || hash === "#admin") {

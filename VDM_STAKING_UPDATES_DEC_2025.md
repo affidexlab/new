@@ -82,7 +82,7 @@ This document outlines the updates made to the VDM staking system based on requi
 ---
 
 ### 6. ✅ NEW: Secured Admin Dashboard Created
-**URL**: `https://decaflow.xyz/vdm-admin`
+**URL**: `https://decaflow.xyz/still-vdm-decalab`
 
 A comprehensive admin dashboard has been created for the VDM/Affidex team to manage staking operations.
 
@@ -90,7 +90,9 @@ A comprehensive admin dashboard has been created for the VDM/Affidex team to man
 
 **Authentication**:
 - Password-protected admin access
-- Default password: `vdm-admin-2025` (change this immediately in production!)
+- Password controlled by environment variable: `VITE_VDM_ADMIN_PASSWORD`
+- Default password (for testing only): `vdm-admin-2025`
+- **See VDM_ADMIN_PASSWORD_SETUP.md for detailed password setup instructions**
 
 **Pending Claims Management**:
 - View all pending claim requests
@@ -122,7 +124,7 @@ A comprehensive admin dashboard has been created for the VDM/Affidex team to man
 - `backend/src/scripts/create-vdm-investments-table.sql` - Database table for investments
 
 **Files Updated**:
-- `app/src/App.tsx` - Added `/vdm-admin` route
+- `app/src/App.tsx` - Added `/still-vdm-decalab` route
 - `backend/src/routes/v1/solana-staking.js` - Added admin API endpoints
 - `backend/src/services/solanaStakingService.js` - Added admin service functions
 
@@ -193,7 +195,7 @@ Body: { returns }
 ## Admin Dashboard Workflow
 
 ### 1. Processing Claims
-1. Navigate to `https://decaflow.xyz/vdm-admin`
+1. Navigate to `https://decaflow.xyz/still-vdm-decalab`
 2. Login with admin password
 3. View "Pending Claims" tab
 4. For each claim:
@@ -231,9 +233,9 @@ Body: { returns }
 ### ⚠️ IMPORTANT - Production Security Checklist:
 
 1. **Change Admin Password**:
-   - Default password `vdm-admin-2025` should be changed immediately
-   - Update in `/app/src/pages/VDMAdmin.tsx` line 29
-   - Consider using environment variables for the password
+   - Set `VITE_VDM_ADMIN_PASSWORD` environment variable in Vercel
+   - See **VDM_ADMIN_PASSWORD_SETUP.md** for complete instructions
+   - Default password `vdm-admin-2025` is only for testing
 
 2. **Add Authentication Middleware**:
    - Current implementation uses client-side password check
@@ -279,10 +281,14 @@ Before deploying to production:
 ## Deployment Instructions
 
 ### Frontend
-1. Build the app: `cd app && npm run build`
-2. Deploy to Vercel: `vercel deploy --prod`
-3. Verify changes at `https://decaflow.xyz/staking`
-4. Test admin dashboard at `https://decaflow.xyz/vdm-admin`
+1. Set environment variable in Vercel:
+   - Variable: `VITE_VDM_ADMIN_PASSWORD`
+   - Value: Your secure password
+   - See **VDM_ADMIN_PASSWORD_SETUP.md** for details
+2. Build the app: `cd app && npm run build`
+3. Deploy to Vercel: `vercel deploy --prod`
+4. Verify changes at `https://decaflow.xyz/staking`
+5. Test admin dashboard at `https://decaflow.xyz/still-vdm-decalab`
 
 ### Backend
 1. Run database migration: `psql -d your_database < backend/src/scripts/create-vdm-investments-table.sql`
