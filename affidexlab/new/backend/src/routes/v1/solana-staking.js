@@ -146,4 +146,146 @@ router.post('/admin/update-rewards', async (req, res) => {
   }
 });
 
+router.get('/admin/claims', async (req, res) => {
+  try {
+    const { getPendingClaims } = await import('../../services/solanaStakingService.js');
+    const claims = await getPendingClaims();
+
+    res.json({
+      success: true,
+      data: claims,
+    });
+  } catch (error) {
+    console.error('Get pending claims error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get pending claims',
+      message: error.message,
+    });
+  }
+});
+
+router.get('/admin/positions', async (req, res) => {
+  try {
+    const { getAllPositions } = await import('../../services/solanaStakingService.js');
+    const positions = await getAllPositions();
+
+    res.json({
+      success: true,
+      data: positions,
+    });
+  } catch (error) {
+    console.error('Get all positions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get positions',
+      message: error.message,
+    });
+  }
+});
+
+router.post('/admin/claims/:claimId/paid', async (req, res) => {
+  try {
+    const { claimId } = req.params;
+    const { markClaimAsPaid } = await import('../../services/solanaStakingService.js');
+    const result = await markClaimAsPaid(parseInt(claimId));
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Mark claim as paid error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark claim as paid',
+      message: error.message,
+    });
+  }
+});
+
+router.get('/admin/investments', async (req, res) => {
+  try {
+    const { getInvestments } = await import('../../services/solanaStakingService.js');
+    const investments = await getInvestments();
+
+    res.json({
+      success: true,
+      data: investments,
+    });
+  } catch (error) {
+    console.error('Get investments error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get investments',
+      message: error.message,
+    });
+  }
+});
+
+router.post('/admin/investments', [
+  body('amount').isNumeric(),
+  body('description').isString().notEmpty(),
+  body('status').isString().optional(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid parameters',
+      details: errors.array(),
+    });
+  }
+
+  try {
+    const { amount, description, status } = req.body;
+    const { createInvestment } = await import('../../services/solanaStakingService.js');
+    const result = await createInvestment({ amount, description, status });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Create investment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create investment',
+      message: error.message,
+    });
+  }
+});
+
+router.post('/admin/investments/:investmentId/returns', [
+  body('returns').isNumeric(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid parameters',
+      details: errors.array(),
+    });
+  }
+
+  try {
+    const { investmentId } = req.params;
+    const { returns } = req.body;
+    const { recordInvestmentReturns } = await import('../../services/solanaStakingService.js');
+    const result = await recordInvestmentReturns(parseInt(investmentId), returns);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Record investment returns error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to record investment returns',
+      message: error.message,
+    });
+  }
+});
+
 export default router;

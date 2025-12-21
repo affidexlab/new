@@ -6,7 +6,6 @@ import {
   LOCK_PERIODS,
   LockPeriod,
   MIN_STAKE_AMOUNT,
-  MAX_STAKE_AMOUNT,
   calculateDepositFee,
   calculateWithdrawalFee,
   calculateRewards,
@@ -72,10 +71,7 @@ export default function SolanaStaking() {
       return;
     }
 
-    if (amount > MAX_STAKE_AMOUNT) {
-      toast.error(`Maximum stake is ${MAX_STAKE_AMOUNT.toLocaleString()} VDM`);
-      return;
-    }
+
 
     if (amount > vdmBalance) {
       toast.error('Insufficient VDM balance in your wallet');
@@ -182,22 +178,16 @@ export default function SolanaStaking() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/10 backdrop-blur-xl border border-[#3396FF]/30 rounded-2xl p-6">
             <p className="text-sm text-gray-400 mb-2">Total Staked</p>
             <p className="text-3xl font-bold text-white">{poolStats?.totalStaked?.toLocaleString() || '0'} VDM</p>
             <p className="text-xs text-green-400 mt-1">↑ {poolStats?.totalStakers || 0} stakers</p>
           </div>
           
-          <div className="bg-gradient-to-br from-[#47A1FF]/20 to-purple-500/10 backdrop-blur-xl border border-[#47A1FF]/30 rounded-2xl p-6">
-            <p className="text-sm text-gray-400 mb-2">Rewards Pool Remaining</p>
-            <p className="text-3xl font-bold text-white">{poolStats?.rewardsPoolRemaining?.toLocaleString() || '150,000,000'} VDM</p>
-            <p className="text-xs text-yellow-400 mt-1">Reserved by VDM team</p>
-          </div>
-          
           <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-2xl p-6">
             <p className="text-sm text-gray-400 mb-2">Total Rewards Distributed</p>
-            <p className="text-3xl font-bold text-white">{poolStats?.totalRewardsDistributed?.toLocaleString() || '0'} VDM</p>
+            <p className="text-3xl font-bold text-white">{poolStats?.totalRewardsDistributed?.toLocaleString() || '0'} USDT</p>
             <p className="text-xs text-gray-400 mt-1">Since launch</p>
           </div>
         </div>
@@ -211,8 +201,9 @@ export default function SolanaStaking() {
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 text-xs text-blue-100 mb-4">
                   <p className="font-semibold mb-1">Important staking information</p>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>VDM tokens are held in the official VDM staking wallet during the lock period.</li>
+                    <li>VDM tokens are held securely in a custodial staking wallet during the lock period.</li>
                     <li>Staking logic and rewards are managed by DecaFlow infrastructure.</li>
+                    <li>Rewards are paid in USDT to maximize flexibility and minimize volatility.</li>
                     <li>This version is fully managed by the DecaFlow × VDM team.</li>
                     <li>Payouts are processed by the VDM / Affidex team.</li>
                   </ul>
@@ -220,7 +211,7 @@ export default function SolanaStaking() {
 
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Select Lock Period</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {LOCK_PERIODS.map((period) => (
                       <button
                         key={period.id}
@@ -258,7 +249,7 @@ export default function SolanaStaking() {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Min: {MIN_STAKE_AMOUNT.toLocaleString()} VDM | Max: {MAX_STAKE_AMOUNT.toLocaleString()} VDM
+                    Min: {MIN_STAKE_AMOUNT.toLocaleString()} VDM
                   </p>
                 </div>
 
@@ -270,15 +261,19 @@ export default function SolanaStaking() {
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
-                      <span className="text-green-400">+{estimatedRewards.toFixed(2)} VDM</span>
+                      <span className="text-green-400">+{estimatedRewards.toFixed(2)} USDT</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Withdrawal Fee (1.5%)</span>
                       <span className="text-red-400">-{calculateWithdrawalFee(amountNumber - calculateDepositFee(amountNumber)).toFixed(2)} VDM</span>
                     </div>
                     <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
-                      <span>Estimated Net Return</span>
-                      <span className="text-green-400">{estimatedNetReturn.toFixed(2)} VDM</span>
+                      <span>Net Staked VDM</span>
+                      <span className="text-white">{(amountNumber - calculateDepositFee(amountNumber) - calculateWithdrawalFee(amountNumber - calculateDepositFee(amountNumber))).toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-white font-medium">
+                      <span>Estimated USDT Rewards</span>
+                      <span className="text-green-400">{estimatedRewards.toFixed(2)} USDT</span>
                     </div>
                     <div className="flex justify-between text-gray-400 text-xs">
                       <span>Lock Period</span>
@@ -298,15 +293,17 @@ export default function SolanaStaking() {
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs text-blue-100">
                   <p className="font-semibold mb-1">ℹ️ How it works</p>
                   <p>• Click "Stake Now" and approve the transaction in your wallet popup</p>
-                  <p>• VDM will be transferred directly to the official staking wallet</p>
+                  <p>• VDM will be transferred securely to the custodial staking wallet</p>
                   <p>• Your stake will be registered automatically after confirmation</p>
+                  <p>• Rewards are calculated and paid in USDT at maturity</p>
                 </div>
 
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
                   <p className="font-medium mb-1">⚠️ Staking information</p>
-                  <p>• Staked VDM is held in the official VDM staking wallet during the lock period.</p>
-                  <p>• Affidex Lab / VDM control the staking wallet and payouts.</p>
+                  <p>• Staked VDM is held securely in a custodial wallet during the lock period.</p>
+                  <p>• Affidex Lab / VDM manage the staking wallet and payouts.</p>
                   <p>• All staking logic and rewards are managed by DecaFlow infrastructure.</p>
+                  <p>• Rewards are paid in USDT for maximum stability.</p>
                 </div>
               </div>
             </div>
@@ -332,7 +329,7 @@ export default function SolanaStaking() {
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Allocated Rewards</span>
-                      <span className="text-green-400">{userStake?.rewardsAllocated.toLocaleString()} VDM</span>
+                      <span className="text-green-400">{userStake?.rewardsAllocated.toLocaleString()} USDT</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Start Date</span>
@@ -355,7 +352,7 @@ export default function SolanaStaking() {
                   <div className="space-y-3">
                     <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                       <p className="text-green-400 font-medium mb-2">✅ Eligible for claim</p>
-                      <p className="text-xs text-gray-300">Your claim request will be processed by Affidex Lab / VDM. You will receive principal minus withdrawal fee plus rewards directly to your wallet.</p>
+                      <p className="text-xs text-gray-300">Your claim request will be processed by Affidex Lab / VDM. You will receive your VDM (minus withdrawal fee) plus USDT rewards directly to your wallet.</p>
                     </div>
                     <button
                       onClick={handleClaim}
@@ -385,8 +382,8 @@ export default function SolanaStaking() {
                     <span className="text-[#47A1FF]">📊</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">High APY Returns</p>
-                    <p className="text-gray-400 text-xs">Earn 8–16% APY (annualized) based on your chosen lock period.</p>
+                    <p className="text-white font-medium">High APY Returns in USDT</p>
+                    <p className="text-gray-400 text-xs">Earn 4–16% APY in USDT based on your chosen lock period.</p>
                   </div>
                 </div>
                 
@@ -406,7 +403,7 @@ export default function SolanaStaking() {
                   </div>
                   <div>
                     <p className="text-white font-medium">Time-Locked Security</p>
-                    <p className="text-gray-400 text-xs">Choose 6, 9, or 12 month lock periods. No early unstaking.</p>
+                    <p className="text-gray-400 text-xs">Choose 3, 6, 9, or 12 month lock periods. No early unstaking.</p>
                   </div>
                 </div>
                 
@@ -415,8 +412,8 @@ export default function SolanaStaking() {
                     <span className="text-green-400">💰</span>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Staking Wallet</p>
-                    <p className="text-gray-400 text-xs">VDM tokens are held in the official VDM staking wallet during the lock period.</p>
+                    <p className="text-white font-medium">Secure Custody</p>
+                    <p className="text-gray-400 text-xs">VDM tokens are held securely in a custodial wallet managed by the team.</p>
                   </div>
                 </div>
                 

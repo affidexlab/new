@@ -8,6 +8,13 @@ const STAKING_FEES = {
 };
 
 const LOCK_PERIODS = {
+  ThreeMonths: {
+    id: 'ThreeMonths',
+    label: '3 Months',
+    months: 3,
+    apy: 4,
+    seconds: 7_884_000,
+  },
   SixMonths: {
     id: 'SixMonths',
     label: '6 Months',
@@ -253,4 +260,116 @@ async function updatePoolStats(stakedAmountDelta, stakersDelta, rewardsDelta) {
       [STAKING_POOL_ID, stakedAmountDelta, Math.max(0, stakersDelta), stakedAmountDelta, Math.max(0, rewardsDelta), now, now]
     );
   }
+}
+
+export async function getPendingClaims() {
+  const result = await query(
+    `SELECT * FROM solana_staking_claims 
+     WHERE pool_id = $1 AND status = 'requested' 
+     ORDER BY requested_at DESC`,
+    [STAKING_POOL_ID]
+  );
+
+  return result.rows;
+}
+
+export async function getAllPositions() {
+  const result = await query(
+    `SELECT * FROM solana_staking_positions 
+     WHERE pool_id = $1 
+     ORDER BY staked_at DESC`,
+    [STAKING_POOL_ID]
+  );
+
+  return result.rows;
+}
+
+export async function markClaimAsPaid(claimId) {
+  const now = Date.now();
+
+  const claimResult = await query(
+    `SELECT * FROM solana_staking_claims WHERE id = $1`,
+    [claimId]
+  );
+
+  if (claimResult.rows.length === 0) {
+    throw new Error('Claim not found');
+  }
+
+  const claim = claimResult.rows[0];
+
+  await query(
+    `UPDATE solana_staking_claims 
+     SET status = 'paid', processed_at = $1 
+     WHERE id = $2`,
+    [now, claimId]
+  );
+
+  await query(
+    `UPDATE solana_staking_positions 
+     SET status = 'claimed', updated_at = $1 
+     WHERE id = $2`,
+    [now, claim.position_id]
+  );
+
+  return {
+    claimId,
+    status: 'paid',
+    processedAt: now,
+  };
+}
+
+export async function getInvestments() {
+  const result = await query(
+    `SELECT * FROM vdm_staking_investments 
+     ORDER BY invested_at DESC`
+  );
+
+  return result.rows;
+}
+
+export async function createInvestment({ amount, description, status = 'active' }) {
+  const now = Date.now();
+
+  const result = await query(
+    `INSERT INTO vdm_staking_investments 
+     (amount, description, status, invested_at, created_at) 
+     VALUES ($1, $2, $3, $4, $5) 
+     RETURNING id`,
+    [amount, description, status, now, now]
+  );
+
+  return {
+    id: result.rows[0].id,
+    amount,
+    description,
+    status,
+    invested_at: now,
+  };
+}
+
+export async function recordInvestmentReturns(investmentId, returns) {
+  const now = Date.now();
+
+  const investmentResult = await query(
+    `SELECT * FROM vdm_staking_investments WHERE id = $1`,
+    [investmentId]
+  );
+
+  if (investmentResult.rows.length === 0) {
+    throw new Error('Investment not found');
+  }
+
+  await query(
+    `UPDATE vdm_staking_investments 
+     SET returns = $1, status = 'closed', updated_at = $2 
+     WHERE id = $3`,
+    [returns, now, investmentId]
+  );
+
+  return {
+    investmentId,
+    returns,
+    status: 'closed',
+  };
 }

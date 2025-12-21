@@ -4,6 +4,7 @@ import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
 import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
+import VDMAdmin from "./pages/VDMAdmin";
 import SolanaStaking from "./pages/SolanaStaking";
 import InvestorMetrics from "./pages/InvestorMetrics";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
@@ -20,6 +21,9 @@ function getPageFromLocation(): string {
   }
   if (path.startsWith("/leaderboard") || hash === "#leaderboard") {
     return "leaderboard";
+  }
+  if (path.startsWith("/vdm-admin") || hash === "#vdm-admin") {
+    return "vdm-admin";
   }
   if (path.startsWith("/admin") || hash === "#admin") {
     return "admin";
@@ -60,6 +64,7 @@ export default function App() {
       )}
       {currentPage === "staking" && <SolanaStaking />}
       {currentPage === "leaderboard" && <Leaderboard />}
+      {currentPage === "vdm-admin" && <VDMAdmin />}
       {currentPage === "admin" && <Admin />}
       {currentPage === "privacy" && (
         <div className="min-h-screen bg-[#0A0E27] text-white">
