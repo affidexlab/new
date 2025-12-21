@@ -297,14 +297,6 @@ export default function SolanaStaking() {
                   <p>• Your stake will be registered automatically after confirmation</p>
                   <p>• Rewards are calculated and paid in USDT at maturity</p>
                 </div>
-
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
-                  <p className="font-medium mb-1">⚠️ Staking information</p>
-                  <p>• Staked VDM is held securely in a custodial wallet during the lock period.</p>
-                  <p>• Affidex Lab / VDM manage the staking wallet and payouts.</p>
-                  <p>• All staking logic and rewards are managed by DecaFlow infrastructure.</p>
-                  <p>• Rewards are paid in USDT for maximum stability.</p>
-                </div>
               </div>
             </div>
           ) : (
