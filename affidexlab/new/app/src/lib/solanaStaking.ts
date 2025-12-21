@@ -5,7 +5,6 @@ export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
 export const AFFIDEX_CUSTODY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
 export const MIN_STAKE_AMOUNT = 1_000;
-export const MAX_STAKE_AMOUNT = 10_000_000;
 
 export const STAKING_FEES = {
   depositFeeBps: 250,
@@ -13,6 +12,7 @@ export const STAKING_FEES = {
 };
 
 export enum LockPeriod {
+  ThreeMonths = 'ThreeMonths',
   SixMonths = 'SixMonths',
   NineMonths = 'NineMonths',
   TwelveMonths = 'TwelveMonths',
@@ -27,6 +27,13 @@ export interface LockPeriodOption {
 }
 
 export const LOCK_PERIODS: LockPeriodOption[] = [
+  {
+    id: LockPeriod.ThreeMonths,
+    label: '3 Months',
+    months: 3,
+    apy: 4.0,
+    seconds: 7_884_000,
+  },
   {
     id: LockPeriod.SixMonths,
     label: '6 Months',
