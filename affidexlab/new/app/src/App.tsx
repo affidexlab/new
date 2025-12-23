@@ -7,6 +7,7 @@ import Admin from "./pages/Admin";
 import VDMAdmin from "./pages/VDMAdmin";
 import SolanaStaking from "./pages/SolanaStaking";
 import InvestorMetrics from "./pages/InvestorMetrics";
+import Quests from "./pages/Quests";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
@@ -33,6 +34,9 @@ function getPageFromLocation(): string {
   }
   if (path.startsWith("/app") || hash === "#app") {
     return "app";
+  }
+  if (path.startsWith("/quests") || hash === "#quests") {
+    return "quests";
   }
   return "home";
 }
@@ -78,6 +82,7 @@ export default function App() {
         </div>
       )}
       {currentPage === "app" && <AppPage />}
+      {currentPage === "quests" && <Quests />}
     </TransactionEventsProvider>
   );
 }
