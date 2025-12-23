@@ -96,6 +96,7 @@ export default function Landing() {
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
+              <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
               <div className="relative">
                 <Button 
                   className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
@@ -140,6 +141,7 @@ export default function Landing() {
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
+              <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
               <div className="space-y-2">
                 <Button 
                   className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"
