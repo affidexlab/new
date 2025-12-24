@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, TrendingUp, DollarSign, Activity } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useTransactionEvents } from '@/contexts/TransactionEventsContext';
 
 interface LeaderboardEntry {
@@ -15,20 +16,43 @@ type Period = 'all' | 'weekly' | 'monthly';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
 
+const formatCurrency = (value?: number, digits = 0) => {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return '$—';
+  }
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: digits,
+  }).format(value);
+};
+
 export default function Leaderboard() {
   const [period, setPeriod] = useState<Period>('weekly');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [campaignMetrics, setCampaignMetrics] = useState<null | {
+    prizePoolUsd: number;
+    weeklyVolumeUsd: number;
+    dailyTrades: number;
+    pioneerTraders: number;
+    updatedAt: string;
+  }>(null);
+  const [campaignLoading, setCampaignLoading] = useState(true);
   const { subscribeToTransactions } = useTransactionEvents();
 
   useEffect(() => {
     fetchLeaderboard();
+    fetchCampaignMetrics();
   }, [period]);
 
   useEffect(() => {
     const unsubscribe = subscribeToTransactions(() => {
-      setTimeout(() => fetchLeaderboard(), 2000);
+      setTimeout(() => {
+        fetchLeaderboard();
+        fetchCampaignMetrics();
+      }, 2000);
     });
     return unsubscribe;
   }, [period]);
@@ -47,6 +71,21 @@ export default function Leaderboard() {
       console.error('Failed to fetch leaderboard:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCampaignMetrics = async () => {
+    try {
+      setCampaignLoading(true);
+      const response = await fetch(`${API_BASE}/v1/points/campaign-metrics`);
+      const data = await response.json();
+      if (data.success) {
+        setCampaignMetrics(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch campaign metrics:', error);
+    } finally {
+      setCampaignLoading(false);
     }
   };
 
@@ -96,7 +135,7 @@ export default function Leaderboard() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-[#3396FF] to-[#47A1FF] bg-clip-text text-transparent">
                 Leaderboard
               </h1>
-              <p className="text-gray-400 mt-1">Compete for weekly and monthly rewards</p>
+              <p className="text-gray-400 mt-1">Compete for Pioneer 100 status and Privacy Sprint rewards</p>
             </div>
           </div>
 
@@ -106,7 +145,7 @@ export default function Leaderboard() {
                 <DollarSign className="w-8 h-8 text-[#47A1FF]" />
                 <div>
                   <p className="text-sm text-gray-400">Weekly Rewards</p>
-                  <p className="text-2xl font-bold">$$ Cash Prizes</p>
+                  <p className="text-2xl font-bold">{campaignLoading ? '$—' : formatCurrency(campaignMetrics?.prizePoolUsd || 0, 1)}</p>
                 </div>
               </div>
             </div>
@@ -115,7 +154,7 @@ export default function Leaderboard() {
                 <TrendingUp className="w-8 h-8 text-blue-400" />
                 <div>
                   <p className="text-sm text-gray-400">Monthly Rewards</p>
-                  <p className="text-2xl font-bold">$$ Cash Prizes</p>
+                  <p className="text-2xl font-bold">{campaignLoading ? '$—' : formatCurrency((campaignMetrics?.prizePoolUsd || 0) * 4, 1)}</p>
                 </div>
               </div>
             </div>
@@ -129,6 +168,14 @@ export default function Leaderboard() {
               </div>
             </div>
           </div>
+
+          {campaignMetrics && (
+            <div className="mb-6 p-4 rounded-xl border border-[#47A1FF]/30 bg-[#0f1435]/50">
+              <p className="text-sm text-gray-300">
+                🚀 Pioneer 100 progress: <span className="font-semibold text-white">{campaignMetrics.pioneerTraders}/100 wallets</span> have traded. Privacy Sprint prize pool currently <span className="font-semibold text-white">{formatCurrency(campaignMetrics.prizePoolUsd, 1)}</span>.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-2 mb-6">
             <button
@@ -250,6 +297,21 @@ export default function Leaderboard() {
                 <p className="text-sm text-yellow-200">
                   💰 <strong>Airdrop Eligibility:</strong> Users with 1,000+ points and 5+ transactions qualify for the 2026 token airdrop!
                 </p>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-white/10 bg-white/5">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-[#47A1FF]">Stay synced</p>
+                <p className="text-gray-300">Follow <a href="https://x.com/Decaflow" className="text-white underline" target="_blank" rel="noreferrer">@DecaFlow</a> on X and join the <a href="https://t.me/decaflowprotocol" className="text-white underline" target="_blank" rel="noreferrer">Telegram</a> war room for Privacy Sprint alerts.</p>
+              </div>
+              <div className="flex gap-3">
+                <Button className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF]" onClick={() => window.open('https://x.com/Decaflow', '_blank')}>
+                  Twitter
+                </Button>
+                <Button variant="outline" className="border-[#47A1FF] text-white" onClick={() => window.open('https://t.me/decaflowprotocol', '_blank')}>
+                  Telegram
+                </Button>
               </div>
             </div>
           </>
