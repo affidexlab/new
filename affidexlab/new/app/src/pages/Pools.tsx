@@ -4,7 +4,7 @@ import { ExternalLink, Zap, Droplets, TrendingUp, Plus, Wallet } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { ChainSelector } from "@/components/ChainSelector";
 import { CHAIN_IDS, CHAIN_METADATA, type ChainKey } from "@/lib/constants";
-import { useUniswapV3LP, PoolData } from "@/hooks/useUniswapV3LP";
+import { useUniswapV3LP, PoolData, DLMMPool } from "@/hooks/useUniswapV3LP";
 import { AddLiquidityModal } from "@/components/AddLiquidityModal";
 import { LPPositionsList } from "@/components/LPPositionsList";
 
@@ -18,6 +18,7 @@ export default function Pools() {
   const {
     positions,
     pools,
+    dlmmPools,
     loading,
     removeLiquidity,
     collectFees,
@@ -91,13 +92,94 @@ export default function Pools() {
         </div>
       )}
 
+      {/* Maverick DLMM Pools */}
+      {dlmmPools && dlmmPools.pools.length > 0 && (
+        <div className="rounded-2xl bg-[#0B1221] border border-[#1E2940] p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Zap size={20} className="text-[#3396FF]" />
+                Maverick DLMM Pools - {getChainName(selectedChainId)}
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Dynamic Liquidity Market Maker with concentrated liquidity bins
+              </p>
+            </div>
+            {dlmmPools.stats && (
+              <div className="text-right text-xs text-gray-400">
+                <div>${dlmmPools.stats.totalLiquidityUsd.toLocaleString()} TVL</div>
+                <div>{dlmmPools.stats.poolCount} pools</div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {dlmmPools.pools.map((pool: DLMMPool) => (
+              <div
+                key={pool.id}
+                className="rounded-xl bg-[#0D1624] border border-[#3396FF]/20 p-5 hover:border-[#3396FF]/50 transition"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="text-lg font-bold mb-1">
+                      {pool.token0.symbol} / {pool.token1.symbol}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span>Bin Width: {pool.binWidthBps} bps</span>
+                      <span>•</span>
+                      <span className="text-[#3396FF]">Maverick DLMM</span>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://app.mav.xyz/?chain=${selectedChainId}&pool=${pool.poolAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[#3396FF] hover:underline flex items-center gap-1"
+                  >
+                    Trade on Maverick <ExternalLink size={12} />
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="rounded-lg bg-[#1A1F2E] p-3">
+                    <div className="text-xs text-gray-400 mb-1">Liquidity</div>
+                    <div className="text-sm font-medium">
+                      ${pool.liquidityUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-[#1A1F2E] p-3">
+                    <div className="text-xs text-gray-400 mb-1">APR</div>
+                    <div className="text-sm font-medium text-green-400">{pool.apr.toFixed(2)}%</div>
+                  </div>
+                  <div className="rounded-lg bg-[#1A1F2E] p-3">
+                    <div className="text-xs text-gray-400 mb-1">Volume 24h</div>
+                    <div className="text-sm font-medium">
+                      ${pool.dailyVolumeUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-[#1A1F2E] p-3">
+                    <div className="text-xs text-gray-400 mb-1">Bins</div>
+                    <div className="text-sm font-medium text-[#3396FF]">{pool.bins.length}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Available Pools */}
       <div className="rounded-2xl bg-[#0B1221] border border-[#1E2940] p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Droplets size={20} className="text-[#47A1FF]" />
-            Top Pools - {getChainName(selectedChainId)}
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <Droplets size={20} className="text-[#47A1FF]" />
+              Uniswap V3 Pools - {getChainName(selectedChainId)}
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Concentrated liquidity pools with custom fee tiers
+            </p>
+          </div>
         </div>
 
         {loading ? (

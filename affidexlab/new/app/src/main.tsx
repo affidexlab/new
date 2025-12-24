@@ -30,6 +30,17 @@ createRoot(document.getElementById('root')!).render(
             initialChain={config.chains[0]}
             showRecentTransactions={true}
             coolMode={false}
+            appInfo={{
+              appName: 'DecaFlow',
+              learnMoreUrl: 'https://decaflow.app',
+              disclaimer: ({ Text, Link }) => (
+                <Text>
+                  By connecting your wallet, you agree to the{' '}
+                  <Link href="https://decaflow.app/terms">Terms of Service</Link> and{' '}
+                  <Link href="https://decaflow.app/privacy">Privacy Policy</Link>
+                </Text>
+              ),
+            }}
           >
             <App />
             <Toaster theme="dark" position="top-right" richColors />
