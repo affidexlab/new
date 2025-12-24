@@ -24,11 +24,25 @@ const quests = [
     link: "/app/privacy"
   },
   {
+    title: "Bridge Week bonus",
+    description: "Bridge any asset into Base during the live multiplier window and screenshot the confirmation for +500 bonus points.",
+    reward: "+500 pts",
+    cta: "Bridge now",
+    link: "/app"
+  },
+  {
+    title: "Pioneer 100 push",
+    description: "Reach 1,000 points + 5 transactions to lock Pioneer status. Submit proof via leaderboard form.",
+    reward: "2x airdrop",
+    cta: "View leaderboard",
+    link: "/leaderboard"
+  },
+  {
     title: "Follow us on X",
-    description: "Help grow the community—follow @DecaFlowHQ and drop your handle via the quest form for verification.",
+    description: "Help grow the community—follow @DecaFlow and drop your handle via the quest form for verification.",
     reward: "+100 pts",
     cta: "Follow on X",
-    link: "https://x.com/DecaFlowHQ"
+    link: "https://x.com/Decaflow"
   },
   {
     title: "Join our Telegram community",
@@ -45,9 +59,9 @@ export default function Quests() {
       <div className="container mx-auto px-4 py-16 max-w-5xl">
         <div className="text-center mb-12">
           <p className="text-sm uppercase tracking-[0.3em] text-[#47A1FF] mb-4">Quests</p>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Earn Bonus Points</h1>
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Pioneer Missions</h1>
           <p className="text-gray-400 text-lg max-w-3xl mx-auto">
-            Complete missions to accelerate your leaderboard climb. On-chain quests are credited automatically.
+            Complete missions to accelerate your Pioneer 100 progress and Privacy Sprint standing. On-chain quests credit automatically.
             Social quests unlock via the submissions section inside the leaderboard dashboard.
           </p>
         </div>
@@ -82,6 +96,21 @@ export default function Quests() {
             Quests award bonus points that stack on top of base rates (2x-7x). Points credit automatically for on-chain actions.
             For social quests, submit proof via the leaderboard interface. Bonuses typically appear within 5 minutes.
           </p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 rounded-xl border border-white/10 bg-white/5">
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-[#47A1FF]">Stay synced</p>
+            <p className="text-gray-300">Announcements land on <a href="https://x.com/Decaflow" className="text-white underline" target="_blank" rel="noreferrer">X</a> first, then the <a href="https://t.me/decaflowprotocol" className="text-white underline" target="_blank" rel="noreferrer">Telegram hub</a>. Join both for multiplier alerts.</p>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <Button className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF]" onClick={() => window.open('https://x.com/Decaflow', '_blank')}>
+              Twitter
+            </Button>
+            <Button variant="outline" className="border-[#47A1FF] text-white" onClick={() => window.open('https://t.me/decaflowprotocol', '_blank')}>
+              Telegram
+            </Button>
+          </div>
         </div>
       </div>
     </div>

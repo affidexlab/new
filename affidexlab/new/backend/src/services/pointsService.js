@@ -471,3 +471,74 @@ export const getGlobalMetrics = async () => {
     throw error;
   }
 };
+
+export const getCampaignMetrics = async () => {
+  try {
+    const [dailyResult, weeklyResult, privacyResult, multiplierResult, pioneerResult] = await Promise.all([
+      query(
+        `SELECT 
+          COUNT(*) as trades,
+          COALESCE(SUM(amount_usd), 0) as volume
+         FROM transactions 
+         WHERE status = 'completed'
+         AND created_at >= date_trunc('day', (now() at time zone 'utc'))`
+      ),
+      query(
+        `SELECT 
+          COUNT(*) as trades,
+          COALESCE(SUM(amount_usd), 0) as volume
+         FROM transactions 
+         WHERE status = 'completed'
+         AND created_at >= date_trunc('week', (now() at time zone 'utc'))`
+      ),
+      query(
+        `SELECT 
+          COUNT(*) as privacy_trades
+         FROM transactions 
+         WHERE status = 'completed'
+         AND transaction_type = 'privacy_swap'
+         AND created_at >= date_trunc('day', (now() at time zone 'utc'))`
+      ),
+      query(
+        `SELECT COUNT(*) as active_multipliers
+         FROM point_multipliers
+         WHERE active = TRUE
+           AND (start_date IS NULL OR start_date <= CURRENT_TIMESTAMP)
+           AND (end_date IS NULL OR end_date >= CURRENT_TIMESTAMP)`
+      ),
+      query(
+        `SELECT COUNT(*) as pioneer_traders
+         FROM users
+         WHERE transaction_count > 0`
+      )
+    ]);
+
+    const dailyStats = dailyResult.rows[0] || { trades: 0, volume: 0 };
+    const weeklyStats = weeklyResult.rows[0] || { trades: 0, volume: 0 };
+    const privacyStats = privacyResult.rows[0] || { privacy_trades: 0 };
+    const multiplierStats = multiplierResult.rows[0] || { active_multipliers: 0 };
+    const pioneerStats = pioneerResult.rows[0] || { pioneer_traders: 0 };
+
+    const weeklyVolume = parseFloat(weeklyStats.volume) || 0;
+    const platformFeeRate = 0.008; // 0.8%
+    const rewardShare = 0.8; // 80% of fees recycled into prizes
+    const prizePoolUsd = weeklyVolume * platformFeeRate * rewardShare;
+
+    return {
+      dailyTrades: parseInt(dailyStats.trades) || 0,
+      dailyVolumeUsd: parseFloat(dailyStats.volume) || 0,
+      weeklyTrades: parseInt(weeklyStats.trades) || 0,
+      weeklyVolumeUsd: weeklyVolume,
+      privacySwapsToday: parseInt(privacyStats.privacy_trades) || 0,
+      activeMultipliers: parseInt(multiplierStats.active_multipliers) || 0,
+      pioneerTraders: parseInt(pioneerStats.pioneer_traders) || 0,
+      prizePoolUsd,
+      platformFeeRate,
+      rewardShare,
+      updatedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('❌ Campaign metrics fetch error:', error);
+    throw error;
+  }
+};

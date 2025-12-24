@@ -11,6 +11,19 @@ import {
 
 const router = express.Router();
 
+const DLMM_PROVIDERS = [
+  {
+    id: 'maverick-base',
+    name: 'Maverick Protocol',
+    status: 'live',
+    supportedChains: [8453],
+    docsUrl: 'https://docs.mav.xyz/',
+    description: 'Dynamic Distribution AMM powering Goose.run MemeFi and other Base deployments. Battle-tested across Ethereum and zkSync with programmable liquidity bins.',
+    integrationNotes: 'Interact through Maverick Router / Boosted Pools. Supports concentrated, auto-shifting bins ideal for DLMM incentives.',
+    tags: ['dlmm', 'base', 'battle-tested']
+  }
+];
+
 router.get('/pools', [
   query('chainId').isInt({ min: 1 }).toInt()
 ], async (req, res) => {
@@ -218,6 +231,16 @@ router.post('/collect', [
       message: error.message
     });
   }
+});
+
+router.get('/dlmm/providers', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      providers: DLMM_PROVIDERS,
+      updatedAt: new Date().toISOString()
+    }
+  });
 });
 
 export default router;

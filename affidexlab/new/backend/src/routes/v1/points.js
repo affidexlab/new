@@ -11,7 +11,8 @@ import {
   getTopPerformers,
   recordReward,
   updateRewardStatus,
-  getGlobalMetrics
+  getGlobalMetrics,
+  getCampaignMetrics
 } from '../../services/pointsService.js';
 
 const router = express.Router();
@@ -27,6 +28,22 @@ router.get('/metrics', async (req, res) => {
     console.error('Get global metrics error:', error);
     res.status(500).json({
       error: 'Failed to get global metrics',
+      message: error.message
+    });
+  }
+});
+
+router.get('/campaign-metrics', async (_req, res) => {
+  try {
+    const metrics = await getCampaignMetrics();
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error) {
+    console.error('Get campaign metrics error:', error);
+    res.status(500).json({
+      error: 'Failed to get campaign metrics',
       message: error.message
     });
   }
