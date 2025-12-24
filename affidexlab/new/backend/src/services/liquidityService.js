@@ -1,4 +1,5 @@
 import { getTopPools, getPoolData, getUserPositions as getUniswapPositions, getNonfungiblePositionManagerAddress } from './uniswapV3Service.js';
+import { getMaverickPools } from './maverickService.js';
 
 const LIQUIDITY_ROUTER_ADDRESSES = {
   8453: '0x4b6D747Bc35CF3856e99C1C7B2e73C2687AB7DB4',
@@ -38,13 +39,16 @@ export async function getLiquidityPools(chainId, partner) {
       pools = BASE_FALLBACK_POOLS;
     }
 
+    const dlmm = chainId === 8453 ? await getMaverickPools(chainId, { limit: 12 }) : null;
+
     if (!pools || pools.length === 0) {
       return {
         chainId,
         pools: [],
         routerAddress: LIQUIDITY_ROUTER_ADDRESSES[chainId] || null,
         nftManagerAddress: getNonfungiblePositionManagerAddress(chainId),
-        message: 'No pools available for this chain'
+        message: 'No pools available for this chain',
+        dlmm
       };
     }
 
@@ -56,7 +60,8 @@ export async function getLiquidityPools(chainId, partner) {
         ...pool,
         canAdd: true,
         canRemove: true
-      }))
+      })),
+      dlmm
     };
   } catch (error) {
     console.error('Get liquidity pools error:', error);
@@ -65,7 +70,8 @@ export async function getLiquidityPools(chainId, partner) {
       pools: [],
       routerAddress: LIQUIDITY_ROUTER_ADDRESSES[chainId] || null,
       nftManagerAddress: getNonfungiblePositionManagerAddress(chainId),
-      message: error.message
+      message: error.message,
+      dlmm: null
     };
   }
 }

@@ -8,9 +8,11 @@ import Pools from "./Pools";
 import PointsDashboard from "@/components/PointsDashboard";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCampaignStats, type GlobalStats, type CampaignStats } from "@/hooks/useCampaignStats";
 
 export default function AppPage() {
   const [activeTab, setActiveTab] = useState("swap");
+  const { globalStats, campaignStats, loading: campaignLoading } = useCampaignStats(45000);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0B1426] via-[#0A0F1E] to-[#080D1A] text-white flex flex-col">
@@ -47,6 +49,9 @@ export default function AppPage() {
               </button>
               <ConnectButton />
             </div>
+          </div>
+          <div className="py-4">
+            <CampaignBanner globalStats={globalStats} campaignStats={campaignStats} loading={campaignLoading} />
           </div>
         </div>
       </header>
@@ -161,3 +166,61 @@ export default function AppPage() {
     </div>
   );
 }
+
+const PIONEER_TARGET = 100;
+
+function CampaignBanner({ globalStats, campaignStats, loading }: { globalStats: GlobalStats; campaignStats: CampaignStats; loading: boolean }) {
+  const pioneerCount = globalStats?.uniqueWallets ?? 0;
+  const prizePool = formatBannerCurrency(campaignStats?.prizePoolUsd ?? 0);
+  const privacySwaps = campaignStats?.privacySwapsToday ?? 0;
+  const multipliers = campaignStats?.activeMultipliers ?? 0;
+  const progress = Math.min(pioneerCount / PIONEER_TARGET, 1);
+
+  return (
+    <div className="rounded-2xl border border-[#1E2940] bg-[#0D1624] p-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <CampaignBannerStat label="Prize Pool" value={prizePool} loading={loading} sublabel="Weekly rewards" />
+        <CampaignBannerStat label="Privacy Swaps" value={privacySwaps.toLocaleString()} loading={loading} sublabel="Today" />
+        <CampaignBannerStat label="Active Multipliers" value={`${multipliers}x`} loading={loading} sublabel="Privacy Sprint" />
+        <CampaignBannerStat label="Swaps Logged" value={globalStats.totalTrades.toLocaleString()} loading={loading} sublabel="Lifetime" />
+      </div>
+      <div className="mt-4">
+        <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+          <span>Pioneer 100 Progress</span>
+          <span>{loading ? '—' : `${pioneerCount}/${PIONEER_TARGET}`}</span>
+        </div>
+        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF]" style={{ width: `${Math.min(progress * 100, 100)}%` }}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampaignBannerStat({ label, value, sublabel, loading }: { label: string; value: string; sublabel?: string; loading: boolean }) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-[#080D1A]/70 p-3">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-xl font-semibold text-white">{loading ? '—' : value}</p>
+      {sublabel && <p className="text-[10px] text-gray-500">{sublabel}</p>}
+    </div>
+  );
+}
+
+function formatBannerCurrency(value: number) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+  if (Math.abs(amount) >= 1_000_000_000) {
+    return `$${(amount / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (Math.abs(amount) >= 1_000_000) {
+    return `$${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  if (Math.abs(amount) >= 1_000) {
+    return `$${(amount / 1_000).toFixed(1)}K`;
+  }
+  return `$${amount.toFixed(0)}`;
+}
+
