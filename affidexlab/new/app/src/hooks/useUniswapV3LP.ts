@@ -73,10 +73,53 @@ export interface PoolData {
   txCount: number;
 }
 
+export interface DLMMPool {
+  id: string;
+  poolAddress: string;
+  token0: {
+    address: string;
+    symbol: string;
+    decimals: number;
+  };
+  token1: {
+    address: string;
+    symbol: string;
+    decimals: number;
+  };
+  liquidityUsd: number;
+  dailyVolumeUsd: number;
+  lastPrice: number;
+  fees: {
+    makerFeeBps: number;
+    takerFeeBps: number;
+  };
+  apr: number;
+  binWidthBps: number;
+  bins: Array<{
+    id: string;
+    lowerPrice: number;
+    upperPrice: number;
+    liquidityUsd: number;
+  }>;
+}
+
+export interface DLMMData {
+  provider: string;
+  pools: DLMMPool[];
+  stats: {
+    totalLiquidityUsd: number;
+    totalVolumeUsd: number;
+    averageFeeBps: number;
+    poolCount: number;
+    lastUpdated: string;
+  };
+}
+
 export function useUniswapV3LP(chainId: number) {
   const { address } = useAccount();
   const [positions, setPositions] = useState<LPPosition[]>([]);
   const [pools, setPools] = useState<PoolData[]>([]);
+  const [dlmmPools, setDlmmPools] = useState<DLMMData | null>(null);
   const [loading, setLoading] = useState(false);
   
   const { writeContract, data: txHash, isPending } = useWriteContract();
@@ -99,6 +142,12 @@ export function useUniswapV3LP(chainId: number) {
         setPools(data.data.pools);
       } else {
         setPools([]);
+      }
+      
+      if (data.success && data.data?.dlmm) {
+        setDlmmPools(data.data.dlmm);
+      } else {
+        setDlmmPools(null);
       }
     } catch (error) {
       logger.error('Failed to fetch pools', error);
@@ -421,6 +470,7 @@ export function useUniswapV3LP(chainId: number) {
   return {
     positions,
     pools,
+    dlmmPools,
     loading,
     addLiquidity,
     increaseLiquidityPosition,
