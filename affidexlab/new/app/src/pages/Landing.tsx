@@ -26,6 +26,8 @@ export default function Landing() {
   const [campaignLoading, setCampaignLoading] = useState(true);
   const [dlmmProviders, setDlmmProviders] = useState<Array<{ id: string; name: string; description: string; status: string; supportedChains: number[]; docsUrl: string; tags?: string[] }>>([]);
   const [dlmmLoading, setDlmmLoading] = useState(true);
+  const [dlmmSnapshot, setDlmmSnapshot] = useState<DlmmSnapshot | null>(null);
+  const [dlmmStatsLoading, setDlmmStatsLoading] = useState(true);
   const { subscribeToTransactions } = useTransactionEvents();
 
   const PIONEER_TARGET = 100;
@@ -109,13 +111,36 @@ export default function Landing() {
     }
   };
 
+  const fetchDlmmStats = async () => {
+    try {
+      setDlmmStatsLoading(true);
+      const response = await fetch(`${API_BASE}/v1/liquidity/pools?chainId=8453`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch DLMM pools');
+      }
+      const data = await response.json();
+      if (data.success && data.data?.dlmm) {
+        setDlmmSnapshot(data.data.dlmm as DlmmSnapshot);
+      } else {
+        setDlmmSnapshot(null);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch DLMM stats:', error);
+      setDlmmSnapshot(null);
+    } finally {
+      setDlmmStatsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchGlobalStats();
     fetchCampaignStats();
     fetchDlmmProviders();
+    fetchDlmmStats();
     const id = setInterval(() => {
       fetchGlobalStats();
       fetchCampaignStats();
+      fetchDlmmStats();
     }, 30000);
     return () => clearInterval(id);
   }, []);
@@ -565,8 +590,8 @@ export default function Landing() {
                 </Button>
               </div>
             </div>
-            <div className="w-full h-full rounded-3xl overflow-hidden bg-[#0F1419]/70 border border-[#47A1FF]/20 p-8">
-              <OptimizedImage src="/images/chainswap/same-chain-swaps-graphic.png" alt="DLMM Visualization" className="w-full h-full object-contain" />
+            <div className="w-full h-full rounded-3xl overflow-hidden bg-[#0F1419]/70 border border-[#47A1FF]/20 p-6">
+              <DlmmStatsPanel data={dlmmSnapshot} loading={dlmmStatsLoading} />
             </div>
           </div>
           <div className="mt-12">
@@ -831,6 +856,158 @@ function SocialIcon({ icon, href }: { icon: string; href: string }) {
       <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
     </a>
   );
+}
+
+interface DlmmPool {
+  id: string;
+  poolAddress: string;
+  token0: { symbol: string; address: string };
+  token1: { symbol: string; address: string };
+  liquidityUsd: number;
+  dailyVolumeUsd: number;
+  lastPrice?: number;
+  apr?: number;
+  fees: {
+    makerFeeBps?: number;
+    takerFeeBps?: number;
+  };
+  binWidthBps?: number;
+  bins?: Array<{ id: string; lowerPrice: number; upperPrice: number; liquidityUsd: number }>;
+  stats?: {
+    bid?: number;
+    ask?: number;
+  };
+  updatedAt?: string;
+}
+
+interface DlmmSnapshot {
+  provider: string;
+  pools: DlmmPool[];
+  stats: {
+    totalLiquidityUsd: number;
+    totalVolumeUsd: number;
+    averageFeeBps: number;
+    poolCount: number;
+    lastUpdated: string;
+  };
+}
+
+function DlmmStatsPanel({ data, loading }: { data: DlmmSnapshot | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="h-16 rounded-xl bg-white/5"></div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <p className="text-sm text-gray-400">Unable to load live DLMM stats right now. Please try again shortly.</p>;
+  }
+
+  const topPools = data.pools.slice(0, 3);
+
+  return (
+    <div className="flex flex-col gap-5 h-full">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs uppercase tracking-widest text-[#47A1FF]">{data.provider}</p>
+        <h3 className="text-2xl font-bold">Live DLMM Grid</h3>
+        <p className="text-[11px] text-gray-500">Updated {new Date(data.stats.lastUpdated).toLocaleTimeString()}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <DlmmStatPill label="DLMM TVL" value={formatCompactCurrency(data.stats.totalLiquidityUsd)} sublabel="Across Base" />
+        <DlmmStatPill label="24h Volume" value={formatCompactCurrency(data.stats.totalVolumeUsd)} sublabel="Adaptive bins" />
+        <DlmmStatPill label="Avg. Fee" value={`${formatNumber(data.stats.averageFeeBps, 1)} bps`} sublabel="Maker share" />
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        {topPools.length === 0 ? (
+          <p className="text-sm text-gray-500">No Maverick pools detected yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {topPools.map((pool) => (
+              <DlmmPoolRow key={pool.id} pool={pool} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DlmmStatPill({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
+  return (
+    <div className="rounded-2xl bg-[#111629] border border-white/5 p-4">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{label}</p>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      {sublabel && <p className="text-[11px] text-gray-500 mt-1">{sublabel}</p>}
+    </div>
+  );
+}
+
+function DlmmPoolRow({ pool }: { pool: DlmmPool }) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-[#0A0F1E]/70 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {pool.token0.symbol} / {pool.token1.symbol}
+          </p>
+          <p className="text-[11px] text-gray-500">
+            Fee {pool.fees.makerFeeBps ? `${formatNumber(pool.fees.makerFeeBps, 1)} bps` : '—'} · Bin {pool.binWidthBps ? `${formatNumber(pool.binWidthBps, 1)} bps` : 'n/a'}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-green-400">{pool.apr ? `${pool.apr}% APR` : '—'}</p>
+          <p className="text-[11px] text-gray-500">{formatCompactCurrency(pool.dailyVolumeUsd)}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 mt-4 text-xs text-gray-400">
+        <div>
+          <p className="uppercase text-[10px]">TVL</p>
+          <p className="text-white text-sm">{formatCompactCurrency(pool.liquidityUsd)}</p>
+        </div>
+        <div>
+          <p className="uppercase text-[10px]">Spread</p>
+          <p className="text-white text-sm">
+            {pool.stats?.bid && pool.stats?.ask ? `${formatNumber(pool.stats.ask - pool.stats.bid, 4)} Δ` : '—'}
+          </p>
+        </div>
+        <div>
+          <p className="uppercase text-[10px]">Last Price</p>
+          <p className="text-white text-sm">{pool.lastPrice ? formatNumber(pool.lastPrice, 4) : '—'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatCompactCurrency(value?: number) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+  if (Math.abs(amount) >= 1_000_000_000) {
+    return `$${(amount / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (Math.abs(amount) >= 1_000_000) {
+    return `$${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  if (Math.abs(amount) >= 1_000) {
+    return `$${(amount / 1_000).toFixed(1)}K`;
+  }
+  return `$${amount.toFixed(0)}`;
+}
+
+function formatNumber(value?: number, digits = 2) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+  return amount.toFixed(digits);
 }
 
 <style jsx>{`
