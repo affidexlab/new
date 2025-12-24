@@ -10,19 +10,14 @@ import {
   ledgerWallet,
 } from '@rainbow-me/rainbowkit/wallets';
 
-// Get WalletConnect Project ID from environment
-const projectIdSource =
-  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ||
-  import.meta.env.VITE_REOWN_PROJECT_ID ||
-  'bb466d3ee706ec7ccd389d161d64005a';
-
-const projectId = projectIdSource.trim();
+// Get Reown Project ID (formerly WalletConnect)
+const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID || 'bb466d3ee706ec7ccd389d161d64005a').trim();
 
 if (!projectId || projectId.length < 32) {
-  console.error('❌ WalletConnect project ID is invalid or not set!');
-  console.error('⚠️  Get a free project ID at: https://cloud.walletconnect.com');
+  console.error('❌ Reown project ID is invalid!');
+  console.error('⚠️  Get a free project ID at: https://cloud.reown.com');
 } else {
-  console.log('✅ WalletConnect Project ID configured:', projectId.substring(0, 10) + '...');
+  console.log('✅ Reown/WalletConnect configured:', projectId.substring(0, 10) + '...');
 }
 
 // Supported chains
@@ -78,6 +73,6 @@ export const config = createConfig({
 });
 
 // Debug logging
-console.log('🔧 Wagmi config initialized with explicit connectors');
+console.log('🔧 Wagmi config initialized');
 console.log('📱 Chains:', chains.map(c => c.name).join(', '));
 console.log('🔌 Connectors:', connectors.length, 'configured');
