@@ -115,7 +115,7 @@ const ERC20_ABI = [
 ];
 
 const RPC_URLS = {
-  8453: 'https://mainnet.base.org',
+  8453: 'https://base.llamarpc.com',
   1: 'https://eth.llamarpc.com',
   42161: 'https://arbitrum.llamarpc.com',
   324: 'https://mainnet.era.zksync.io',
@@ -123,25 +123,49 @@ const RPC_URLS = {
   534352: 'https://rpc.scroll.io'
 };
 
-export async function getMaverickV2PoolsOnChain(chainId, { limit = 12 } = {}) {
-  try {
-    const rpcUrl = RPC_URLS[chainId];
-    if (!rpcUrl) {
-      console.log(`No RPC URL for chain ${chainId}`);
-      return {
-        provider: 'Maverick V2',
-        pools: [],
-        stats: {
-          totalLiquidityUsd: 0,
-          totalVolumeUsd: 0,
-          averageFeeBps: 0,
-          poolCount: 0,
-          lastUpdated: new Date().toISOString()
-        }
-      };
-    }
+const REQUEST_TIMEOUT_MS = 8000;
 
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+export async function getMaverickV2PoolsOnChain(chainId, { limit = 12 } = {}) {
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT_MS)
+  );
+
+  try {
+    return await Promise.race([timeoutPromise, fetchPoolsInternal(chainId, limit)]);
+  } catch (error) {
+    console.error('Maverick V2 on-chain fetch error:', error);
+    return {
+      provider: 'Maverick V2',
+      pools: [],
+      stats: {
+        totalLiquidityUsd: 0,
+        totalVolumeUsd: 0,
+        averageFeeBps: 0,
+        poolCount: 0,
+        lastUpdated: new Date().toISOString()
+      }
+    };
+  }
+}
+
+async function fetchPoolsInternal(chainId, limit) {
+  const rpcUrl = RPC_URLS[chainId];
+  if (!rpcUrl) {
+    console.log(`No RPC URL for chain ${chainId}`);
+    return {
+      provider: 'Maverick V2',
+      pools: [],
+      stats: {
+        totalLiquidityUsd: 0,
+        totalVolumeUsd: 0,
+        averageFeeBps: 0,
+        poolCount: 0,
+        lastUpdated: new Date().toISOString()
+      }
+    };
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
     
     const factory = new ethers.Contract(
       MAVERICK_V2_FACTORY_ADDRESS,
@@ -169,8 +193,13 @@ export async function getMaverickV2PoolsOnChain(chainId, { limit = 12 } = {}) {
     const endIndex = Math.min(limit, totalPools);
     const poolAddresses = await factory.lookup(0, endIndex);
 
-    const pools = await Promise.all(
-      poolAddresses.slice(0, limit).map(async (poolAddress) => {
+    const pools = [];
+    const batchSize = 3;
+    
+    for (let i = 0; i < Math.min(poolAddresses.length, limit); i += batchSize) {
+      const batch = poolAddresses.slice(i, Math.min(i + batchSize, Math.min(poolAddresses.length, limit)));
+      const batchResults = await Promise.all(
+        batch.map(async (poolAddress) => {
         try {
           const pool = new ethers.Contract(poolAddress, MAVERICK_V2_POOL_ABI, provider);
           const poolLens = new ethers.Contract(
@@ -232,36 +261,24 @@ export async function getMaverickV2PoolsOnChain(chainId, { limit = 12 } = {}) {
           return null;
         }
       })
-    );
+      );
+      pools.push(...batchResults);
+    }
 
-    const validPools = pools.filter(p => p !== null);
-    const totalLiquidityUsd = validPools.reduce((acc, pool) => acc + pool.liquidityUsd, 0);
+  const validPools = pools.filter(p => p !== null);
+  const totalLiquidityUsd = validPools.reduce((acc, pool) => acc + pool.liquidityUsd, 0);
 
-    return {
-      provider: 'Maverick V2',
-      pools: validPools,
-      stats: {
-        totalLiquidityUsd: Number(totalLiquidityUsd.toFixed(2)),
-        totalVolumeUsd: 0,
-        averageFeeBps: validPools.length > 0
-          ? validPools.reduce((acc, pool) => acc + pool.fees.makerFeeBps, 0) / validPools.length
-          : 0,
-        poolCount: validPools.length,
-        lastUpdated: new Date().toISOString()
-      }
-    };
-  } catch (error) {
-    console.error('Maverick V2 on-chain fetch error:', error);
-    return {
-      provider: 'Maverick V2',
-      pools: [],
-      stats: {
-        totalLiquidityUsd: 0,
-        totalVolumeUsd: 0,
-        averageFeeBps: 0,
-        poolCount: 0,
-        lastUpdated: new Date().toISOString()
-      }
-    };
-  }
+  return {
+    provider: 'Maverick V2',
+    pools: validPools,
+    stats: {
+      totalLiquidityUsd: Number(totalLiquidityUsd.toFixed(2)),
+      totalVolumeUsd: 0,
+      averageFeeBps: validPools.length > 0
+        ? validPools.reduce((acc, pool) => acc + pool.fees.makerFeeBps, 0) / validPools.length
+        : 0,
+      poolCount: validPools.length,
+      lastUpdated: new Date().toISOString()
+    }
+  };
 }

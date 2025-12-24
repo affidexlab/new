@@ -14,14 +14,15 @@ import {
 const projectIdSource =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ||
   import.meta.env.VITE_REOWN_PROJECT_ID ||
-  '';
+  'bb466d3ee706ec7ccd389d161d64005a';
 
 const projectId = projectIdSource.trim();
 
-if (!projectId) {
-  console.error('❌ WalletConnect/Reown project ID is not set!');
+if (!projectId || projectId.length < 32) {
+  console.error('❌ WalletConnect project ID is invalid or not set!');
+  console.error('⚠️  Get a free project ID at: https://cloud.walletconnect.com');
 } else {
-  console.log('✅ WalletConnect/Reown Project ID:', projectId.substring(0, 10) + '...');
+  console.log('✅ WalletConnect Project ID configured:', projectId.substring(0, 10) + '...');
 }
 
 // Supported chains

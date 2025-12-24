@@ -8,7 +8,7 @@ const API_BASE_URLS = [
   'https://stats.mav.xyz'
 ];
 const CACHE_TTL_MS = Number(process.env.MAVERICK_CACHE_TTL_MS || 60_000);
-const REQUEST_TIMEOUT_MS = Number(process.env.MAVERICK_API_TIMEOUT_MS || 10_000);
+const REQUEST_TIMEOUT_MS = Number(process.env.MAVERICK_API_TIMEOUT_MS || 5_000);
 const DEFAULT_FEE_BPS = Number(process.env.MAVERICK_DEFAULT_FEE_BPS || 20);
 
 const cache = new Map();
@@ -192,33 +192,41 @@ function formatTicker(raw) {
 }
 
 export async function getMaverickPools(chainId, { limit = 8 } = {}) {
-  const tickers = await fetchTickers(chainId);
-  
-  if (!tickers.length) {
-    console.log('Maverick API returned no pools, trying on-chain query');
-    try {
-      const onChainData = await getMaverickV2PoolsOnChain(chainId, { limit });
-      return onChainData;
-    } catch (error) {
-      console.error('On-chain Maverick fetch also failed:', error);
-      return { provider: 'Maverick V2', pools: [], stats: { totalLiquidityUsd: 0, totalVolumeUsd: 0, averageFeeBps: 0, poolCount: 0, lastUpdated: new Date().toISOString() } };
+  try {
+    const tickers = await Promise.race([
+      fetchTickers(chainId),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Ticker fetch timeout')), 8000))
+    ]);
+    
+    if (!tickers.length) {
+      console.log('Maverick API returned no pools, trying on-chain query');
+      try {
+        const onChainData = await getMaverickV2PoolsOnChain(chainId, { limit });
+        return onChainData;
+      } catch (error) {
+        console.error('On-chain Maverick fetch also failed:', error);
+        return { provider: 'Maverick V2', pools: [], stats: { totalLiquidityUsd: 0, totalVolumeUsd: 0, averageFeeBps: 0, poolCount: 0, lastUpdated: new Date().toISOString() } };
+      }
     }
+
+    const pools = tickers.slice(0, limit).map(formatTicker);
+    const totalLiquidityUsd = pools.reduce((acc, pool) => acc + pool.liquidityUsd, 0);
+    const totalVolumeUsd = pools.reduce((acc, pool) => acc + pool.dailyVolumeUsd, 0);
+    const averageFeeBps = pools.reduce((acc, pool) => acc + (pool.fees.makerFeeBps || DEFAULT_FEE_BPS), 0) / pools.length;
+
+    return {
+      provider: 'Maverick DLMM',
+      pools,
+      stats: {
+        totalLiquidityUsd: Number(totalLiquidityUsd.toFixed(2)),
+        totalVolumeUsd: Number(totalVolumeUsd.toFixed(2)),
+        averageFeeBps: Number(averageFeeBps.toFixed(2)),
+        poolCount: pools.length,
+        lastUpdated: pools[0]?.updatedAt || new Date().toISOString()
+      }
+    };
+  } catch (error) {
+    console.error('getMaverickPools error:', error);
+    return { provider: 'Maverick V2', pools: [], stats: { totalLiquidityUsd: 0, totalVolumeUsd: 0, averageFeeBps: 0, poolCount: 0, lastUpdated: new Date().toISOString() } };
   }
-
-  const pools = tickers.slice(0, limit).map(formatTicker);
-  const totalLiquidityUsd = pools.reduce((acc, pool) => acc + pool.liquidityUsd, 0);
-  const totalVolumeUsd = pools.reduce((acc, pool) => acc + pool.dailyVolumeUsd, 0);
-  const averageFeeBps = pools.reduce((acc, pool) => acc + (pool.fees.makerFeeBps || DEFAULT_FEE_BPS), 0) / pools.length;
-
-  return {
-    provider: 'Maverick DLMM',
-    pools,
-    stats: {
-      totalLiquidityUsd: Number(totalLiquidityUsd.toFixed(2)),
-      totalVolumeUsd: Number(totalVolumeUsd.toFixed(2)),
-      averageFeeBps: Number(averageFeeBps.toFixed(2)),
-      poolCount: pools.length,
-      lastUpdated: pools[0]?.updatedAt || new Date().toISOString()
-    }
-  };
 }
