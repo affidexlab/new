@@ -11,12 +11,17 @@ import {
 } from '@rainbow-me/rainbowkit/wallets';
 
 // Get WalletConnect Project ID from environment
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string;
+const projectIdSource =
+  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ||
+  import.meta.env.VITE_REOWN_PROJECT_ID ||
+  '';
+
+const projectId = projectIdSource.trim();
 
 if (!projectId) {
-  console.error('❌ VITE_WALLETCONNECT_PROJECT_ID is not set!');
+  console.error('❌ WalletConnect/Reown project ID is not set!');
 } else {
-  console.log('✅ WalletConnect Project ID:', projectId.substring(0, 10) + '...');
+  console.log('✅ WalletConnect/Reown Project ID:', projectId.substring(0, 10) + '...');
 }
 
 // Supported chains
