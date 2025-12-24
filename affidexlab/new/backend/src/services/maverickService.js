@@ -1,6 +1,12 @@
 import fetch from 'node-fetch';
+import { getMaverickV2PoolsOnChain } from './maverickV2OnChain.js';
 
-const DEFAULT_API_BASE = (process.env.MAVERICK_API_BASE_URL || 'https://stats.mav.xyz').replace(/\/$/, '');
+const API_BASE_URLS = [
+  'https://api.mav.xyz',
+  'https://data.mav.xyz',
+  'https://v2api.mav.xyz',
+  'https://stats.mav.xyz'
+];
 const CACHE_TTL_MS = Number(process.env.MAVERICK_CACHE_TTL_MS || 60_000);
 const REQUEST_TIMEOUT_MS = Number(process.env.MAVERICK_API_TIMEOUT_MS || 10_000);
 const DEFAULT_FEE_BPS = Number(process.env.MAVERICK_DEFAULT_FEE_BPS || 20);
@@ -96,46 +102,47 @@ async function fetchTickers(chainId) {
     return cached.data;
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  for (const baseUrl of API_BASE_URLS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  try {
-    const url = `${DEFAULT_API_BASE}/api/latest/tickers?chainId=${chainId}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      },
-      signal: controller.signal
-    });
+    try {
+      const url = `${baseUrl}/api/latest/tickers?chainId=${chainId}`;
+      console.log(`Trying Maverick API: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      console.error('Maverick API error', { status: response.status, statusText: response.statusText, body: body?.slice(0, 200) });
-      return cached?.data || [];
+      if (response.ok) {
+        const json = await response.json();
+        const tickers = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+            ? json.data
+            : Array.isArray(json?.tickers)
+              ? json.tickers
+              : [];
+
+        if (tickers.length > 0) {
+          console.log(`✅ Maverick API success: ${baseUrl} (${tickers.length} pools)`);
+          cache.set(cacheKey, { data: tickers, timestamp: now });
+          return tickers;
+        }
+      }
+    } catch (error) {
+      console.log(`Failed to fetch from ${baseUrl}:`, error.message);
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const json = await response.json();
-    const tickers = Array.isArray(json)
-      ? json
-      : Array.isArray(json?.data)
-        ? json.data
-        : Array.isArray(json?.tickers)
-          ? json.tickers
-          : [];
-
-    cache.set(cacheKey, { data: tickers, timestamp: now });
-    return tickers;
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      console.warn('Maverick API request timed out');
-    } else {
-      console.error('Failed to fetch Maverick data', error);
-    }
-    return cached?.data || [];
-  } finally {
-    clearTimeout(timeout);
   }
+
+  console.log('All Maverick API endpoints failed, falling back to on-chain query');
+  return cached?.data || [];
 }
 
 function formatTicker(raw) {
@@ -186,8 +193,16 @@ function formatTicker(raw) {
 
 export async function getMaverickPools(chainId, { limit = 8 } = {}) {
   const tickers = await fetchTickers(chainId);
+  
   if (!tickers.length) {
-    return { provider: 'Maverick DLMM', pools: [], stats: { totalLiquidityUsd: 0, totalVolumeUsd: 0, averageFeeBps: 0, poolCount: 0, lastUpdated: new Date().toISOString() } };
+    console.log('Maverick API returned no pools, trying on-chain query');
+    try {
+      const onChainData = await getMaverickV2PoolsOnChain(chainId, { limit });
+      return onChainData;
+    } catch (error) {
+      console.error('On-chain Maverick fetch also failed:', error);
+      return { provider: 'Maverick V2', pools: [], stats: { totalLiquidityUsd: 0, totalVolumeUsd: 0, averageFeeBps: 0, poolCount: 0, lastUpdated: new Date().toISOString() } };
+    }
   }
 
   const pools = tickers.slice(0, limit).map(formatTicker);
