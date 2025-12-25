@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DecaFlow Protocol - Seed Round Pitch Deck</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e27;
+            color: #ffffff;
+        }
+        
+        .slides-container {
+            width: 100%;
+            background: #0a0e27;
+        }
+        
+        .slide {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 120px;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        }
+        
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(14, 118, 253, 0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(14, 118, 253, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        .slide-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Cover Slide */
+        .cover-slide {
+            text-align: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0E76FD 0%, #4040BF 50%, #1E3DA1 100%);
+        }
+        
+        .logo {
+            font-size: 120px;
+            font-weight: 800;
+            margin-bottom: 40px;
+            letter-spacing: -2px;
+        }
+        
+        .tagline {
+            font-size: 64px;
+            font-weight: 300;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+        
+        .subtitle {
+            font-size: 42px;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 100px;
+        }
+        
+        .deck-meta {
+            font-size: 28px;
+            opacity: 0.8;
+        }
+        
+        /* Standard Slide Layouts */
+        h1 {
+            font-size: 88px;
+            font-weight: 800;
+            margin-bottom: 60px;
+            line-height: 1.2;
+            background: linear-gradient(90deg, #0E76FD, #4040BF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        h2 {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: #0E76FD;
+        }
+        
+        h3 {
+            font-size: 42px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+        
+        p {
+            font-size: 36px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .large-text {
+            font-size: 48px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+        
+        ul {
+            list-style: none;
+            font-size: 36px;
+            line-height: 1.8;
+        }
+        
+        ul li {
+            margin-bottom: 25px;
+            padding-left: 50px;
+            position: relative;
+        }
+        
+        ul li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #0E76FD;
+            font-weight: 700;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .stat-box {
+            background: rgba(14, 118, 253, 0.1);
+            border: 2px solid rgba(14, 118, 253, 0.3);
+            border-radius: 20px;
+            padding: 50px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 72px;
+            font-weight: 800;
+            color: #0E76FD;
+            margin-bottom: 15px;
+        }
+        
+        .stat-label {
+            font-size: 32px;
+            opacity: 0.8;
+        }
+        
+        /* Feature Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .feature-box {
+            background: rgba(14, 118, 253, 0.05);
+            border-left: 4px solid #0E76FD;
+            padding: 40px;
+            border-radius: 12px;
+        }
+        
+        .feature-title {
+            font-size: 38px;
+            font-weight: 700;
+            color: #0E76FD;
+            margin-bottom: 20px;
+        }
+        
+        .feature-desc {
+            font-size: 30px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+            font-size: 32px;
+        }
+        
+        th {
+            background: rgba(14, 118, 253, 0.2);
+            padding: 25px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #0E76FD;
+        }
+        
+        td {
+            padding: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        tr:hover {
+            background: rgba(14, 118, 253, 0.05);
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(14, 118, 253, 0.2), rgba(64, 64, 191, 0.2));
+            border: 2px solid #0E76FD;
+            border-radius: 20px;
+            padding: 60px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        
+        .highlight-number {
+            font-size: 96px;
+            font-weight: 800;
+            color: #0E76FD;
+            margin-bottom: 20px;
+        }
+        
+        .highlight-text {
+            font-size: 42px;
+            font-weight: 600;
+        }
+        
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
+        }
+        
+        /* Footer */
+        .slide-footer {
+            position: absolute;
+            bottom: 40px;
+            left: 120px;
+            right: 120px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            opacity: 0.5;
+        }
+        
+        /* Slide Numbers */
+        .slide-number {
+            position: absolute;
+            bottom: 40px;
+            right: 120px;
+            font-size: 28px;
+            opacity: 0.6;
+        }
+        
+        /* Accent Colors */
+        .text-primary { color: #0E76FD; }
+        .text-success { color: #30E000; }
+        .text-warning { color: #FFD641; }
+        
+        /* Print Styles */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .slide {
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-block;
+            background: rgba(14, 118, 253, 0.2);
+            color: #0E76FD;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            border: 2px solid #0E76FD;
+        }
+        
+        /* Quote */
+        .quote {
+            font-size: 48px;
+            font-style: italic;
+            line-height: 1.5;
+            padding: 40px;
+            border-left: 6px solid #0E76FD;
+            margin: 40px 0;
+            opacity: 0.95;
+        }
+    </style>
+</head>
+<body>
+    <div class="slides-container">
+        
+        <!-- Slide 1: Cover -->
+        <div class="slide cover-slide">
+            <div class="slide-content">
+                <div class="logo">DecaFlow</div>
+                <div class="tagline">Private Liquidity Layer<br/>for Base & Beyond</div>
+                <div class="subtitle">Privacy Swaps • DLMM Liquidity • Cross-Chain Native</div>
+                <div class="deck-meta">
+                    Seed Round Pitch Deck<br/>
+                    December 2025<br/>
+                    Seeking $500K - $2M
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>The Problem</h1>
+                <div class="large-text" style="margin-bottom: 50px;">DeFi lacks privacy by design. Every trade is transparent, exploitable, and tracked.</div>
+                
+                <ul style="font-size: 40px;">
+                    <li><strong>MEV Extraction:</strong> $1B+ extracted from traders annually through front-running and sandwich attacks</li>
+                    <li><strong>Privacy Crisis:</strong> All transactions are public—whales can't move without market impact</li>
+                    <li><strong>Fragmented Liquidity:</strong> Cross-chain swaps require multiple bridges, exposing users to exploits</li>
+                    <li><strong>Trust Barriers:</strong> Institutions won't adopt DeFi without transaction privacy</li>
+                </ul>
+                
+                <p style="margin-top: 60px; font-size: 38px; opacity: 0.8;">
+                    Current DEXs optimize for speed and liquidity, but <span class="text-primary">privacy and security</span> are afterthoughts.
+                </p>
+            </div>
+            <div class="slide-number">2</div>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>The Solution</h1>
+                <div class="large-text" style="margin-bottom: 40px;">
+                    DecaFlow is a <span class="text-primary">privacy-first liquidity layer</span> that combines confidential routing with programmable DLMM pools.
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-box">
+                        <div class="feature-title">🔒 Privacy Flow Engine</div>
+                        <div class="feature-desc">CoW Protocol routing hides trade intent through batch auctions and dark orderflow, eliminating MEV exploitation</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">💧 DLMM Liquidity</div>
+                        <div class="feature-desc">Dynamic Liquidity Market Maker pools capture denser fees and provide capital-efficient liquidity provisioning</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">🌉 Secure Cross-Chain</div>
+                        <div class="feature-desc">Chainlink CCIP & Circle CCTP integration for trust-minimized bridging across 6+ chains</div>
+                    </div>
+                    
+                    <div class="feature-box">
+                        <div class="feature-title">⚡ Base Native</div>
+                        <div class="feature-desc">Built on Coinbase's Base L2—low fees, fast settlements, institutional-grade infrastructure</div>
+                    </div>
+                </div>
+                
+                <div class="quote" style="margin-top: 50px;">
+                    "Trade privately. Move size quietly. Earn dense fees."
+                </div>
+            </div>
+            <div class="slide-number">3</div>
+        </div>
+
+        <!-- Slide 4: How It Works -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>How It Works</h1>
+                
+                <div style="margin-bottom: 60px;">
+                    <h3 class="text-primary">Privacy Flow Engine</h3>
+                    <ul style="font-size: 34px;">
+                        <li>User submits trade intent (not public transaction)</li>
+                        <li>CoW Protocol batches intents into dark auctions</li>
+                        <li>Solvers compete to find best execution</li>
+                        <li>Settlement happens on-chain—zero front-running</li>
+                        <li>Optional privacy quests for enhanced anonymity</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 60px;">
+                    <h3 class="text-primary">DLMM Pools</h3>
+                    <ul style="font-size: 34px;">
+                        <li>Liquidity concentrated in active price bins</li>
+                        <li>LPs earn higher fees per dollar deployed</li>
+                        <li>Auto-rebalancing based on volatility</li>
+                        <li>Lower slippage for large trades</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-primary">Cross-Chain Security</h3>
+                    <ul style="font-size: 34px;">
+                        <li>CCIP for general message passing & token transfers</li>
+                        <li>CCTP for native USDC swaps (no wrapped tokens)</li>
+                        <li>Unified UX across Base, Arbitrum, Optimism, Polygon, Ethereum, Avalanche</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">4</div>
+        </div>
+
+        <!-- Slide 5: Market Opportunity -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Market Opportunity</h1>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">$130B+</div>
+                        <div class="stat-label">DEX Annual Volume (2024)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">$8B+</div>
+                        <div class="stat-label">Total Value Locked in DEXs</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">45%</div>
+                        <div class="stat-label">YoY Growth in DEX Trading</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">$1B+</div>
+                        <div class="stat-label">Annual MEV Extraction</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 80px;">
+                    <h3>Why Privacy DEXs Now?</h3>
+                    <ul style="font-size: 38px;">
+                        <li><strong>Institutional Demand:</strong> Funds need private execution to avoid front-running</li>
+                        <li><strong>Regulatory Clarity:</strong> Privacy ≠ anonymity; compliant privacy is the future</li>
+                        <li><strong>Base Momentum:</strong> $2B+ TVL, fastest-growing L2, backed by Coinbase</li>
+                        <li><strong>Cross-Chain Era:</strong> 70%+ of DeFi users hold assets on multiple chains</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">5</div>
+        </div>
+
+        <!-- Slide 6: Traction & Milestones -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Traction & Roadmap</h1>
+                
+                <div class="badge">LAUNCHED: December 20, 2025</div>
+                
+                <div class="two-column">
+                    <div>
+                        <h3>✅ Achieved (Q4 2025)</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Mainnet launch on Base</li>
+                            <li>Privacy swap integration (CoW Protocol)</li>
+                            <li>DLMM pools deployed</li>
+                            <li>Cross-chain bridging (CCIP + CCTP)</li>
+                            <li>Multi-chain support (6 chains)</li>
+                            <li>Points & rewards system live</li>
+                            <li>Pioneer 100 program (2x airdrop)</li>
+                            <li>VDM staking mechanism</li>
+                            <li>Leaderboard & quests platform</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3>🎯 Next 6-12 Months</h3>
+                        <ul style="font-size: 32px;">
+                            <li><strong>Q1 2026:</strong> Security audits (CertiK/Trail of Bits)</li>
+                            <li><strong>Q1 2026:</strong> Strategic partnerships (wallets, protocols)</li>
+                            <li><strong>Q1 2026:</strong> $10M TVL target</li>
+                            <li><strong>Q2 2026:</strong> Native token ($DECA) TGE</li>
+                            <li><strong>Q2 2026:</strong> DAO governance launch</li>
+                            <li><strong>Q2 2026:</strong> Mobile app (iOS/Android)</li>
+                            <li><strong>H2 2026:</strong> Institutional liquidity pools</li>
+                            <li><strong>H2 2026:</strong> $100M+ cumulative volume</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="highlight-box" style="margin-top: 50px;">
+                    <div class="highlight-text">First 100 wallets get 2x airdrop allocation + permanent Founding Trader status</div>
+                </div>
+            </div>
+            <div class="slide-number">6</div>
+        </div>
+
+        <!-- Slide 7: Tokenomics -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Tokenomics: $DECA</h1>
+                
+                <div style="margin-bottom: 50px;">
+                    <div class="badge">Total Supply: 1,000,000,000 DECA</div>
+                    <div class="badge" style="margin-left: 20px;">TGE: Q2 2026</div>
+                    <div class="badge" style="margin-left: 20px;">Chain: Arbitrum</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Allocation</th>
+                            <th>Amount</th>
+                            <th>%</th>
+                            <th>Vesting</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Community & Airdrops</strong></td>
+                            <td>300M</td>
+                            <td class="text-primary">30%</td>
+                            <td>Linear over 48 months</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Team & Advisors</strong></td>
+                            <td>200M</td>
+                            <td class="text-primary">20%</td>
+                            <td>12-month cliff, 36-month linear</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Seed Investors</strong></td>
+                            <td>150M</td>
+                            <td class="text-primary">15%</td>
+                            <td>6-month cliff, 24-month linear</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Treasury & DAO</strong></td>
+                            <td>150M</td>
+                            <td class="text-primary">15%</td>
+                            <td>Unlocked, DAO-governed</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Liquidity Provisions</strong></td>
+                            <td>100M</td>
+                            <td class="text-primary">10%</td>
+                            <td>Unlocked at TGE</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Partners & Ambassadors</strong></td>
+                            <td>100M</td>
+                            <td class="text-primary">10%</td>
+                            <td>6-month cliff, 24-month linear</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 50px;">
+                    <h3>Token Utility</h3>
+                    <ul style="font-size: 34px;">
+                        <li><strong>Staking:</strong> Stake $DECA to earn USDC from protocol fees (15-30% APY)</li>
+                        <li><strong>Fee Discounts:</strong> Tiered system—up to 100% fee waiver for top stakers</li>
+                        <li><strong>Governance:</strong> Vote on protocol upgrades, fee structures, treasury allocation</li>
+                        <li><strong>Liquidity Mining:</strong> Earn $DECA rewards for providing DLMM liquidity</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">7</div>
+        </div>
+
+        <!-- Slide 8: Business Model -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Business Model</h1>
+                
+                <div style="margin-bottom: 60px;">
+                    <h3 class="text-primary">Revenue Streams</h3>
+                    <ul style="font-size: 38px;">
+                        <li><strong>Swap Fees:</strong> 0.3% per trade (industry standard, competitive with Uniswap)</li>
+                        <li><strong>Cross-Chain Fees:</strong> 0.1% premium on CCIP/CCTP transactions</li>
+                        <li><strong>Privacy Premium:</strong> Optional 0.05% for enhanced privacy routing</li>
+                        <li><strong>LP Management Fees:</strong> 10% of DLMM pool profits (shared with protocol)</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight-box">
+                    <div class="highlight-text" style="font-size: 38px; margin-bottom: 20px;">Revenue Distribution Model</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; text-align: center; font-size: 32px;">
+                        <div>
+                            <div class="text-primary" style="font-size: 56px; font-weight: 800;">50%</div>
+                            <div>$DECA Stakers<br/>(Protocol Revenue Share)</div>
+                        </div>
+                        <div>
+                            <div class="text-primary" style="font-size: 56px; font-weight: 800;">30%</div>
+                            <div>Liquidity Providers<br/>(LP Incentives)</div>
+                        </div>
+                        <div>
+                            <div class="text-primary" style="font-size: 56px; font-weight: 800;">20%</div>
+                            <div>Treasury<br/>(Development & Growth)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 60px;">
+                    <h3 class="text-primary">Financial Projections (Conservative)</h3>
+                    <table style="font-size: 30px;">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>6 Months</th>
+                                <th>12 Months</th>
+                                <th>24 Months</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Total Value Locked</td>
+                                <td>$10M</td>
+                                <td>$50M</td>
+                                <td>$200M</td>
+                            </tr>
+                            <tr>
+                                <td>Monthly Volume</td>
+                                <td>$5M</td>
+                                <td>$25M</td>
+                                <td>$100M</td>
+                            </tr>
+                            <tr>
+                                <td>Monthly Revenue</td>
+                                <td>$15K</td>
+                                <td>$75K</td>
+                                <td>$300K</td>
+                            </tr>
+                            <tr>
+                                <td>Active Users</td>
+                                <td>1,000</td>
+                                <td>10,000</td>
+                                <td>50,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="slide-number">8</div>
+        </div>
+
+        <!-- Slide 9: Go-to-Market Strategy -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Go-to-Market Strategy</h1>
+                
+                <div class="two-column">
+                    <div>
+                        <h3>Phase 1: Community Building (Now - Q1 2026)</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Pioneer 100 incentive program</li>
+                            <li>Points & quest gamification</li>
+                            <li>Weekly trading competitions</li>
+                            <li>Base ecosystem partnerships</li>
+                            <li>KOL/influencer campaigns</li>
+                            <li>Twitter Spaces & AMAs</li>
+                            <li>Discord community growth</li>
+                        </ul>
+                        
+                        <h3 style="margin-top: 40px;">Phase 2: Strategic Growth (Q2-Q3 2026)</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Wallet integrations (Rainbow, Frame, Coinbase Wallet)</li>
+                            <li>DeFi protocol partnerships</li>
+                            <li>Aggregator listings (1inch, 0x)</li>
+                            <li>Security audits & certifications</li>
+                            <li>$DECA token launch (TGE)</li>
+                            <li>Liquidity mining campaigns</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3>Phase 3: Institutional Adoption (Q4 2026+)</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Whitelabel privacy solutions for institutions</li>
+                            <li>API access for trading desks</li>
+                            <li>Compliance-friendly privacy features</li>
+                            <li>Cross-chain expansion (10+ chains)</li>
+                            <li>Mobile app launch</li>
+                            <li>Governance DAO activation</li>
+                        </ul>
+                        
+                        <div class="feature-box" style="margin-top: 40px;">
+                            <div class="feature-title">Distribution Channels</div>
+                            <div class="feature-desc">
+                                • Direct (decaflow.xyz)<br/>
+                                • Aggregators (1inch, Matcha)<br/>
+                                • Embedded (wallet integrations)<br/>
+                                • API (institutional partners)<br/>
+                                • Mobile apps (iOS/Android)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">9</div>
+        </div>
+
+        <!-- Slide 10: Competitive Landscape -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Competitive Landscape</h1>
+                
+                <table style="font-size: 28px;">
+                    <thead>
+                        <tr>
+                            <th>Protocol</th>
+                            <th>Privacy</th>
+                            <th>Cross-Chain</th>
+                            <th>DLMM</th>
+                            <th>Base Native</th>
+                            <th>MEV Protection</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(14, 118, 253, 0.2);">
+                            <td><strong>DecaFlow</strong></td>
+                            <td class="text-success">✓ CoW Protocol</td>
+                            <td class="text-success">✓ CCIP + CCTP</td>
+                            <td class="text-success">✓ Yes</td>
+                            <td class="text-success">✓ Yes</td>
+                            <td class="text-success">✓ Full</td>
+                        </tr>
+                        <tr>
+                            <td>Uniswap</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                        </tr>
+                        <tr>
+                            <td>Railgun</td>
+                            <td class="text-success">✓</td>
+                            <td>Partial</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>Partial</td>
+                        </tr>
+                        <tr>
+                            <td>Aztec Network</td>
+                            <td class="text-success">✓ zk-proofs</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td class="text-success">✓</td>
+                        </tr>
+                        <tr>
+                            <td>CoW Swap</td>
+                            <td class="text-success">✓</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td>✗</td>
+                            <td class="text-success">✓</td>
+                        </tr>
+                        <tr>
+                            <td>1inch</td>
+                            <td>✗</td>
+                            <td class="text-success">✓</td>
+                            <td>✗</td>
+                            <td>Partial</td>
+                            <td>Partial</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px;">
+                    <h3 class="text-primary">Our Competitive Advantages</h3>
+                    <div class="features-grid">
+                        <div class="feature-box">
+                            <div class="feature-title">🎯 Full-Stack Privacy</div>
+                            <div class="feature-desc">Only DEX combining CoW batch auctions + DLMM pools + cross-chain on Base</div>
+                        </div>
+                        <div class="feature-box">
+                            <div class="feature-title">🚀 Base Ecosystem</div>
+                            <div class="feature-desc">Native to fastest-growing L2, backed by Coinbase—institutional credibility</div>
+                        </div>
+                        <div class="feature-box">
+                            <div class="feature-title">💎 Capital Efficiency</div>
+                            <div class="feature-desc">DLMM provides 3-5x better capital efficiency than traditional AMMs</div>
+                        </div>
+                        <div class="feature-box">
+                            <div class="feature-title">🔐 Trust-Minimized</div>
+                            <div class="feature-desc">Chainlink CCIP (bank-grade security) + Circle CCTP (native USDC)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">10</div>
+        </div>
+
+        <!-- Slide 11: Technology Stack -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Technology Stack</h1>
+                
+                <div class="two-column">
+                    <div>
+                        <h3 class="text-primary">Core Infrastructure</h3>
+                        <ul style="font-size: 32px;">
+                            <li><strong>Base L2:</strong> Primary deployment (Optimism-based, EVM-compatible)</li>
+                            <li><strong>Solidity:</strong> Smart contracts (audited, open-source)</li>
+                            <li><strong>CoW Protocol:</strong> Intent-based privacy routing</li>
+                            <li><strong>DLMM Pools:</strong> Meteora/TraderJoe architecture</li>
+                            <li><strong>Chainlink CCIP:</strong> Cross-chain messaging & token transfers</li>
+                            <li><strong>Circle CCTP:</strong> Native USDC bridging</li>
+                        </ul>
+                        
+                        <h3 class="text-primary" style="margin-top: 40px;">Frontend & UX</h3>
+                        <ul style="font-size: 32px;">
+                            <li>React + TypeScript</li>
+                            <li>RainbowKit wallet integration</li>
+                            <li>Wagmi hooks for blockchain interaction</li>
+                            <li>Real-time WebSocket updates</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-primary">Security & Compliance</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Smart contract audits: CertiK, Trail of Bits (scheduled Q1 2026)</li>
+                            <li>Bug bounty: $100K-$500K for critical vulnerabilities</li>
+                            <li>Multisig treasury (Gnosis Safe)</li>
+                            <li>2-day governance timelock</li>
+                            <li>Emergency pause mechanism</li>
+                            <li>KYC for institutional features (optional)</li>
+                        </ul>
+                        
+                        <h3 class="text-primary" style="margin-top: 40px;">Backend Services</h3>
+                        <ul style="font-size: 32px;">
+                            <li>Node.js + Express API</li>
+                            <li>PostgreSQL for user data & points</li>
+                            <li>Redis for caching & real-time stats</li>
+                            <li>Deployed on Render/Railway</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="highlight-box" style="margin-top: 50px;">
+                    <div class="highlight-text">All core contracts are open-source and will be fully audited before mainnet scaling</div>
+                </div>
+            </div>
+            <div class="slide-number">11</div>
+        </div>
+
+        <!-- Slide 12: Team -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Team</h1>
+                
+                <div style="margin-bottom: 60px;">
+                    <h3 class="text-primary">Built by Affidex Lab</h3>
+                    <p style="font-size: 38px;">
+                        Incubation lab founded 1 year ago, focused on building core utility projects that solve real-world problems through blockchain and AI. DecaFlow is our flagship DeFi product.
+                    </p>
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-box">
+                        <div class="feature-title">🏗️ Incubation Expertise</div>
+                        <div class="feature-desc">Track record of building and shipping 3 blockchain/AI projects from 0 to 1</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">⚡ Rapid Execution</div>
+                        <div class="feature-desc">DecaFlow: Idea to mainnet launch in under 6 months with full feature set</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">🔧 Technical Depth</div>
+                        <div class="feature-desc">Deep expertise in DeFi primitives, cross-chain architecture, privacy protocols</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">🌍 Community-First</div>
+                        <div class="feature-desc">No VC pre-allocation. Bootstrapped to launch. Community owns majority of tokens.</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 60px;">
+                    <h3 class="text-primary">Key Roles & Hiring</h3>
+                    <ul style="font-size: 36px;">
+                        <li><strong>Current Team:</strong> Founder/CEO, Lead Developer, UI/UX Designer, Community Manager</li>
+                        <li><strong>Post-Raise Hires:</strong> Head of BD, Senior Smart Contract Engineer, Security Auditor, Growth Marketing Lead</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight-box" style="margin-top: 50px;">
+                    <div class="highlight-text">Founded by Samuel Ut — Serial builder with 1+ year in blockchain incubation</div>
+                </div>
+            </div>
+            <div class="slide-number">12</div>
+        </div>
+
+        <!-- Slide 13: Use of Funds -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Use of Funds</h1>
+                
+                <div class="highlight-box" style="margin-bottom: 60px;">
+                    <div class="highlight-number">$500K - $2M</div>
+                    <div class="highlight-text">Seed Round | 12-18 Month Runway</div>
+                </div>
+                
+                <table style="font-size: 32px;">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Allocation</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Team & Hiring</strong></td>
+                            <td class="text-primary">35%</td>
+                            <td>4 key hires (BD, Dev, Security, Marketing) + salaries</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Security & Audits</strong></td>
+                            <td class="text-primary">20%</td>
+                            <td>CertiK/Trail of Bits audits, bug bounty program, ongoing security</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Marketing & Growth</strong></td>
+                            <td class="text-primary">20%</td>
+                            <td>KOL campaigns, events, community rewards, partnerships</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Liquidity Incentives</strong></td>
+                            <td class="text-primary">15%</td>
+                            <td>LP rewards, trading competitions, airdrop allocations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Infrastructure & Tools</strong></td>
+                            <td class="text-primary">7%</td>
+                            <td>Cloud hosting, APIs (Chainlink, etc.), dev tools, analytics</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Legal & Compliance</strong></td>
+                            <td class="text-primary">3%</td>
+                            <td>Corporate structure, token legal review, regulatory counsel</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px;">
+                    <h3 class="text-primary">Key Milestones to Series A</h3>
+                    <ul style="font-size: 36px;">
+                        <li>$50M+ Total Value Locked across all chains</li>
+                        <li>$100M+ cumulative trading volume</li>
+                        <li>10,000+ active monthly users</li>
+                        <li>5+ strategic partnerships (wallets, protocols, aggregators)</li>
+                        <li>Successful $DECA token launch with DAO governance</li>
+                        <li>2 completed security audits with zero critical findings</li>
+                        <li>$500K+ annualized revenue run rate</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">13</div>
+        </div>
+
+        <!-- Slide 14: Investment Highlights -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>Why Invest Now?</h1>
+                
+                <div class="features-grid" style="margin-bottom: 50px;">
+                    <div class="feature-box">
+                        <div class="feature-title">📈 Massive Tailwinds</div>
+                        <div class="feature-desc">DEX volume up 45% YoY. Privacy is the next frontier. Base is the fastest-growing L2.</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">🛡️ Defensible Moat</div>
+                        <div class="feature-desc">First-mover in privacy + DLMM + Base. Complex tech stack = high barrier to entry.</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">⚡ Proven Execution</div>
+                        <div class="feature-desc">Shipped production protocol in 6 months. Live on mainnet with paying users.</div>
+                    </div>
+                    <div class="feature-box">
+                        <div class="feature-title">💰 Clear Path to Revenue</div>
+                        <div class="feature-desc">3+ revenue streams (swap fees, cross-chain fees, LP premiums). Sustainable from day 1.</div>
+                    </div>
+                </div>
+                
+                <div class="two-column">
+                    <div>
+                        <h3 class="text-primary">Unique Advantages</h3>
+                        <ul style="font-size: 34px;">
+                            <li>Only full-stack privacy DEX on Base</li>
+                            <li>Coinbase ecosystem = institutional credibility</li>
+                            <li>Battle-tested infrastructure (Chainlink CCIP, CoW, Circle CCTP)</li>
+                            <li>Community-first tokenomics (30% to users)</li>
+                            <li>Already live and operational</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-primary">Market Timing</h3>
+                        <ul style="font-size: 34px;">
+                            <li>Privacy regulation clarifying globally</li>
+                            <li>Institutional DeFi adoption accelerating</li>
+                            <li>Base surpassing $2B TVL in 2024</li>
+                            <li>MEV awareness at all-time high</li>
+                            <li>Cross-chain DeFi becoming standard</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="quote" style="margin-top: 60px; font-size: 42px;">
+                    "Privacy in DeFi is inevitable. The question isn't IF, but WHO will build it. We're already live."
+                </div>
+            </div>
+            <div class="slide-number">14</div>
+        </div>
+
+        <!-- Slide 15: The Ask -->
+        <div class="slide">
+            <div class="slide-content">
+                <h1>The Ask</h1>
+                
+                <div class="highlight-box" style="margin-bottom: 60px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">Seeking</div>
+                    <div class="highlight-number">$500K - $2M</div>
+                    <div class="highlight-text">Seed Round</div>
+                </div>
+                
+                <div class="stats-grid" style="margin-bottom: 60px;">
+                    <div class="stat-box">
+                        <div class="stat-label" style="font-size: 28px; margin-bottom: 15px;">Valuation</div>
+                        <div class="stat-number" style="font-size: 56px;">$4M - $8M</div>
+                        <div class="stat-label" style="font-size: 24px; opacity: 0.7;">Pre-Money</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label" style="font-size: 28px; margin-bottom: 15px;">Instrument</div>
+                        <div class="stat-number" style="font-size: 48px;">SAFE / Equity</div>
+                        <div class="stat-label" style="font-size: 24px; opacity: 0.7;">Flexible Structure</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label" style="font-size: 28px; margin-bottom: 15px;">Runway</div>
+                        <div class="stat-number" style="font-size: 56px;">12-18 Mo</div>
+                        <div class="stat-label" style="font-size: 24px; opacity: 0.7;">To Series A</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label" style="font-size: 28px; margin-bottom: 15px;">Token Allocation</div>
+                        <div class="stat-number" style="font-size: 56px;">15%</div>
+                        <div class="stat-label" style="font-size: 24px; opacity: 0.7;">Seed Investors (150M $DECA)</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-primary">What You Get</h3>
+                    <ul style="font-size: 38px;">
+                        <li><strong>Equity:</strong> Ownership in Affidex Lab (parent company)</li>
+                        <li><strong>Token Rights:</strong> 15% allocation of $DECA (150M tokens) with 6-month cliff, 24-month vesting</li>
+                        <li><strong>Strategic Input:</strong> Quarterly updates, advisory board seat for lead investors</li>
+                        <li><strong>Network Access:</strong> Introductions to DeFi protocols, L2 ecosystems, institutional users</li>
+                        <li><strong>First Right of Refusal:</strong> Participation in Series A (if applicable)</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight-box" style="margin-top: 60px;">
+                    <div class="highlight-text">Target Close: Q1 2026 | Rolling basis accepted</div>
+                </div>
+            </div>
+            <div class="slide-number">15</div>
+        </div>
+
+        <!-- Slide 16: Contact -->
+        <div class="slide cover-slide">
+            <div class="slide-content" style="text-align: center;">
+                <h1 style="font-size: 96px; color: white; margin-bottom: 60px;">Let's Build the Future<br/>of Private DeFi</h1>
+                
+                <div style="font-size: 48px; margin-bottom: 80px; line-height: 1.6;">
+                    <div style="margin-bottom: 30px;">🌐 <strong>decaflow.xyz</strong></div>
+                    <div style="margin-bottom: 30px;">📧 <strong>hello@affidexlab.com</strong></div>
+                    <div style="margin-bottom: 30px;">🐦 <strong>@DecaFlow</strong> | <strong>@affidexlab</strong></div>
+                    <div>📄 <strong>docs.decaflow.xyz</strong></div>
+                </div>
+                
+                <div style="font-size: 38px; opacity: 0.9; margin-bottom: 60px;">
+                    Telegram: t.me/decaflowprotocol<br/>
+                    Discord: discord.gg/decaflow
+                </div>
+                
+                <div style="font-size: 56px; font-weight: 700; margin-top: 80px;">
+                    Trade Privately. Move Quietly. Earn Densely.
+                </div>
+                
+                <div style="margin-top: 100px; font-size: 32px; opacity: 0.7;">
+                    © 2025 Affidex Lab | DecaFlow Protocol<br/>
+                    Confidential & Proprietary
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <script>
+        // For viewing - add slide navigation with arrow keys
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        
+        function showSlide(n) {
+            slides.forEach((slide, index) => {
+                slide.style.display = index === n ? 'flex' : 'none';
+            });
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && currentSlide < slides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            } else if (e.key === 'ArrowLeft' && currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        });
+        
+        // Show first slide initially
+        showSlide(0);
+        
+        console.log('DecaFlow Pitch Deck - Use arrow keys to navigate or print to PDF');
+    </script>
+</body>
+</html>
