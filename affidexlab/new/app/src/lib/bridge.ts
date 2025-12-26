@@ -97,16 +97,40 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
 
     logger.info("Li.Fi quote request", { url, params });
 
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+    };
+
+    // Add API key if available (helps avoid rate limits)
+    const apiKey = import.meta.env.VITE_LIFI_API_KEY;
+    if (apiKey) {
+      headers["x-lifi-api-key"] = apiKey;
+    }
+
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-      },
+      headers,
+      signal: AbortSignal.timeout(15000), // 15 second timeout
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      logger.error("Li.Fi API error", { status: response.status, error: errorText });
-      throw new Error(`Li.Fi quote failed: ${response.status}`);
+      let errorMsg = "failed to fetch";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.message || errorData.error || `HTTP ${response.status}`;
+      } catch {
+        const errorText = await response.text().catch(() => "");
+        if (errorText) errorMsg = errorText;
+      }
+      
+      logger.error("Li.Fi API error", { status: response.status, error: errorMsg });
+      
+      // Provide helpful error messages for common issues
+      if (response.status === 429) {
+        throw new Error("rate limit exceeded. Try again in a few minutes or use CCTP/CCIP");
+      } else if (response.status >= 500) {
+        throw new Error("service temporarily unavailable");
+      }
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();
@@ -114,7 +138,7 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
     logger.info("Li.Fi quote response", { data });
 
     if (!data.estimate) {
-      throw new Error("No Li.Fi route found");
+      throw new Error("no route found for this token pair");
     }
 
     const toolNames = data.toolDetails?.map((t: any) => t.name).join(", ") || "Multi-bridge";
@@ -128,7 +152,9 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
     };
   } catch (error) {
     logger.error("Li.Fi quote error", error);
-    throw error;
+    // Re-throw with more context
+    const errorMsg = error instanceof Error ? error.message : "unknown error";
+    throw new Error(errorMsg);
   }
 }
 
