@@ -78,12 +78,32 @@ export default function Bridge() {
     const fetchQuotes = async () => {
       setIsQuoting(true);
       try {
+        let amountBaseUnits: string;
+        try {
+          amountBaseUnits = parseUnits(amount, token.decimals).toString();
+        } catch {
+          throw new Error("Invalid amount format");
+        }
+
+        const toChainId = CHAIN_IDS[toChain];
+        const toTokenList = TOKENS_BY_CHAIN[toChainId] || [];
+
+        const symbol = token.symbol;
+        const symbolFallback = symbol.endsWith(".e") ? symbol.replace(/\.e$/i, "") : symbol;
+
+        const toToken =
+          toTokenList.find(t => t.symbol === symbol)?.address ||
+          toTokenList.find(t => t.symbol === symbolFallback)?.address ||
+          token.address;
+
         if (showComparison) {
           const quotes = await compareAllRoutes({
             fromChain,
             toChain,
             token: token.address,
-            amount,
+            toToken,
+            tokenSymbol: token.symbol,
+            amount: amountBaseUnits,
             fromAddress: address,
           });
           setAllQuotes(quotes);
@@ -93,7 +113,9 @@ export default function Bridge() {
             fromChain,
             toChain,
             token: token.address,
-            amount,
+            toToken,
+            tokenSymbol: token.symbol,
+            amount: amountBaseUnits,
             fromAddress: address,
           });
           setQuote(bestQuote);
@@ -125,10 +147,17 @@ export default function Bridge() {
     }
 
     try {
+      let amountBaseUnits: string;
+      try {
+        amountBaseUnits = parseUnits(amount, token.decimals).toString();
+      } catch {
+        throw new Error("Invalid amount format");
+      }
+
       await executeBridge({
         quote,
         token,
-        amount,
+        amount: amountBaseUnits,
         fromChain,
         toChain,
         fromAddress: address,
