@@ -6,6 +6,8 @@ export type BridgeParams = {
   fromChain: keyof typeof CHAIN_IDS;
   toChain: keyof typeof CHAIN_IDS;
   token: string;
+  toToken?: string;
+  tokenSymbol?: string;
   amount: string;
   fromAddress?: string;
 };
@@ -91,7 +93,7 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
       fromChain: CHAIN_IDS[params.fromChain].toString(),
       toChain: CHAIN_IDS[params.toChain].toString(),
       fromToken: params.token,
-      toToken: params.token,
+      toToken: params.toToken || params.token,
       fromAmount: params.amount,
       fromAddress: params.fromAddress,
       slippage: "0.03",
@@ -102,20 +104,36 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
 
     logger.info("Li.Fi quote request", { url, params });
 
-    const headers: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       Accept: "application/json",
     };
 
-    // Add API key if available (helps avoid rate limits)
     const apiKey = import.meta.env.VITE_LIFI_API_KEY;
-    if (apiKey) {
-      headers["x-lifi-api-key"] = apiKey;
-    }
 
-    const response = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(15000), // 15 second timeout
-    });
+    const fetchAttempt = async (headers: Record<string, string>, timeoutMs?: number) => {
+      const controller = new AbortController();
+      const timeoutId = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      try {
+        return await fetch(url, {
+          headers,
+          signal: controller.signal,
+        });
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    // Attempt #1: with API key (higher rate limit)
+    let response: Response;
+    try {
+      const headers = { ...baseHeaders };
+      if (apiKey) headers["x-lifi-api-key"] = apiKey;
+      response = await fetchAttempt(headers, 15000);
+    } catch (e) {
+      // Attempt #2: without API key header (avoids any preflight/header edge cases)
+      logger.warn("Li.Fi fetch failed with API key header, retrying without API key", e);
+      response = await fetchAttempt(baseHeaders, 15000);
+    }
 
     if (!response.ok) {
       let errorMsg = "failed to fetch";
@@ -195,8 +213,8 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
   }
 
   const ccipSupportedTokens = ["weth", "link", "usdc", "eth"];
-  const tokenSymbol = params.token.toLowerCase();
-  if (ccipSupportedTokens.some(t => tokenSymbol.includes(t))) {
+  const tokenSymbol = (params.tokenSymbol || "").toLowerCase();
+  if (tokenSymbol && ccipSupportedTokens.some(t => tokenSymbol === t || tokenSymbol.includes(t))) {
     try {
       return await quoteCCIP(params);
     } catch (error) {
@@ -267,8 +285,14 @@ export async function executeBridge({
     throw new Error("Source and destination chains must be different");
   }
 
-  const amountNum = parseFloat(amount);
-  if (isNaN(amountNum) || amountNum <= 0) {
+  let amountWei: bigint;
+  try {
+    amountWei = BigInt(amount);
+  } catch {
+    throw new Error("Invalid bridge amount");
+  }
+
+  if (amountWei <= 0n) {
     throw new Error("Invalid bridge amount");
   }
 
@@ -291,7 +315,6 @@ export async function executeBridge({
 
     const cctpAbi = CCTP_TOKEN_MESSENGER_ABI;
 
-    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
     const mintRecipient = `0x000000000000000000000000${fromAddress.slice(2)}`;
 
     await writeContract({
@@ -324,7 +347,7 @@ export async function executeBridge({
 
     const ccipAbi = CCIP_ROUTER_ABI;
 
-    const amountWei = BigInt(amount) * BigInt(10 ** token.decimals);
+
 
     await writeContract({
       address: ccipRouters[fromChain] as `0x${string}`,
