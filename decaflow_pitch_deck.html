@@ -291,14 +291,43 @@
         .text-warning { color: #FFD641; }
         
         /* Print Styles */
+        @page {
+            size: 13.333in 7.5in;
+            margin: 0;
+        }
+
         @media print {
-            body {
+            html, body {
                 margin: 0;
                 padding: 0;
+                width: 13.333in;
+                height: 7.5in;
+                background: #0a0e27;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
+
+            .slides-container {
+                width: 13.333in;
+            }
+
             .slide {
+                width: 13.333in;
+                height: 7.5in;
+                margin: 0;
                 page-break-after: always;
                 page-break-inside: avoid;
+            }
+
+            .slide-footer {
+                bottom: 0.35in;
+                left: 1in;
+                right: 1in;
+            }
+
+            .slide-number {
+                bottom: 0.35in;
+                right: 1in;
             }
         }
         
