@@ -82,13 +82,18 @@ export async function quoteCCIP(params: BridgeParams): Promise<BridgeQuote> {
 // Li.Fi: Multi-bridge aggregator (preferred for best rates)
 export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
   try {
+    // Li.Fi requires a valid wallet address (rejects zero address)
+    if (!params.fromAddress || params.fromAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error("wallet address required. Please connect your wallet");
+    }
+
     const queryParams = new URLSearchParams({
       fromChain: CHAIN_IDS[params.fromChain].toString(),
       toChain: CHAIN_IDS[params.toChain].toString(),
       fromToken: params.token,
       toToken: params.token,
       fromAmount: params.amount,
-      fromAddress: params.fromAddress || "0x0000000000000000000000000000000000000000",
+      fromAddress: params.fromAddress,
       slippage: "0.03",
       allowSwitchChain: "false",
     });
@@ -161,12 +166,20 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
 export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
   const errors: string[] = [];
 
-  try {
-    return await quoteLiFi(params);
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    errors.push(`Li.Fi: ${errorMsg}`);
-    logger.warn("Li.Fi failed, trying alternatives", error);
+  // Only try Li.Fi if we have a valid wallet address
+  const hasValidAddress = params.fromAddress && params.fromAddress !== "0x0000000000000000000000000000000000000000";
+  
+  if (hasValidAddress) {
+    try {
+      return await quoteLiFi(params);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      errors.push(`Li.Fi: ${errorMsg}`);
+      logger.warn("Li.Fi failed, trying alternatives", error);
+    }
+  } else {
+    errors.push("Li.Fi: skipped (wallet address required)");
+    logger.info("Skipping Li.Fi, no valid address provided");
   }
 
   const tokenIsUSDC = isUSDCAddress(params.token);
