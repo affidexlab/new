@@ -293,41 +293,44 @@
         /* Print Styles */
         @page {
             size: 13.333in 7.5in;
-            margin: 0;
+            margin: 0.4in;
         }
 
         @media print {
             html, body {
                 margin: 0;
                 padding: 0;
-                width: 13.333in;
-                height: 7.5in;
                 background: #0a0e27;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
             .slides-container {
-                width: 13.333in;
+                width: 100%;
             }
 
             .slide {
-                width: 13.333in;
-                height: 7.5in;
-                margin: 0;
+                width: calc(13.333in - 0.8in);
+                height: calc(7.5in - 0.8in);
+                margin: 0 auto;
+                padding: 0.75in 0.85in;
                 page-break-after: always;
                 page-break-inside: avoid;
             }
 
+            .slide-content {
+                padding: 0;
+            }
+
             .slide-footer {
                 bottom: 0.35in;
-                left: 1in;
-                right: 1in;
+                left: 0.85in;
+                right: 0.85in;
             }
 
             .slide-number {
                 bottom: 0.35in;
-                right: 1in;
+                right: 0.85in;
             }
         }
         
