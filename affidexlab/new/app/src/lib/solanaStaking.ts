@@ -61,6 +61,8 @@ export interface UserStake {
   user: string;
   amountStaked: number;
   rewardsAllocated: number;
+  vdmPriceUsdtSnapshot?: number;
+  stakedValueUsdtSnapshot?: number;
   lockPeriod: LockPeriod;
   startTimestamp: number;
   unlockTimestamp: number;
@@ -86,25 +88,30 @@ export const calculateWithdrawalFee = (amount: number): number => {
   return amount * (STAKING_FEES.withdrawalFeeBps / 10000);
 };
 
-export const calculateRewards = (amount: number, lockPeriod: LockPeriod): number => {
-  const period = LOCK_PERIODS.find(p => p.id === lockPeriod);
-  if (!period) return 0;
-  
+export const calculateNetStakedVdm = (amount: number): number => {
   const depositFee = calculateDepositFee(amount);
-  const netAmount = amount - depositFee;
+  return amount - depositFee;
+};
+
+export const calculateGrossValueUsdt = (amount: number, vdmPriceUsdt: number): number => {
+  if (!vdmPriceUsdt) return 0;
+  return amount * vdmPriceUsdt;
+};
+
+export const calculateNetStakedValueUsdt = (amount: number, vdmPriceUsdt: number): number => {
+  if (!vdmPriceUsdt) return 0;
+  return calculateNetStakedVdm(amount) * vdmPriceUsdt;
+};
+
+export const calculateEstimatedRewardsUsdt = (amount: number, lockPeriod: LockPeriod, vdmPriceUsdt: number): number => {
+  const period = LOCK_PERIODS.find(p => p.id === lockPeriod);
+  if (!period || !vdmPriceUsdt) return 0;
+
+  const netValueUsdt = calculateNetStakedValueUsdt(amount, vdmPriceUsdt);
   const annualRate = period.apy / 100;
   const secondsInYear = 31_536_000;
   const lockRatio = period.seconds / secondsInYear;
-  return netAmount * annualRate * lockRatio;
-};
-
-export const calculateNetReturn = (amount: number, lockPeriod: LockPeriod): number => {
-  const depositFee = calculateDepositFee(amount);
-  const netAmount = amount - depositFee;
-  const rewards = calculateRewards(amount, lockPeriod);
-  const withdrawalFee = calculateWithdrawalFee(netAmount);
-  
-  return netAmount - withdrawalFee + rewards;
+  return netValueUsdt * annualRate * lockRatio;
 };
 
 export async function getVDMTokenBalance(
@@ -157,6 +164,23 @@ export async function getUserStake(
   }
 }
 
+export async function getVDMPriceUsdt(): Promise<{ priceUsd: number; timestamp: number } | null> {
+  try {
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+    const response = await fetch(`${API_BASE}/v1/solana-staking/vdm-price`);
+    const data = await response.json();
+
+    if (!data.success) {
+      return null;
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching VDM price:', error);
+    return null;
+  }
+}
+
 export async function getPoolStats(): Promise<PoolStats | null> {
   try {
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
@@ -179,7 +203,7 @@ export async function transferVDMAndStake(
   walletAdapter: any,
   amount: number,
   lockPeriod: LockPeriod,
-): Promise<string> {
+): Promise<{ signature: string; stake: any }> {
   if (!walletAdapter.publicKey || !walletAdapter.signTransaction) {
     throw new Error('Wallet not connected');
   }
@@ -228,15 +252,14 @@ export async function transferVDMAndStake(
     lastValidBlockHeight,
   }, 'confirmed');
   
-  // Register stake with backend
-  await registerOffchainStake(
+  const stake = await registerOffchainStake(
     walletAdapter.publicKey,
     amount,
     lockPeriod,
     signature
   );
   
-  return signature;
+  return { signature, stake };
 }
 
 export async function registerOffchainStake(
@@ -244,7 +267,7 @@ export async function registerOffchainStake(
   amount: number,
   lockPeriod: LockPeriod,
   depositSignature: string,
-): Promise<void> {
+): Promise<any> {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
   
   const response = await fetch(`${API_BASE}/v1/solana-staking/stake`, {
@@ -263,11 +286,13 @@ export async function registerOffchainStake(
   if (!data.success) {
     throw new Error(data.error || 'Failed to register stake');
   }
+
+  return data.data;
 }
 
 export async function requestOffchainClaim(
   walletAddress: PublicKey,
-): Promise<{ principalAmount: number; rewardsAmount: number; withdrawalFee: number }> {
+): Promise<{ principalAmount: number; principalValueUsdtSnapshot: number; rewardsAmount: number; vdmPriceUsdtSnapshot: number; withdrawalFee: number }> {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
   
   const response = await fetch(`${API_BASE}/v1/solana-staking/claim`, {

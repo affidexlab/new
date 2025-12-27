@@ -1,6 +1,36 @@
 import { query } from '../db/connection.js';
+import fetch from 'node-fetch';
 
 const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
+
+const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+const VDM_PRICE_CACHE_TTL = 60_000;
+let vdmPriceCache = { price: 0, timestamp: 0 };
+
+export async function getCurrentVdmPriceUsdt() {
+  if (vdmPriceCache.price > 0 && Date.now() - vdmPriceCache.timestamp < VDM_PRICE_CACHE_TTL) {
+    return vdmPriceCache.price;
+  }
+
+  const response = await fetch(
+    `${COINGECKO_API}/simple/token_price/solana?contract_addresses=${VDM_TOKEN_ADDRESS}&vs_currencies=usd`,
+    { timeout: 5000 }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch VDM price');
+  }
+
+  const data = await response.json();
+  const price = data?.[VDM_TOKEN_ADDRESS.toLowerCase()]?.usd;
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error('Invalid VDM price');
+  }
+
+  vdmPriceCache = { price, timestamp: Date.now() };
+  return price;
+}
 
 const STAKING_FEES = {
   depositFeeBps: 250,
@@ -64,6 +94,8 @@ export async function getStakeInfo(wallet) {
     user: pos.wallet,
     amountStaked: parseFloat(pos.staked_amount),
     rewardsAllocated: parseFloat(pos.pending_rewards),
+    vdmPriceUsdtSnapshot: parseFloat(pos.vdm_price_usdt_snapshot || 0),
+    stakedValueUsdtSnapshot: parseFloat(pos.staked_value_usdt_snapshot || 0),
     lockPeriod: period.id,
     startTimestamp,
     unlockTimestamp,
@@ -119,22 +151,27 @@ export async function createOffchainStake({ wallet, amount, lockPeriod, depositS
   const depositFee = amount * (STAKING_FEES.depositFeeBps / 10000);
   const netStakedAmount = amount - depositFee;
 
+  const vdmPriceUsdtSnapshot = await getCurrentVdmPriceUsdt();
+  const stakedValueUsdtSnapshot = netStakedAmount * vdmPriceUsdtSnapshot;
+
   const rewardRate = period.apy / 100;
   const lockRatio = period.seconds / SECONDS_IN_YEAR;
-  const totalRewards = netStakedAmount * rewardRate * lockRatio;
+  const totalRewards = stakedValueUsdtSnapshot * rewardRate * lockRatio;
 
   const unlockTimestampMs = now + period.seconds * 1000;
 
   const positionResult = await query(
     `INSERT INTO solana_staking_positions 
-     (wallet, pool_id, staked_amount, lp_tokens, pending_rewards, staked_at, last_claim_at, status, lock_period, unlock_timestamp, created_at, updated_at)
-     VALUES ($1, $2, $3, 0, $4, $5, $6, 'active', $7, $8, $9, $10)
+     (wallet, pool_id, staked_amount, lp_tokens, pending_rewards, vdm_price_usdt_snapshot, staked_value_usdt_snapshot, staked_at, last_claim_at, status, lock_period, unlock_timestamp, created_at, updated_at)
+     VALUES ($1, $2, $3, 0, $4, $5, $6, $7, $8, 'active', $9, $10, $11, $12)
      RETURNING id`,
     [
       wallet,
       STAKING_POOL_ID,
       netStakedAmount,
       totalRewards,
+      vdmPriceUsdtSnapshot,
+      stakedValueUsdtSnapshot,
       now,
       now,
       period.id,
@@ -165,6 +202,8 @@ export async function createOffchainStake({ wallet, amount, lockPeriod, depositS
   return {
     positionId,
     netStakedAmount,
+    stakedValueUsdtSnapshot,
+    vdmPriceUsdtSnapshot,
     totalRewards,
     lockPeriod: period.id,
     unlockTimestamp: Math.floor(unlockTimestampMs / 1000),
@@ -194,6 +233,9 @@ export async function requestClaim({ wallet }) {
   const withdrawalFee = stakedAmount * (STAKING_FEES.withdrawalFeeBps / 10000);
   const netPrincipal = stakedAmount - withdrawalFee;
 
+  const vdmPriceUsdtSnapshot = parseFloat(position.vdm_price_usdt_snapshot || 0) || await getCurrentVdmPriceUsdt();
+  const principalValueUsdtSnapshot = netPrincipal * vdmPriceUsdtSnapshot;
+
   await query(
     `UPDATE solana_staking_positions 
      SET status = 'claim_requested', updated_at = $1 
@@ -203,9 +245,9 @@ export async function requestClaim({ wallet }) {
 
   await query(
     `INSERT INTO solana_staking_claims 
-     (wallet, pool_id, position_id, principal_amount, rewards_amount, status, requested_at, created_at)
-     VALUES ($1, $2, $3, $4, $5, 'requested', $6, $7)`,
-    [wallet, STAKING_POOL_ID, position.id, netPrincipal, rewardsAllocated, now, now]
+     (wallet, pool_id, position_id, principal_amount, principal_value_usdt_snapshot, rewards_amount, vdm_price_usdt_snapshot, status, requested_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'requested', $8, $9)`,
+    [wallet, STAKING_POOL_ID, position.id, netPrincipal, principalValueUsdtSnapshot, rewardsAllocated, vdmPriceUsdtSnapshot, now, now]
   );
 
   await query(
@@ -219,7 +261,9 @@ export async function requestClaim({ wallet }) {
 
   return {
     principalAmount: netPrincipal,
+    principalValueUsdtSnapshot,
     rewardsAmount: rewardsAllocated,
+    vdmPriceUsdtSnapshot,
     withdrawalFee,
   };
 }

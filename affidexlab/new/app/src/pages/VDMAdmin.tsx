@@ -6,7 +6,9 @@ interface ClaimRequest {
   id: number;
   wallet: string;
   principal_amount: number;
+  principal_value_usdt_snapshot?: number;
   rewards_amount: number;
+  vdm_price_usdt_snapshot?: number;
   status: string;
   requested_at: string;
 }
@@ -16,6 +18,8 @@ interface StakePosition {
   wallet: string;
   staked_amount: number;
   pending_rewards: number;
+  vdm_price_usdt_snapshot?: number;
+  staked_value_usdt_snapshot?: number;
   lock_period: string;
   staked_at: string;
   unlock_timestamp: string;
@@ -371,14 +375,22 @@ export default function VDMAdmin() {
                                 Pending
                               </span>
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                               <div>
                                 <p className="text-gray-400 text-xs">Principal (VDM)</p>
                                 <p className="text-white font-medium">{claim.principal_amount.toLocaleString()}</p>
                               </div>
                               <div>
+                                <p className="text-gray-400 text-xs">Principal Value (USDT)</p>
+                                <p className="text-white font-medium">{claim.principal_value_usdt_snapshot ? claim.principal_value_usdt_snapshot.toLocaleString() : '—'}</p>
+                              </div>
+                              <div>
                                 <p className="text-gray-400 text-xs">Rewards (USDT)</p>
                                 <p className="text-green-400 font-medium">{claim.rewards_amount.toLocaleString()}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400 text-xs">VDM Price Snapshot</p>
+                                <p className="text-white font-medium">{claim.vdm_price_usdt_snapshot ? `$${Number(claim.vdm_price_usdt_snapshot).toFixed(6)}` : '—'}</p>
                               </div>
                               <div>
                                 <p className="text-gray-400 text-xs">Requested At</p>
@@ -438,10 +450,18 @@ export default function VDMAdmin() {
                             </span>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-7 gap-4 text-sm">
                           <div>
                             <p className="text-gray-400 text-xs">Staked Amount</p>
                             <p className="text-white font-medium">{position.staked_amount.toLocaleString()} VDM</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Stake Value (USDT)</p>
+                            <p className="text-white font-medium">{position.staked_value_usdt_snapshot ? position.staked_value_usdt_snapshot.toLocaleString() : '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">VDM Price Snapshot</p>
+                            <p className="text-white font-medium">{position.vdm_price_usdt_snapshot ? `$${Number(position.vdm_price_usdt_snapshot).toFixed(6)}` : '—'}</p>
                           </div>
                           <div>
                             <p className="text-gray-400 text-xs">Rewards (USDT)</p>
