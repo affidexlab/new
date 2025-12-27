@@ -30,6 +30,7 @@ export default function SolanaStaking() {
   const [vdmBalance, setVdmBalance] = useState(0);
   const [vdmPriceUsdt, setVdmPriceUsdt] = useState(0);
   const [vdmPriceTimestamp, setVdmPriceTimestamp] = useState<number | null>(null);
+  const [vdmPriceLoadedOnce, setVdmPriceLoadedOnce] = useState(false);
   const [userStake, setUserStake] = useState<any | null>(null);
   const [poolStats, setPoolStatsState] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,8 @@ export default function SolanaStaking() {
           setVdmPriceTimestamp(Number(data.timestamp) || Date.now());
         }
       } catch {
+      } finally {
+        setVdmPriceLoadedOnce(true);
       }
     };
 
@@ -108,11 +111,6 @@ export default function SolanaStaking() {
     setLoading(true);
 
     try {
-      if (!vdmPriceUsdt) {
-        toast.error('Unable to fetch current VDM price. Please try again.');
-        return;
-      }
-
       toast.info(`Transferring ${amount.toFixed(2)} VDM to staking wallet. Please approve the transaction in your wallet.`);
 
       const { signature, stake } = await transferVDMAndStake(
@@ -286,7 +284,7 @@ export default function SolanaStaking() {
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
                     <span>Current VDM price</span>
                     <span className="text-white">
-                      {vdmPriceUsdt ? `$${vdmPriceUsdt.toFixed(6)}` : 'Loading...'}
+                      {vdmPriceUsdt ? `$${vdmPriceUsdt.toFixed(6)}` : vdmPriceLoadedOnce ? 'Unavailable' : 'Loading...'}
                     </span>
                   </div>
                   {vdmPriceTimestamp && (
@@ -334,7 +332,7 @@ export default function SolanaStaking() {
 
                 <button
                   onClick={handleStake}
-                  disabled={loading || !publicKey || !amountNumber || amountNumber < MIN_STAKE_AMOUNT || !vdmPriceUsdt}
+                  disabled={loading || !publicKey || !amountNumber || amountNumber < MIN_STAKE_AMOUNT}
                   className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Processing...' : 'Stake Now'}
