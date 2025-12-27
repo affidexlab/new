@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TokenSelector } from "@/components/TokenSelector";
 import { TOKENS_BY_CHAIN, CHAIN_IDS, type ChainKey } from "@/lib/constants";
-import { bestBridgeRoute, compareAllRoutes, BridgeQuote, executeBridge } from "@/lib/bridge";
+import { compareAllRoutes, quoteCCTP, quoteCCIP, quoteLiFi, BridgeQuote, executeBridge } from "@/lib/bridge";
 import { Loader2, ArrowRight, Info, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -28,6 +28,20 @@ export default function Bridge() {
   const [allQuotes, setAllQuotes] = useState<BridgeQuote[]>([]);
   const [isQuoting, setIsQuoting] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [amountUsd, setAmountUsd] = useState<number | null>(null);
+
+  const AUTO_CCIP_AVOID_UNDER_USD = 25;
+  const MIN_RECOMMENDED_USD = 10;
+  const FEE_WARNING_PCT = 5;
+
+  const parseFeeUsdMax = (feeEstimate?: string): number | null => {
+    if (!feeEstimate) return null;
+    const matches = feeEstimate.match(/\d+(?:\.\d+)?/g);
+    if (!matches || matches.length === 0) return null;
+    const nums = matches.map(n => Number(n)).filter(n => isFinite(n));
+    if (nums.length === 0) return null;
+    return Math.max(...nums);
+  };
 
   const { writeContract, data: txHash, isPending: isBridging } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
@@ -72,6 +86,7 @@ export default function Bridge() {
     if (!amount || !token || !address) {
       setQuote(null);
       setAllQuotes([]);
+      setAmountUsd(null);
       return;
     }
 
@@ -96,30 +111,65 @@ export default function Bridge() {
           toTokenList.find(t => t.symbol === symbolFallback)?.address ||
           token.address;
 
-        if (showComparison) {
-          const quotes = await compareAllRoutes({
-            fromChain,
-            toChain,
-            token: token.address,
-            toToken,
-            tokenSymbol: token.symbol,
-            amount: amountBaseUnits,
-            fromAddress: address,
-          });
-          setAllQuotes(quotes);
-          setQuote(quotes[0] || null);
+        const fromChainId = CHAIN_IDS[fromChain];
+        const tokenPriceUsd = await getTokenPriceUSD(fromChainId, token.address);
+        const amountNum = parseFloat(amount || "0");
+        const computedAmountUsd = tokenPriceUsd && tokenPriceUsd > 0 ? amountNum * tokenPriceUsd : null;
+        setAmountUsd(computedAmountUsd && isFinite(computedAmountUsd) ? computedAmountUsd : null);
+
+        const preferAvoidCCIP = selectedRoute === "auto" && computedAmountUsd != null && computedAmountUsd > 0 && computedAmountUsd < AUTO_CCIP_AVOID_UNDER_USD;
+
+        const routeParams = {
+          fromChain,
+          toChain,
+          token: token.address,
+          toToken,
+          tokenSymbol: token.symbol,
+          amount: amountBaseUnits,
+          fromAddress: address,
+        };
+
+        if (selectedRoute === "auto") {
+          const quotes = await compareAllRoutes(routeParams);
+          const eligible = preferAvoidCCIP ? quotes.filter(q => q.provider !== "ccip") : quotes;
+
+          const cheapest = eligible.reduce<BridgeQuote | null>((best, q) => {
+            const fee = parseFeeUsdMax(q.feeEstimate);
+            if (fee == null) return best;
+            if (!best) return q;
+            const bestFee = parseFeeUsdMax(best.feeEstimate);
+            if (bestFee == null) return q;
+            return fee < bestFee ? q : best;
+          }, null);
+
+          if (!cheapest) {
+            setQuote(null);
+            setAllQuotes(showComparison ? quotes : []);
+            toast.error("No cheap route found", {
+              description: `Auto avoids CCIP under $${AUTO_CCIP_AVOID_UNDER_USD}. Try Li.Fi, bridge USDC via CCTP, or increase amount.`,
+            });
+          } else {
+            setQuote(cheapest);
+            setAllQuotes(showComparison ? quotes : [cheapest]);
+          }
         } else {
-          const bestQuote = await bestBridgeRoute({
-            fromChain,
-            toChain,
-            token: token.address,
-            toToken,
-            tokenSymbol: token.symbol,
-            amount: amountBaseUnits,
-            fromAddress: address,
-          });
-          setQuote(bestQuote);
-          setAllQuotes([bestQuote]);
+          let forcedQuote: BridgeQuote;
+          if (selectedRoute === "lifi") forcedQuote = await quoteLiFi(routeParams);
+          else if (selectedRoute === "cctp") forcedQuote = await quoteCCTP(routeParams);
+          else forcedQuote = await quoteCCIP(routeParams);
+
+          if (showComparison) {
+            try {
+              const quotes = await compareAllRoutes(routeParams);
+              setAllQuotes(quotes);
+            } catch {
+              setAllQuotes([forcedQuote]);
+            }
+          } else {
+            setAllQuotes([forcedQuote]);
+          }
+
+          setQuote(forcedQuote);
         }
       } catch (error) {
         logger.error("Bridge quote error", error);
@@ -136,7 +186,7 @@ export default function Bridge() {
 
     const debounce = setTimeout(fetchQuotes, 500);
     return () => clearTimeout(debounce);
-  }, [amount, token, fromChain, toChain, address, showComparison]);
+  }, [amount, token, fromChain, toChain, address, showComparison, selectedRoute]);
 
   const handleBridge = async () => {
     if (!quote?.data || !address) {
@@ -174,6 +224,12 @@ export default function Bridge() {
       });
     }
   };
+
+  const feeUsdMax = parseFeeUsdMax(quote?.feeEstimate);
+  const feePct = amountUsd != null && feeUsdMax != null && amountUsd > 0 ? (feeUsdMax / amountUsd) * 100 : null;
+  const showFeeWarning = feePct != null && feePct > FEE_WARNING_PCT;
+  const showMinWarning = amountUsd != null && amountUsd > 0 && amountUsd < MIN_RECOMMENDED_USD;
+  const autoCcipBlocked = selectedRoute === "auto" && quote?.provider === "ccip" && amountUsd != null && amountUsd > 0 && amountUsd < AUTO_CCIP_AVOID_UNDER_USD;
 
   if (!isConnected) {
     return (
@@ -329,10 +385,33 @@ export default function Bridge() {
           </div>
         )}
 
+        {(quote && !isQuoting && (autoCcipBlocked || showFeeWarning || showMinWarning)) && (
+          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+            <div className="text-gray-200 space-y-1">
+              {autoCcipBlocked && (
+                <div>
+                  Auto avoids CCIP under $<span className="font-semibold">{AUTO_CCIP_AVOID_UNDER_USD}</span>. Select CCIP to proceed (higher fees), or bridge USDC via CCTP.
+                </div>
+              )}
+              {!autoCcipBlocked && showFeeWarning && feePct != null && feeUsdMax != null && amountUsd != null && (
+                <div>
+                  Estimated fee is high for this size: ~$<span className="font-semibold">{feeUsdMax.toFixed(2)}</span> (<span className="font-semibold">{feePct.toFixed(1)}</span>%). Consider using USDC + CCTP or increasing amount.
+                </div>
+              )}
+              {!autoCcipBlocked && !showFeeWarning && showMinWarning && amountUsd != null && (
+                <div>
+                  Small transfer warning: ~$<span className="font-semibold">{amountUsd.toFixed(2)}</span>. Fees can dominate small cross-chain transfers.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Action Button */}
         <Button
           onClick={handleBridge}
-          disabled={!quote || isBridging || isConfirming || !amount}
+          disabled={!quote || isBridging || isConfirming || !amount || autoCcipBlocked}
           className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl transition-all shadow-lg"
         >
           {isBridging || isConfirming ? (

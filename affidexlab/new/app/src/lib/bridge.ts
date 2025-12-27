@@ -12,12 +12,19 @@ export type BridgeParams = {
   fromAddress?: string;
 };
 
+export type BridgeProvider = "cctp" | "ccip" | "lifi";
+export type BridgeRoutePreference = "auto" | BridgeProvider;
+
 export type BridgeQuote = {
-  provider: "cctp" | "ccip" | "lifi";
+  provider: BridgeProvider;
   path: string;
   eta: string;
   feeEstimate: string;
   data?: any;
+};
+
+export type BridgeRouteOptions = {
+  allowCCIP?: boolean;
 };
 
 const USDC_ADDRESSES: Record<string, string> = {
@@ -181,8 +188,9 @@ export async function quoteLiFi(params: BridgeParams): Promise<BridgeQuote> {
   }
 }
 
-export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote> {
+export async function bestBridgeRoute(params: BridgeParams, options: BridgeRouteOptions = {}): Promise<BridgeQuote> {
   const errors: string[] = [];
+  const allowCCIP = options.allowCCIP ?? true;
 
   // Only try Li.Fi if we have a valid wallet address
   const hasValidAddress = params.fromAddress && params.fromAddress !== "0x0000000000000000000000000000000000000000";
@@ -214,7 +222,9 @@ export async function bestBridgeRoute(params: BridgeParams): Promise<BridgeQuote
 
   const ccipSupportedTokens = ["weth", "link", "usdc", "eth"];
   const tokenSymbol = (params.tokenSymbol || "").toLowerCase();
-  if (tokenSymbol && ccipSupportedTokens.some(t => tokenSymbol === t || tokenSymbol.includes(t))) {
+  if (!allowCCIP) {
+    errors.push("CCIP: skipped (auto-avoid for small transfers)");
+  } else if (tokenSymbol && ccipSupportedTokens.some(t => tokenSymbol === t || tokenSymbol.includes(t))) {
     try {
       return await quoteCCIP(params);
     } catch (error) {
