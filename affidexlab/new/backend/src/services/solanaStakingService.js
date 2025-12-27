@@ -3,33 +3,102 @@ import fetch from 'node-fetch';
 
 const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
 
+const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex';
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
-const VDM_PRICE_CACHE_TTL = 60_000;
-let vdmPriceCache = { price: 0, timestamp: 0 };
 
-export async function getCurrentVdmPriceUsdt() {
-  if (vdmPriceCache.price > 0 && Date.now() - vdmPriceCache.timestamp < VDM_PRICE_CACHE_TTL) {
-    return vdmPriceCache.price;
+const VDM_PRICE_CACHE_TTL = 60_000;
+let vdmPriceCache = { priceUsd: 0, timestamp: 0, source: 'none' };
+
+async function getVdmPriceFromDexScreener() {
+  const explicitPair = (process.env.VDM_DEXSCREENER_PAIR || '').trim();
+
+  if (explicitPair) {
+    const response = await fetch(`${DEXSCREENER_API}/pairs/solana/${encodeURIComponent(explicitPair)}`, { timeout: 5000 });
+    if (!response.ok) {
+      throw new Error('DexScreener request failed');
+    }
+
+    const data = await response.json();
+    const pair = data?.pair || data?.pairs?.[0];
+    const priceUsd = Number(pair?.priceUsd);
+
+    if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+      throw new Error('Invalid DexScreener price');
+    }
+
+    return priceUsd;
   }
 
+  const response = await fetch(`${DEXSCREENER_API}/tokens/${VDM_TOKEN_ADDRESS}`, { timeout: 5000 });
+  if (!response.ok) {
+    throw new Error('DexScreener request failed');
+  }
+
+  const data = await response.json();
+  const pairs = Array.isArray(data?.pairs) ? data.pairs : [];
+
+  const best = pairs
+    .map(p => ({
+      priceUsd: Number(p?.priceUsd),
+      liquidityUsd: Number(p?.liquidity?.usd) || 0,
+    }))
+    .filter(p => Number.isFinite(p.priceUsd) && p.priceUsd > 0)
+    .sort((a, b) => b.liquidityUsd - a.liquidityUsd)[0];
+
+  if (!best) {
+    throw new Error('No DexScreener pairs with priceUsd');
+  }
+
+  return best.priceUsd;
+}
+
+async function getVdmPriceFromCoinGecko() {
   const response = await fetch(
     `${COINGECKO_API}/simple/token_price/solana?contract_addresses=${VDM_TOKEN_ADDRESS}&vs_currencies=usd`,
     { timeout: 5000 }
   );
 
   if (!response.ok) {
-    throw new Error('Failed to fetch VDM price');
+    throw new Error('CoinGecko request failed');
   }
 
   const data = await response.json();
-  const price = data?.[VDM_TOKEN_ADDRESS.toLowerCase()]?.usd;
+  const priceUsd = Number(data?.[VDM_TOKEN_ADDRESS.toLowerCase()]?.usd);
 
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new Error('Invalid VDM price');
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    throw new Error('Invalid CoinGecko price');
   }
 
-  vdmPriceCache = { price, timestamp: Date.now() };
-  return price;
+  return priceUsd;
+}
+
+export async function getCurrentVdmPriceUsdtInfo() {
+  if (vdmPriceCache.priceUsd > 0 && Date.now() - vdmPriceCache.timestamp < VDM_PRICE_CACHE_TTL) {
+    return { ...vdmPriceCache };
+  }
+
+  try {
+    const priceUsd = await getVdmPriceFromDexScreener();
+    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'dexscreener' };
+    return { ...vdmPriceCache };
+  } catch {
+  }
+
+  try {
+    const priceUsd = await getVdmPriceFromCoinGecko();
+    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'coingecko' };
+    return { ...vdmPriceCache };
+  } catch (error) {
+    if (vdmPriceCache.priceUsd > 0) {
+      return { ...vdmPriceCache, source: `stale:${vdmPriceCache.source}` };
+    }
+    throw error;
+  }
+}
+
+export async function getCurrentVdmPriceUsdt() {
+  const info = await getCurrentVdmPriceUsdtInfo();
+  return info.priceUsd;
 }
 
 const STAKING_FEES = {
