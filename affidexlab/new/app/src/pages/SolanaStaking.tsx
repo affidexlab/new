@@ -8,8 +8,11 @@ import {
   MIN_STAKE_AMOUNT,
   calculateDepositFee,
   calculateWithdrawalFee,
-  calculateRewards,
-  calculateNetReturn,
+  calculateGrossValueUsdt,
+  calculateNetStakedVdm,
+  calculateNetStakedValueUsdt,
+  calculateEstimatedRewardsUsdt,
+  getVDMPriceUsdt,
   getVDMTokenBalance,
   getUserStake,
   getPoolStats,
@@ -25,6 +28,8 @@ export default function SolanaStaking() {
   const [selectedLockPeriod, setSelectedLockPeriod] = useState<LockPeriod>(LockPeriod.TwelveMonths);
   const [stakeAmount, setStakeAmount] = useState('');
   const [vdmBalance, setVdmBalance] = useState(0);
+  const [vdmPriceUsdt, setVdmPriceUsdt] = useState(0);
+  const [vdmPriceTimestamp, setVdmPriceTimestamp] = useState<number | null>(null);
   const [userStake, setUserStake] = useState<any | null>(null);
   const [poolStats, setPoolStatsState] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,6 +39,23 @@ export default function SolanaStaking() {
       loadData();
     }
   }, [publicKey]);
+
+  useEffect(() => {
+    const refreshPrice = async () => {
+      try {
+        const data = await getVDMPriceUsdt();
+        if (data?.priceUsd) {
+          setVdmPriceUsdt(Number(data.priceUsd));
+          setVdmPriceTimestamp(Number(data.timestamp) || Date.now());
+        }
+      } catch {
+      }
+    };
+
+    refreshPrice();
+    const id = setInterval(refreshPrice, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const loadData = async () => {
     if (!publicKey) return;
@@ -86,18 +108,23 @@ export default function SolanaStaking() {
     setLoading(true);
 
     try {
-      const depositFee = calculateDepositFee(amount);
-      const netStake = amount - depositFee;
-      const rewards = calculateRewards(amount, selectedLockPeriod);
+      if (!vdmPriceUsdt) {
+        toast.error('Unable to fetch current VDM price. Please try again.');
+        return;
+      }
 
       toast.info(`Transferring ${amount.toFixed(2)} VDM to staking wallet. Please approve the transaction in your wallet.`);
 
-      const signature = await transferVDMAndStake(
+      const { signature, stake } = await transferVDMAndStake(
         connection,
         wallet,
         amount,
         selectedLockPeriod
       );
+
+      if (stake?.vdmPriceUsdtSnapshot) {
+        toast.info(`VDM price snapshot locked at $${Number(stake.vdmPriceUsdtSnapshot).toFixed(6)} for this stake.`);
+      }
 
       toast.success(`Stake successful! Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`);
       
@@ -140,8 +167,13 @@ export default function SolanaStaking() {
 
   const selectedPeriod = LOCK_PERIODS.find(p => p.id === selectedLockPeriod);
   const amountNumber = stakeAmount ? parseFloat(stakeAmount) : 0;
-  const estimatedRewards = amountNumber > 0 ? calculateRewards(amountNumber, selectedLockPeriod) : 0;
-  const estimatedNetReturn = amountNumber > 0 ? calculateNetReturn(amountNumber, selectedLockPeriod) : 0;
+  const depositFee = amountNumber > 0 ? calculateDepositFee(amountNumber) : 0;
+  const netStakedVdm = amountNumber > 0 ? calculateNetStakedVdm(amountNumber) : 0;
+  const withdrawalFee = amountNumber > 0 ? calculateWithdrawalFee(netStakedVdm) : 0;
+  const netPrincipalVdm = Math.max(0, netStakedVdm - withdrawalFee);
+  const grossValueUsdt = amountNumber > 0 ? calculateGrossValueUsdt(amountNumber, vdmPriceUsdt) : 0;
+  const netValueUsdt = amountNumber > 0 ? calculateNetStakedValueUsdt(amountNumber, vdmPriceUsdt) : 0;
+  const estimatedRewards = amountNumber > 0 ? calculateEstimatedRewardsUsdt(amountNumber, selectedLockPeriod, vdmPriceUsdt) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0E27] via-[#1a1f3a] to-[#0A0E27]">
@@ -251,13 +283,32 @@ export default function SolanaStaking() {
                   <p className="text-xs text-gray-500 mt-1">
                     Min: {MIN_STAKE_AMOUNT.toLocaleString()} VDM
                   </p>
+                  <div className="flex justify-between text-xs text-gray-500 mt-2">
+                    <span>Current VDM price</span>
+                    <span className="text-white">
+                      {vdmPriceUsdt ? `$${vdmPriceUsdt.toFixed(6)}` : 'Loading...'}
+                    </span>
+                  </div>
+                  {vdmPriceTimestamp && (
+                    <div className="text-[11px] text-gray-600 mt-1">
+                      Last updated: {new Date(vdmPriceTimestamp).toLocaleTimeString()}
+                    </div>
+                  )}
                 </div>
 
                 {amountNumber > 0 && (
                   <div className="bg-[#0A0E27]/50 rounded-lg p-4 space-y-2 text-sm">
                     <div className="flex justify-between text-gray-400">
+                      <span>Input Value</span>
+                      <span className="text-white">{grossValueUsdt ? `${grossValueUsdt.toFixed(2)} USDT` : '—'}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
                       <span>Deposit Fee (2.5%)</span>
-                      <span className="text-red-400">-{calculateDepositFee(amountNumber).toFixed(2)} VDM</span>
+                      <span className="text-red-400">-{depositFee.toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Net Stake Value</span>
+                      <span className="text-white">{netValueUsdt ? `${netValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
@@ -265,26 +316,25 @@ export default function SolanaStaking() {
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Withdrawal Fee (1.5%)</span>
-                      <span className="text-red-400">-{calculateWithdrawalFee(amountNumber - calculateDepositFee(amountNumber)).toFixed(2)} VDM</span>
+                      <span className="text-red-400">-{withdrawalFee.toFixed(2)} VDM</span>
                     </div>
                     <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
-                      <span>Net Staked VDM</span>
-                      <span className="text-white">{(amountNumber - calculateDepositFee(amountNumber) - calculateWithdrawalFee(amountNumber - calculateDepositFee(amountNumber))).toFixed(2)} VDM</span>
-                    </div>
-                    <div className="flex justify-between text-white font-medium">
-                      <span>Estimated USDT Rewards</span>
-                      <span className="text-green-400">{estimatedRewards.toFixed(2)} USDT</span>
+                      <span>Principal After Fees</span>
+                      <span className="text-white">{netPrincipalVdm.toFixed(2)} VDM</span>
                     </div>
                     <div className="flex justify-between text-gray-400 text-xs">
                       <span>Lock Period</span>
                       <span className="text-white">{selectedPeriod?.months} months</span>
+                    </div>
+                    <div className="text-xs text-gray-500 pt-2">
+                      VDM price is snapshotted at the time of staking and used for payout calculations at maturity.
                     </div>
                   </div>
                 )}
 
                 <button
                   onClick={handleStake}
-                  disabled={loading || !publicKey || !amountNumber || amountNumber < MIN_STAKE_AMOUNT}
+                  disabled={loading || !publicKey || !amountNumber || amountNumber < MIN_STAKE_AMOUNT || !vdmPriceUsdt}
                   className="w-full py-3 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Processing...' : 'Stake Now'}
@@ -318,6 +368,14 @@ export default function SolanaStaking() {
                     <div className="flex justify-between text-gray-400">
                       <span>APY</span>
                       <span className="text-[#47A1FF] font-bold">{userStake?.apy}%</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>VDM Price Snapshot</span>
+                      <span className="text-white">{userStake?.vdmPriceUsdtSnapshot ? `$${Number(userStake.vdmPriceUsdtSnapshot).toFixed(6)}` : '—'}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Stake Value Snapshot</span>
+                      <span className="text-white">{userStake?.stakedValueUsdtSnapshot ? `${Number(userStake.stakedValueUsdtSnapshot).toFixed(2)} USDT` : '—'}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Allocated Rewards</span>
