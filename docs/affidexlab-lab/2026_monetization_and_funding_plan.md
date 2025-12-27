@@ -1,255 +1,401 @@
-# Affidex Lab — 2026 Monetization + Funding Plan (Lab-level)
+# Affidex Lab — 2026 Monetization + Funding Plan (Simple, Executable)
 
-Context
-- Affidex Lab audience is small today (X: ~186 followers; DecaFlow X: ~177). Plan cannot depend on content/virality.
+## Who this document is for
+This document is written so that any team member (or external advisor) can pick it up and immediately understand:
+- how Affidex Lab (the Lab, not the products) makes money in 2026,
+- what we sell, to whom, and at what price,
+- how we get clients even with a small audience,
+- how we use revenue + proof to unlock grants/sponsorships and then investment.
+
+## Current reality (starting point)
+- Audience today is small (Affidex Lab X ~186, DecaFlow X ~177). We will not rely on virality to get clients.
 - Team strengths: smart contract deployment, basic audit/readiness, growth/BD.
-- Claimed delivery capacity: up to 15 concurrent client workstreams if demand exists.
-- Goal for 2026: profitability for the Lab (cashflow-first), then fundraise from a position of strength.
+- Capacity: can handle high volume (up to ~15 concurrent workstreams) if work is standardized and managed.
 
-Operating principle
-- Sell outcomes you can control (delivery + execution), collect cash upfront, standardize scope.
-- Use the Lab as a venture studio + execution partner. Portfolio wins are upside, not the only engine.
-
----
-
-## 1) Positioning (what Affidex Lab is)
-One-line
-- “Affidex Lab is a Web3 + AI venture studio and execution partner that ships production smart contracts and growth/BD systems, and helps teams become fundable.”
-
-What to avoid claiming (until true)
-- Avoid “we are a VC” or “we guarantee funding.”
-- Use: “venture studio + advisory + partner network + fundraising preparedness.”
-
-Proof artifacts to lead with
-- DecaFlow shipped launch (publish a case study: timeline, what shipped, what outcomes).
-- 2 additional mini case studies (even small wins): deployment, integrations, growth outcomes.
+## 2026 goal
+- Primary: profitability for Affidex Lab via predictable cashflow.
+- Secondary: raise funding (non-dilutive first, then dilutive) from a position of strength.
 
 ---
 
-## 2) Immediate revenue engines (Q1 priority)
-Affidex Lab should sell only 3–4 offers to start. Too many offers slows sales.
+## 1) The strategy in one page
+Affidex Lab will run as a venture studio + execution partner using 3 money engines.
+
+Engine 1 — Productized Sprints (fast cash)
+- Short engagements with fixed scope, fixed timeline, paid upfront.
+- Example: “Protocol Readiness / Pre-Audit Sprint”.
+
+Engine 2 — Retainers (monthly stability)
+- 3-month minimum monthly retainers for BD + ecosystem + growth operations.
+- These create predictable MRR and allow planning.
+
+Engine 3 — Sponsorships + Grants (Lab-level funding)
+- Chains/infra pay for outcomes: developer onboarding, integrations, workshops.
+- Grants pay for public goods outputs: open-source tooling, education, research.
+
+Important rule
+- In 2026 we sell outcomes we control.
+- Portfolio products are upside, not the only revenue plan.
+
+---
+
+## 2) Glossary (simple definitions)
+- MRR: Monthly Recurring Revenue (active retainers total per month).
+- Cash collected: money received in bank/wallet (the most important metric).
+- Productized sprint: fixed scope, fixed duration, fixed price. Not “consulting by the hour”.
+- Pre-audit / readiness: work that reduces security risk and speeds up audits.
+- Sponsor: chain/infra partner paying for ecosystem growth outcomes.
+- Data room: folder with legal + financial + traction docs used for fundraising.
+
+---
+
+## 3) What we sell (the 4 offers)
+To stay focused, we sell only these 4 offers in Q1/Q2.
 
 ### Offer A — Protocol Readiness / Pre-Audit Sprint (10 business days)
-Buyer
-- Teams going to mainnet/audit, or recently audited and need fixes.
+What this is
+- A short engagement to make a protocol safer to launch and easier to audit.
+- This is NOT a full professional audit. It is “audit readiness + risk reduction”.
 
-Deliverables
-- Threat model + attack surface map
-- Invariants + assumptions list
-- Test plan improvements + priority test cases
-- Deployment checklist + environment hardening
-- Monitoring/alerts checklist (what to watch on-chain, what to alert on)
-- “Audit readiness backlog” (tickets + severity)
+Who it is for
+- Teams about to go to audit.
+- Teams that just got an audit report and need help fixing issues.
+- Teams preparing mainnet and want fewer surprises.
 
-Pricing + terms
-- $8,000–$25,000
-- 100% upfront (short, high value)
+What the client receives (clear deliverables)
+1) Threat model (what can go wrong and how)
+2) Attack surface map (contracts, roles, upgradeability, admin keys, dependencies)
+3) Invariants + assumptions list (what must always be true)
+4) Test plan improvements (priority tests to add + what they prove)
+5) Deployment readiness checklist (configs, permissions, timelocks, multisig, verification)
+6) Monitoring & alerts checklist (what to track after launch)
+7) “Readiness backlog” (tickets with severity + recommended fixes)
 
-Success metrics
-- Reduced audit iterations
-- Deployment incidents avoided
-- Clear readiness scorecard delivered
+What we need from the client (inputs)
+- Repo access (or full contract files)
+- Existing tests (if any)
+- Deployment plan (chains, addresses, admin setup)
+- Any previous audit report (if exists)
+
+Timeline (10 business days)
+- Day 1: kickoff + scope freeze + access
+- Day 2–5: review + threat model + invariants
+- Day 6–8: test plan + deployment checklist + monitoring plan
+- Day 9: backlog + risk scorecard
+- Day 10: delivery call + handover
+
+Price + payment terms
+- $8,000–$25,000 depending on complexity
+- 100% upfront (because it is short and high value)
+
+Acceptance criteria (how we know it is done)
+- Deliverables (1–7) delivered as a single package
+- Final handover call completed
+
+Common upsells
+- “Audit Fix Sprint” (1–2 weeks)
+- Ongoing monitoring setup implementation
 
 
 ### Offer B — Launch Sprint (2 weeks)
-Buyer
-- Teams launching testnet/mainnet or new protocol feature.
+What this is
+- A 2-week execution sprint to launch a protocol feature/testnet/mainnet with credibility.
 
-Deliverables
-- Launch narrative + positioning
-- Launch calendar (2 weeks) + daily execution checklist
-- Landing/docs polish plan (or deliver if in scope)
-- Community funnel: announcements, quests/points structure (lightweight)
-- Partner intro map (who to talk to + scripts)
+Who it is for
+- Teams launching anything public (testnet, mainnet, points campaign, new feature).
 
-Pricing + terms
+What the client receives
+1) Launch narrative (what we are, who it’s for, why now)
+2) 14-day launch calendar (daily checklist)
+3) Announcement package (threads/posts copy, partner outreach copy)
+4) Community funnel plan (quests/points/ambassadors in simple form)
+5) Partner intro map (who to contact + message templates)
+6) Post-launch KPI dashboard spec (what to track)
+
+What we need from the client
+- Product status (what is actually live)
+- Links, docs, branding assets
+- Any existing community channels
+
+Price + payment terms
 - $5,000–$12,000
 - 80% upfront / 20% on delivery
 
+Acceptance criteria
+- Launch calendar delivered
+- Copy pack delivered
+- Partner outreach list + scripts delivered
+
 
 ### Offer C — Growth/BD Retainer (3-month minimum)
-Buyer
-- Teams with product but weak distribution; ecosystems/infra partners expanding into Africa.
+What this is
+- Monthly execution to create partnerships, ecosystem traction, and revenue pathways.
 
-Deliverables (pick 4–6 and standardize)
-- Weekly BD pipeline build + tracking
-- Partner outreach (targets + scripts + scheduling)
+Who it is for
+- Teams with product built but no consistent BD pipeline.
+- Ecosystems/infra partners who want expansion outcomes in Africa.
+
+Retainer menu (we standardize 4–6 items)
+- Weekly pipeline build + tracking (targets, stages, next actions)
+- Partner outreach (messages, follow-ups, scheduling)
 - Ecosystem integrations coordination
-- Grant submissions (packages + reporting)
-- Launch ops for features/releases
-- Weekly founder call + priorities, next-week plan
+- Grant submissions (applications + reporting plan)
+- Launch ops for releases
+- Weekly founder call + weekly written update
 
-Pricing + terms
-- $3,000–$10,000/month
-- 3-month minimum, monthly paid upfront
+Price + payment terms
+- $3,000–$10,000 per month
+- 3-month minimum
+- Paid monthly upfront
+
+Acceptance criteria (per month)
+- Weekly pipeline report delivered (every week)
+- Number of outreach messages/meetings hit
+- Clear next-month plan
 
 
 ### Offer D — Fundraising Prep (Advisory)
-Primary version (recommended)
-- Upfront fee + fixed closing bonus (not %), to reduce regulatory/brokerage risk.
+What this is
+- A structured “become fundable” program. We fix narrative, materials, and execution.
+- This is not a guarantee of funding.
 
-Deliverables (4–6 weeks)
-- Deck + narrative rewrite
-- Data room checklist + structure
-- Investor/partner target list (by thesis)
-- Outreach scripts + weekly KPI tracking
-- Pipeline review cadence
+Who it is for
+- Teams raising in the next 60–120 days.
 
-Pricing + terms
+What the client receives (4–6 weeks)
+1) Fundraising narrative rewrite
+2) Pitch deck improvement
+3) Data room checklist + structure
+4) Investor/partner list by thesis (who fits and why)
+5) Outreach scripts + tracking system
+6) Weekly pipeline review cadence
+
+Pricing options (recommended)
+Option D1 — Upfront only
 - $7,500–$15,000 upfront
-- Optional: $7,500 fixed closing bonus if raise closes in 120 days
 
-Compliance note (non-legal)
-- In many jurisdictions, “% of funds raised” tied to introductions can trigger broker/dealer or intermediary rules. Prefer fixed advisory fees and/or fixed bonus; get local counsel for exact wording.
+Option D2 — Upfront + fixed closing bonus (recommended if used)
+- $7,500–$15,000 upfront
+- + $7,500 fixed closing bonus if raise closes within 120 days
 
----
+Plain-language compliance note (non-legal)
+- Charging “a percentage of funds raised” for introductions can create regulatory risk in many jurisdictions.
+- Safer approach: charge for advisory work (fixed fee) and use a fixed closing bonus.
+- Get local legal review for exact contract language.
 
-## 3) Distribution (how deals are won with a small audience)
-Primary channel for Q1/Q2
-- Targeted outbound + partner referrals (not content-driven growth).
-
-Weekly minimum activity targets (non-negotiable)
-- Add 50 new qualified leads/week
-- Send 100 targeted outreach messages/week (X DMs + email + LinkedIn)
-- Book 10 discovery calls/week
-- Send 4 proposals/week
-- Close 1 deal/week (early target: 1 per 1–2 weeks, then ramp)
-
-Sales pipeline stages
-1) Prospect identified
-2) First message sent
-3) Response / qualification
-4) Call booked
-5) Diagnosis call completed
-6) Proposal sent
-7) Negotiation
-8) Closed (paid)
-
-Inbound acceleration (secondary)
-- Weekly founder office hours (lead gen)
-- Monthly workshop (sponsored or lead gen)
-- Publish 1 case study/month
+Acceptance criteria
+- Deck + data room checklist delivered
+- Investor list + outreach scripts delivered
+- Weekly tracking + review calls completed for the agreed period
 
 ---
 
-## 4) Target customer segments (high probability, fast pay)
-Segment 1 — Protocols pre-audit / pre-mainnet
-- Need readiness, risk reduction, credibility.
+## 4) How we position the Lab (including your “VC-style” idea)
+We can position as “VC-connected” without pretending we are a VC.
 
-Segment 2 — Teams that raised pre-seed and must ship
-- Need speed + delivery certainty.
+Approved positioning
+- “Affidex Lab is a venture studio and advisory firm. We incubate and support teams with execution and fundraising preparedness, and we collaborate with an investor network.”
 
-Segment 3 — Ecosystems (L1/L2/infra) with Africa expansion goals
-- Have budgets for dev onboarding, workshops, integrations, hackathons.
+Not approved (until true)
+- “Affidex Lab is a VC.”
+- “We guarantee funding.”
 
-Segment 4 — Web2 fintechs testing blockchain rails
-- Bigger budgets; sell pilot “Readiness + Architecture + Deployment plan”.
-
----
-
-## 5) Pricing strategy (increase fast, don’t undercharge)
-Rules
-- Charge for speed + certainty, not hours.
-- Collect cash upfront.
-- Raise prices every 3–4 closes if win-rate stays high.
-
-Suggested Q1 price floors
-- Pre-Audit Sprint: do not go below $8k
-- Launch Sprint: do not go below $5k
-- Retainer: do not go below $3k/month
+How we make venture-studio upside real
+- For incubated teams, Affidex Lab can take:
+  - an upfront service fee (cash), and
+  - a small equity/token warrant (upside), tied to milestones.
 
 ---
 
-## 6) Operational capacity model (supporting up to 15 concurrent workstreams)
-To avoid delivery failures, standardize roles per workstream
-- Engagement Lead (client comms + scope control)
-- Tech Lead (smart contract/deployment)
-- BD Operator (partner outreach + tracking)
-- QA/Reviewer (basic audit/readiness checks)
+## 5) Distribution plan (how we get clients with a small audience)
+In Q1 and Q2, our main growth channel is outbound + referrals.
 
-Delivery system
-- Kickoff doc (scope, exclusions, timelines, acceptance)
-- Daily internal standup
-- Weekly client update (scorecard + next week plan)
-- Post-engagement: case study + testimonial request
+### Weekly targets (minimum operating standard)
+Every week:
+- Add 50 new qualified leads
+- Send 100 targeted outreach messages
+- Book 10 discovery calls
+- Send 4 proposals
+- Close 1 deal (early stage may be 1 deal every 1–2 weeks; target is to ramp)
 
-Quality gates (minimum)
-- Written threat model + assumptions list for any contract work
-- Test coverage baseline + deployment checklist signed
-- Monitoring checklist delivered
+### The pipeline stages (so everyone uses the same language)
+1) Identified — target found
+2) Messaged — first message sent
+3) Engaged — replied / interested
+4) Call booked — time scheduled
+5) Diagnosed — discovery call done
+6) Proposed — offer sent
+7) Negotiation — terms being finalized
+8) Closed — invoice paid
+
+### Who we target first (high probability)
+Priority segment 1: protocols pre-audit / pre-mainnet
+- They pay for readiness because security risk is existential.
+
+Priority segment 2: teams that recently raised and must deliver
+- They pay for speed and certainty.
+
+Priority segment 3: ecosystems/infra with expansion budgets
+- They pay for developer onboarding and integrations.
+
+### Outreach scripts (simple)
+Script for Offer A (readiness)
+- “Saw you’re preparing audit/mainnet. We run a 10-day Protocol Readiness Sprint (threat model, invariants, test plan, deployment + monitoring checklist). Flat fee, paid upfront, delivered in 10 business days. Are you pre-audit or post-audit?”
+
+Script for Offer C (retainer)
+- “If you have product but no consistent BD pipeline, we run a 3-month Growth/BD retainer: weekly pipeline build, partner outreach, ecosystem integrations, grants. Want the scope + pricing?”
+
+Script for Offer D (fundraise prep)
+- “If you’re raising in the next 60–120 days, we run Fundraising Prep: narrative + deck + data room + investor list + outreach system + weekly pipeline tracking. Want a quick call to see if it fits?”
 
 ---
 
-## 7) Sponsorships + ecosystem money (Lab-level non-dilutive funding)
-Programs Affidex Lab can sell to chains/infra
-1) “Affidex Build Week” (online, 5 days)
-- Goal: onboard devs, build integrations, ship demos.
-- Sponsor package: $10k–$50k
+## 6) Delivery operations (how we handle high volume without chaos)
+To truly handle ~15 concurrent workstreams, delivery must be standardized.
 
-2) “University Web3+AI Tour” (local)
-- Goal: developer acquisition for sponsor ecosystem.
-- Sponsor package: $5k–$30k per city/campus
+### Standard roles per engagement
+- Engagement Lead: scope control, client comms, timelines
+- Technical Lead: contracts/deployment readiness work
+- Reviewer: second-pass review for quality/risk
+- BD Operator (for Launch/Retainer): outreach + tracking + reporting
 
-3) “Integration Sprint” (partner-specific)
-- Goal: integrate sponsor SDK/oracle/indexer into 3–5 projects.
-- Sponsor package: $15k–$80k
+### Standard weekly client rhythm
+- Kickoff call (scope + timeline)
+- Midpoint update (written)
+- Final delivery call
+- Weekly written report for retainers
+
+### Quality gates (minimum)
+For any contract-related work, the team must deliver:
+- threat model + assumptions list
+- deployment checklist
+- monitoring checklist
+
+---
+
+## 7) Sponsorships + ecosystem money (Lab-level funding)
+These are paid programs where sponsors fund outcomes.
+
+Program 1: “Affidex Build Week” (5 days)
+- Sponsor pays for developer onboarding + integration demos.
+- Sponsor range: $10k–$50k
+
+Program 2: “University Web3+AI Tour”
+- Sponsor pays for developer acquisition.
+- Sponsor range: $5k–$30k per city/campus
+
+Program 3: “Integration Sprint”
+- Sponsor pays to get their stack integrated into 3–5 teams.
+- Sponsor range: $15k–$80k
 
 Sponsor KPIs
 - # developers onboarded
 - # projects integrated
-- # PRs merged / repos created
-- Workshop attendance + completion
-- Follow-on dev activity after 30 days
+- # PRs merged / repos shipped
+- attendance + completion rate
+- 30-day post-program dev activity
 
 ---
 
-## 8) Grants positioning (funding for the Lab)
+## 8) Grants positioning (non-dilutive funding for the Lab)
 Grant narrative that wins
-- “Affidex Lab is a public-goods-oriented venture studio driving ecosystem adoption via open-source tooling, developer onboarding, and integrations.”
+- “Affidex Lab drives ecosystem adoption via open-source tooling, developer onboarding, and integrations.”
 
-Grant-friendly outputs
-- Open-source templates: deployment scripts, monitoring dashboards, readiness checklists
-- SDK adapters/integration guides
-- Workshops + public reporting
+Grant-friendly outputs (what we promise)
+- open-source templates (deployment, monitoring, readiness)
+- integration guides and adapters
+- workshops and public reporting
 
-Grant engine
-- Maintain a grant calendar; submit weekly
-- Reusable modules: impact, implementation plan, budget, KPIs, reporting schedule
+Grant engine (weekly)
+- Submit consistently (weekly cadence)
+- Use reusable modules: impact, implementation plan, budget, KPIs, reporting schedule
 
 ---
 
-## 9) Funding for Affidex Lab (equity + non-dilutive)
-Best sequencing
-1) Q1: build cashflow (MRR + upfront projects)
-2) Q2: lock sponsor programs + grants
+## 9) How the Lab raises investment (after cashflow proof)
+Sequence (recommended)
+1) Q1: build cashflow (sprints + retainers)
+2) Q2: lock sponsorships + grants
 3) Q3: raise studio round (SAFE/convertible) from strength
 
-What investors fund at Lab level
-- Predictable revenue (retainers + productized sprints)
-- Portfolio upside (studio terms: small equity/warrants in incubated teams)
-- Distribution advantage (partner network + repeatable pipeline)
+What investors want to see at Lab level
+- Predictable revenue
+- Clear margins and delivery capacity
+- Portfolio upside (studio terms)
+- Repeatable distribution (pipeline, partners)
 
-Minimum “investment-ready” data room checklist
-- Studio deck
+Minimum data room checklist
+- studio deck
 - 12-month operating plan + budget
-- Revenue proof (contracts/invoices)
-- Case studies (DecaFlow + 2)
-- Standard studio terms (upfront fee + optional equity/warrants)
+- revenue proof (contracts/invoices)
+- case studies (DecaFlow + 2)
+- standard terms for sprints/retainers/studio incubation
 
 ---
 
-## 10) Q1 execution focus (what matters most)
-Week 1–2
-- Finalize 4 offers (scopes, pricing, terms)
-- Publish DecaFlow case study
-- Build 200-lead list (by segment)
+## 10) First 30 days execution plan (copy/paste)
+Week 1
+- Finalize the 4 offers (scope, price, terms)
+- Create 1-page PDF/one-pager per offer
+- Publish DecaFlow case study (short + clear)
 
-Week 3–4
-- Run outbound machine weekly
-- Close first 2 paid engagements
+Week 2
+- Build a 200-lead list (50 per segment)
+- Start outbound: 100 messages/week
+- Book 5–10 calls
+
+Week 3
+- Send proposals (4 per week)
+- Close 1–2 sprint deals
 - Start 1 retainer
 
-Q1 outcome targets
-- $10k–$25k MRR by end of March
-- $30k–$80k total cash collected by end of March
-- 3 case studies total (including DecaFlow)
+Week 4
+- Deliver first sprint with excellence
+- Collect testimonial
+- Publish a second mini case study
+
+30-day targets
+- 2 paid sprint engagements closed
+- 1 retainer started
+- $10k–$25k cash collected
+
+---
+
+## 11) KPI scoreboard (definitions)
+These are tracked weekly and monthly.
+
+Revenue KPIs
+- Cash collected: total money received this period
+- MRR: sum of active retainers per month
+- Gross margin %: (Revenue - direct delivery cost) / Revenue
+
+Sales KPIs
+- New leads added
+- Outreach messages sent
+- Calls booked
+- Proposals sent
+- Close rate: deals closed / proposals sent
+- Average deal size: total revenue closed / number of deals
+
+Delivery KPIs
+- On-time delivery %: engagements delivered on or before deadline / total
+- Client satisfaction: 1–10 score collected at end of engagement
+
+Funding KPIs
+- Grants submitted
+- Grants approved $ (or credits)
+- Sponsor $ closed
+- Investor meetings booked
+
+---
+
+## Appendix A — Simple proposal template (for sprints)
+Use this structure in a proposal (1–2 pages):
+- Problem summary (what risk/outcome we are solving)
+- Scope (what is included)
+- Exclusions (what is not included)
+- Timeline (start date, delivery date)
+- Deliverables list (bulleted)
+- Price + payment terms
+- Acceptance criteria
+- Next steps (invoice + kickoff)
