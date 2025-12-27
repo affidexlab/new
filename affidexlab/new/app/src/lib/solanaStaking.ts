@@ -164,17 +164,36 @@ export async function getUserStake(
   }
 }
 
-export async function getVDMPriceUsdt(): Promise<{ priceUsd: number; timestamp: number } | null> {
+export async function getVDMPriceUsdt(): Promise<{ priceUsd: number; timestamp: number; source?: string } | null> {
   try {
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
     const response = await fetch(`${API_BASE}/v1/solana-staking/vdm-price`);
     const data = await response.json();
 
-    if (!data.success) {
+    if (data?.success && data?.data?.priceUsd) {
+      return data.data;
+    }
+  } catch {
+  }
+
+  try {
+    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${VDM_TOKEN_ADDRESS}`);
+    const data = await response.json();
+
+    const pairs = Array.isArray(data?.pairs) ? data.pairs : [];
+    const best = pairs
+      .map((p: any) => ({
+        priceUsd: Number(p?.priceUsd),
+        liquidityUsd: Number(p?.liquidity?.usd) || 0,
+      }))
+      .filter((p: any) => Number.isFinite(p.priceUsd) && p.priceUsd > 0)
+      .sort((a: any, b: any) => b.liquidityUsd - a.liquidityUsd)[0];
+
+    if (!best) {
       return null;
     }
 
-    return data.data;
+    return { priceUsd: best.priceUsd, timestamp: Date.now(), source: 'dexscreener-direct' };
   } catch (error) {
     console.error('Error fetching VDM price:', error);
     return null;
