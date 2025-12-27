@@ -6,7 +6,7 @@ import {
   createOffchainStake,
   requestClaim,
   updateRewards,
-  getCurrentVdmPriceUsdt,
+  getCurrentVdmPriceUsdtInfo,
 } from '../../services/solanaStakingService.js';
 
 const router = express.Router();
@@ -61,15 +61,11 @@ router.get('/pool-stats', async (req, res) => {
 
 router.get('/vdm-price', async (req, res) => {
   try {
-    const priceUsd = await getCurrentVdmPriceUsdt();
+    const info = await getCurrentVdmPriceUsdtInfo();
 
     res.json({
       success: true,
-      data: {
-        priceUsd,
-        timestamp: Date.now(),
-        source: 'coingecko',
-      },
+      data: info,
     });
   } catch (error) {
     console.error('Get VDM price error:', error);
