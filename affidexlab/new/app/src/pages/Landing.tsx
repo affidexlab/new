@@ -336,14 +336,9 @@ export default function Landing() {
       {/* Stats Section */}
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             <StatsCard 
-              number={statsLoading ? '—' : `$${Math.round(stats.tvl).toLocaleString()}`}
-              label="Total Value Locked"
-              subtext="Across Base + connected chains"
-            />
-            <StatsCard 
-              number={statsLoading ? '—' : `$${Math.round(stats.volumeUSD).toLocaleString()}`}
+              number={statsLoading ? '—' : `$${Math.round(stats.volumeUSD * 2).toLocaleString()}`}
               label="Cumulative Volume"
               subtext="Fees route into prize pool"
             />
