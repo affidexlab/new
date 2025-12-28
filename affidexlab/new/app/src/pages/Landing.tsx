@@ -94,7 +94,7 @@ export default function Landing() {
   const { subscribeToTransactions } = useTransactionEvents();
 
   const PIONEER_TARGET = 100;
-  const pioneerCount = campaignStats?.pioneerTraders ?? stats.wallets || 0;
+  const pioneerCount = campaignStats?.pioneerTraders ?? (stats.wallets || 0);
   const pioneerProgress = Math.min(pioneerCount / PIONEER_TARGET, 1);
   const totalChainsLive = 6;
 
