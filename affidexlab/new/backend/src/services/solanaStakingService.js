@@ -5,12 +5,13 @@ const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
 const AFFIDEX_CUSTODY_WALLET = 'EacwKwV6DwnGKmZ192bmF2jnmg15PJytwEc9n98537eR';
 const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
+const COINMARKETCAP_API = 'https://pro-api.coinmarketcap.com';
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex';
 
 const VDM_PRICE_CACHE_TTL = 60_000;
 let vdmPriceCache = { priceUsd: 0, timestamp: 0, source: 'none' };
 
-async function fetchJsonWithTimeout(url, timeoutMs) {
+async function fetchJsonWithTimeout(url, timeoutMs, headers = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -20,6 +21,7 @@ async function fetchJsonWithTimeout(url, timeoutMs) {
       headers: {
         accept: 'application/json',
         'user-agent': 'decaflow-backend',
+        ...headers,
       },
     });
 
@@ -27,6 +29,39 @@ async function fetchJsonWithTimeout(url, timeoutMs) {
   } finally {
     clearTimeout(id);
   }
+}
+
+async function getVdmPriceFromCoinMarketCap() {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('CoinMarketCap API key not configured');
+  }
+
+  const url = `${COINMARKETCAP_API}/v2/cryptocurrency/quotes/latest?address=${VDM_TOKEN_ADDRESS}&platform=solana`;
+  
+  const { response, data } = await fetchJsonWithTimeout(
+    url,
+    7000,
+    { 'X-CMC_PRO_API_KEY': apiKey }
+  );
+
+  if (!response.ok) {
+    throw new Error(`CoinMarketCap API error: ${response.status}`);
+  }
+
+  if (data?.status?.error_code !== 0) {
+    throw new Error(data?.status?.error_message || 'CoinMarketCap API error');
+  }
+
+  const tokenData = Object.values(data?.data || {})[0];
+  const priceUsd = tokenData?.quote?.USD?.price;
+
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    throw new Error('Invalid price data from CoinMarketCap');
+  }
+
+  return priceUsd;
 }
 
 async function getVdmPriceFromDexScreener() {
@@ -78,19 +113,42 @@ export async function getCurrentVdmPriceUsdtInfo() {
     return { ...vdmPriceCache };
   }
 
+  console.log('🔍 Fetching VDM price (CA: B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5)...');
+
   try {
-    const priceUsd = await getVdmPriceFromDexScreener();
-    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'dexscreener' };
+    console.log('📊 Attempting CoinMarketCap (PRIMARY)...');
+    const priceUsd = await getVdmPriceFromCoinMarketCap();
+    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'coinmarketcap' };
+    console.log(`✅ VDM price from CoinMarketCap: $${priceUsd}`);
     return { ...vdmPriceCache };
   } catch (error) {
-    console.warn('DexScreener price fetch failed:', error?.message || error);
+    console.warn('⚠️  CoinMarketCap price fetch failed:', error?.message || error);
+  }
+
+  try {
+    console.log('📊 Attempting DexScreener (BACKUP)...');
+    const priceUsd = await getVdmPriceFromDexScreener();
+    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'dexscreener' };
+    console.log(`✅ VDM price from DexScreener: $${priceUsd}`);
+    return { ...vdmPriceCache };
+  } catch (error) {
+    console.warn('⚠️  DexScreener price fetch failed:', error?.message || error);
   }
 
   if (vdmPriceCache.priceUsd > 0) {
+    console.log(`📦 Using cached VDM price: $${vdmPriceCache.priceUsd} (stale, source: ${vdmPriceCache.source})`);
     return { ...vdmPriceCache, source: `stale:${vdmPriceCache.source}` };
   }
 
-  throw new Error('Failed to fetch VDM price from DexScreener');
+  const fallbackPrice = parseFloat(process.env.VDM_FALLBACK_PRICE || '0');
+  if (fallbackPrice > 0) {
+    console.log(`🔄 Using manual fallback VDM price: $${fallbackPrice}`);
+    vdmPriceCache = { priceUsd: fallbackPrice, timestamp: Date.now(), source: 'fallback-manual' };
+    return { ...vdmPriceCache };
+  }
+
+  console.error('❌ Failed to fetch VDM price from all sources (CoinMarketCap, DexScreener, cache, fallback)');
+  throw new Error('Failed to fetch VDM price from all available sources');
 }
 
 export async function getCurrentVdmPriceUsdt() {

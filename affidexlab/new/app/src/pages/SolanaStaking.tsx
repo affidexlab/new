@@ -44,12 +44,17 @@ export default function SolanaStaking() {
   useEffect(() => {
     const refreshPrice = async () => {
       try {
+        console.log('🔄 Fetching VDM price...');
         const data = await getVDMPriceUsdt();
         if (data?.priceUsd) {
+          console.log('✅ VDM price loaded:', data.priceUsd, 'USD (source:', data.source, ')');
           setVdmPriceUsdt(Number(data.priceUsd));
           setVdmPriceTimestamp(Number(data.timestamp) || Date.now());
+        } else {
+          console.warn('⚠️ VDM price data unavailable');
         }
-      } catch {
+      } catch (error) {
+        console.error('❌ Error fetching VDM price:', error);
       } finally {
         setVdmPriceLoadedOnce(true);
       }
@@ -63,6 +68,8 @@ export default function SolanaStaking() {
   const loadData = async () => {
     if (!publicKey) return;
     
+    console.log('🔄 Loading VDM staking data for wallet:', publicKey.toString());
+    
     try {
       const [balance, stake, stats] = await Promise.all([
         getVDMTokenBalance(connection, publicKey),
@@ -70,11 +77,16 @@ export default function SolanaStaking() {
         getPoolStats(),
       ]);
       
+      console.log('✅ VDM Balance loaded:', balance, 'VDM');
+      console.log('✅ User Stake loaded:', stake);
+      console.log('✅ Pool Stats loaded:', stats);
+      
       setVdmBalance(balance);
       setUserStake(stake);
       setPoolStatsState(stats);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('❌ Error loading staking data:', error);
+      toast.error('Failed to load staking data. Please check console for details.');
     }
   };
 
