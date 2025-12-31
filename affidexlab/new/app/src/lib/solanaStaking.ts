@@ -1,7 +1,28 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
+async function retryRpcCall<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`RPC call failed (attempt ${i + 1}/${maxRetries}):`, error?.message || error);
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
+export const VDM_TOKEN_DECIMALS = 6;
 export const AFFIDEX_CUSTODY_WALLET = 'EacwKwV6DwnGKmZ192bmF2jnmg15PJytwEc9n98537eR';
 export const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
@@ -121,7 +142,7 @@ async function getVdmTokenProgramId(connection: Connection): Promise<PublicKey> 
   if (!vdmTokenProgramIdCache) {
     vdmTokenProgramIdCache = (async () => {
       const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
-      const info = await connection.getAccountInfo(vdmMint);
+      const info = await retryRpcCall(() => connection.getAccountInfo(vdmMint));
       const owner = info?.owner;
       if (owner?.equals(TOKEN_2022_PROGRAM_ID)) {
         return TOKEN_2022_PROGRAM_ID;
@@ -138,14 +159,27 @@ async function sumTokenBalanceByProgram(
   tokenProgramId: PublicKey
 ): Promise<number> {
   const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
-  const resp = await connection.getParsedTokenAccountsByOwner(walletAddress, { programId: tokenProgramId });
+  
+  const resp = await retryRpcCall(() => 
+    connection.getParsedTokenAccountsByOwner(walletAddress, { programId: tokenProgramId })
+  );
+  
+  console.log(`📊 Found ${resp.value.length} token accounts for program ${tokenProgramId.toString().substring(0, 8)}...`);
+  
   let total = 0;
   for (const acc of resp.value) {
     const parsed: any = acc.account.data;
     const mint = parsed?.parsed?.info?.mint;
-    if (mint !== vdmMint.toString()) continue;
-    const ui = Number(parsed?.parsed?.info?.tokenAmount?.uiAmount);
-    if (Number.isFinite(ui)) total += ui;
+    const uiAmount = Number(parsed?.parsed?.info?.tokenAmount?.uiAmount);
+    
+    console.log(`   Token: ${mint?.substring(0, 8)}... Balance: ${uiAmount}`);
+    
+    if (mint === vdmMint.toString()) {
+      console.log(`   ✅ VDM Token found! Balance: ${uiAmount}`);
+      if (Number.isFinite(uiAmount)) {
+        total += uiAmount;
+      }
+    }
   }
   return total;
 }
@@ -154,34 +188,39 @@ export async function getVDMTokenBalance(
   connection: Connection,
   walletAddress: PublicKey
 ): Promise<number> {
+  console.log('🔍 Fetching VDM balance for wallet:', walletAddress.toString());
+  console.log('   VDM Token Address:', VDM_TOKEN_ADDRESS);
+  
   try {
+    const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
+    
     const programId = await getVdmTokenProgramId(connection);
+    console.log('   Detected token program:', programId.toString());
 
     let total = 0;
+    
     try {
+      console.log('   Scanning primary token program...');
       total += await sumTokenBalanceByProgram(connection, walletAddress, programId);
     } catch (e) {
       console.warn('⚠️  Primary token-program balance scan failed:', (e as any)?.message || e);
     }
 
-    if (programId.equals(TOKEN_PROGRAM_ID)) {
-      try {
-        total += await sumTokenBalanceByProgram(connection, walletAddress, TOKEN_2022_PROGRAM_ID);
-      } catch {
-      }
-    } else {
-      try {
-        total += await sumTokenBalanceByProgram(connection, walletAddress, TOKEN_PROGRAM_ID);
-      } catch {
-      }
+    const altProgramId = programId.equals(TOKEN_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    try {
+      console.log('   Scanning alternative token program...');
+      total += await sumTokenBalanceByProgram(connection, walletAddress, altProgramId);
+    } catch (e) {
+      console.log('   No accounts in alternative program');
     }
 
-    console.log(`💰 VDM Balance (summed): ${total}`);
+    console.log(`💰 ✅ VDM Balance Total: ${total.toLocaleString()} VDM`);
     return total;
   } catch (error: any) {
     console.error('❌ Error fetching VDM balance:', error);
     console.error('   Wallet:', walletAddress.toString());
     console.error('   VDM Token:', VDM_TOKEN_ADDRESS);
+    console.error('   Error details:', error?.message || error);
     return 0;
   }
 }
@@ -301,13 +340,13 @@ export async function transferVDMAndStake(
     tokenProgramId
   );
 
-  const amountInLamports = Math.floor(amount * 1_000_000_000);
+  const amountInSmallestUnit = Math.floor(amount * Math.pow(10, VDM_TOKEN_DECIMALS));
 
   const transferInstruction = createTransferInstruction(
     fromTokenAccount,
     toTokenAccount,
     walletAdapter.publicKey,
-    amountInLamports,
+    amountInSmallestUnit,
     [],
     tokenProgramId
   );
