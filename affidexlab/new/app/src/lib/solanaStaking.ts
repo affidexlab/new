@@ -123,10 +123,22 @@ export async function getVDMTokenBalance(
     const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
     const tokenAccount = await getAssociatedTokenAddress(vdmMint, walletAddress);
     
+    console.log('🔍 Fetching VDM balance from token account:', tokenAccount.toString());
+    
     const balance = await connection.getTokenAccountBalance(tokenAccount);
-    return parseFloat(balance.value.uiAmount?.toString() || '0');
-  } catch (error) {
-    console.error('Error fetching VDM balance:', error);
+    const uiAmount = parseFloat(balance.value.uiAmount?.toString() || '0');
+    
+    console.log(`💰 VDM Balance: ${uiAmount} (raw: ${balance.value.amount})`);
+    
+    return uiAmount;
+  } catch (error: any) {
+    if (error.message?.includes('could not find account')) {
+      console.warn('⚠️  VDM token account does not exist for this wallet. Send some VDM to this wallet first to create the account.');
+      return 0;
+    }
+    console.error('❌ Error fetching VDM balance:', error);
+    console.error('   Wallet:', walletAddress.toString());
+    console.error('   VDM Token:', VDM_TOKEN_ADDRESS);
     return 0;
   }
 }

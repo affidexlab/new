@@ -81,16 +81,26 @@ export async function getCurrentVdmPriceUsdtInfo() {
   try {
     const priceUsd = await getVdmPriceFromDexScreener();
     vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'dexscreener' };
+    console.log(`✅ VDM price from DexScreener: $${priceUsd}`);
     return { ...vdmPriceCache };
   } catch (error) {
-    console.warn('DexScreener price fetch failed:', error?.message || error);
+    console.warn('⚠️  DexScreener price fetch failed:', error?.message || error);
   }
 
   if (vdmPriceCache.priceUsd > 0) {
+    console.log(`📦 Using cached VDM price: $${vdmPriceCache.priceUsd} (stale)`);
     return { ...vdmPriceCache, source: `stale:${vdmPriceCache.source}` };
   }
 
-  throw new Error('Failed to fetch VDM price from DexScreener');
+  const fallbackPrice = parseFloat(process.env.VDM_FALLBACK_PRICE || '0');
+  if (fallbackPrice > 0) {
+    console.log(`🔄 Using fallback VDM price: $${fallbackPrice}`);
+    vdmPriceCache = { priceUsd: fallbackPrice, timestamp: Date.now(), source: 'fallback-manual' };
+    return { ...vdmPriceCache };
+  }
+
+  console.error('❌ Failed to fetch VDM price from all sources');
+  throw new Error('Failed to fetch VDM price from DexScreener and no fallback available');
 }
 
 export async function getCurrentVdmPriceUsdt() {
