@@ -21,6 +21,47 @@ async function retryRpcCall<T>(
   throw lastError;
 }
 
+const FALLBACK_SOLANA_RPC_URLS = [
+  'https://api.mainnet-beta.solana.com',
+  'https://rpc.ankr.com/solana',
+] as const;
+
+function shouldFallbackRpc(error: any): boolean {
+  const msg = String(error?.message || error || '').toLowerCase();
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('load failed') ||
+    msg.includes('fetch') ||
+    msg.includes('blocked') ||
+    msg.includes('csp') ||
+    msg.includes('content security policy')
+  );
+}
+
+async function getWorkingConnection(primary: Connection): Promise<Connection> {
+  try {
+    await retryRpcCall(() => primary.getLatestBlockhash('processed'), 1);
+    return primary;
+  } catch (e) {
+    if (!shouldFallbackRpc(e)) {
+      return primary;
+    }
+  }
+
+  for (const url of FALLBACK_SOLANA_RPC_URLS) {
+    try {
+      const c = new Connection(url, 'confirmed');
+      await retryRpcCall(() => c.getLatestBlockhash('processed'), 2);
+      console.log(`✅ Using fallback Solana RPC: ${url}`);
+      return c;
+    } catch {
+    }
+  }
+
+  return primary;
+}
+
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
 export const VDM_TOKEN_DECIMALS = 6;
 export const AFFIDEX_CUSTODY_WALLET = 'EacwKwV6DwnGKmZ192bmF2jnmg15PJytwEc9n98537eR';
@@ -148,7 +189,10 @@ async function getVdmTokenProgramId(connection: Connection): Promise<PublicKey> 
         return TOKEN_2022_PROGRAM_ID;
       }
       return TOKEN_PROGRAM_ID;
-    })();
+    })().catch((e) => {
+      vdmTokenProgramIdCache = null;
+      throw e;
+    });
   }
   return vdmTokenProgramIdCache;
 }
@@ -190,18 +234,16 @@ export async function getVDMTokenBalance(
 ): Promise<number> {
   console.log('🔍 Fetching VDM balance for wallet:', walletAddress.toString());
   console.log('   VDM Token Address:', VDM_TOKEN_ADDRESS);
-  
-  try {
-    const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
-    
-    const programId = await getVdmTokenProgramId(connection);
+
+  const run = async (conn: Connection): Promise<number> => {
+    const programId = await getVdmTokenProgramId(conn);
     console.log('   Detected token program:', programId.toString());
 
     let total = 0;
-    
+
     try {
       console.log('   Scanning primary token program...');
-      total += await sumTokenBalanceByProgram(connection, walletAddress, programId);
+      total += await sumTokenBalanceByProgram(conn, walletAddress, programId);
     } catch (e) {
       console.warn('⚠️  Primary token-program balance scan failed:', (e as any)?.message || e);
     }
@@ -209,13 +251,35 @@ export async function getVDMTokenBalance(
     const altProgramId = programId.equals(TOKEN_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     try {
       console.log('   Scanning alternative token program...');
-      total += await sumTokenBalanceByProgram(connection, walletAddress, altProgramId);
-    } catch (e) {
+      total += await sumTokenBalanceByProgram(conn, walletAddress, altProgramId);
+    } catch {
       console.log('   No accounts in alternative program');
     }
 
     console.log(`💰 ✅ VDM Balance Total: ${total.toLocaleString()} VDM`);
     return total;
+  };
+
+  try {
+    const primaryConn = await getWorkingConnection(connection);
+    try {
+      return await run(primaryConn);
+    } catch (e: any) {
+      if (!shouldFallbackRpc(e)) {
+        throw e;
+      }
+    }
+
+    for (const url of FALLBACK_SOLANA_RPC_URLS) {
+      try {
+        vdmTokenProgramIdCache = null;
+        const fallbackConn = new Connection(url, 'confirmed');
+        return await run(fallbackConn);
+      } catch {
+      }
+    }
+
+    return 0;
   } catch (error: any) {
     console.error('❌ Error fetching VDM balance:', error);
     console.error('   Wallet:', walletAddress.toString());
@@ -322,9 +386,11 @@ export async function transferVDMAndStake(
     throw new Error('Wallet not connected');
   }
 
+  const conn = await getWorkingConnection(connection);
+
   const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
   const custodyWallet = new PublicKey(AFFIDEX_CUSTODY_WALLET);
-  const tokenProgramId = await getVdmTokenProgramId(connection);
+  const tokenProgramId = await getVdmTokenProgramId(conn);
 
   const fromTokenAccount = await getAssociatedTokenAddress(
     vdmMint,
@@ -353,18 +419,33 @@ export async function transferVDMAndStake(
 
   const transaction = new Transaction().add(transferInstruction);
 
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+  const { blockhash, lastValidBlockHeight } = await retryRpcCall(() => conn.getLatestBlockhash('finalized'));
   transaction.recentBlockhash = blockhash;
   transaction.feePayer = walletAdapter.publicKey;
 
   const signed = await walletAdapter.signTransaction(transaction);
-  const signature = await connection.sendRawTransaction(signed.serialize());
 
-  await connection.confirmTransaction({
-    signature,
-    blockhash,
-    lastValidBlockHeight,
-  }, 'confirmed');
+  let signature: string;
+  try {
+    signature = await retryRpcCall(() => conn.sendRawTransaction(signed.serialize()));
+  } catch (e) {
+    if (!shouldFallbackRpc(e)) throw e;
+
+    for (const url of FALLBACK_SOLANA_RPC_URLS) {
+      try {
+        const fallbackConn = new Connection(url, 'confirmed');
+        signature = await retryRpcCall(() => fallbackConn.sendRawTransaction(signed.serialize()));
+        await retryRpcCall(() => fallbackConn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
+        const stake = await registerOffchainStake(walletAdapter.publicKey, amount, lockPeriod, signature);
+        return { signature, stake };
+      } catch {
+      }
+    }
+
+    throw e;
+  }
+
+  await retryRpcCall(() => conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
 
   const stake = await registerOffchainStake(
     walletAdapter.publicKey,
