@@ -2,6 +2,8 @@ import { query } from '../db/connection.js';
 import fetch from 'node-fetch';
 
 const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
+const AFFIDEX_CUSTODY_WALLET = 'EacwKwV6DwnGKmZ192bmF2jnmg15PJytwEc9n98537eR';
+const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex';
 
@@ -260,7 +262,7 @@ export async function createOffchainStake({ wallet, amount, lockPeriod, depositS
     `INSERT INTO solana_staking_fees 
      (pool_id, fee_type, recipient, amount, percentage, timestamp, created_at)
      VALUES ($1, 'deposit', $2, $3, 100, $4, $5)`,
-    [STAKING_POOL_ID, 'affidex', depositFee, now, now]
+    [STAKING_POOL_ID, AFFIDEX_TREASURY_WALLET, depositFee, now, now]
   );
 
   return {
@@ -318,7 +320,7 @@ export async function requestClaim({ wallet }) {
     `INSERT INTO solana_staking_fees 
      (pool_id, fee_type, recipient, amount, percentage, timestamp, created_at)
      VALUES ($1, 'withdrawal', $2, $3, 100, $4, $5)`,
-    [STAKING_POOL_ID, 'affidex', withdrawalFee, now, now]
+    [STAKING_POOL_ID, AFFIDEX_TREASURY_WALLET, withdrawalFee, now, now]
   );
 
   await updatePoolStats(-stakedAmount, -1, 0);
@@ -479,5 +481,45 @@ export async function recordInvestmentReturns(investmentId, returns) {
     investmentId,
     returns,
     status: 'closed',
+  };
+}
+
+export async function getPendingFeeConversions() {
+  const result = await query(
+    `SELECT 
+      fee_type,
+      recipient,
+      SUM(amount) as total_vdm_amount,
+      COUNT(*) as fee_count,
+      MIN(timestamp) as earliest_fee,
+      MAX(timestamp) as latest_fee
+     FROM solana_staking_fees 
+     WHERE pool_id = $1 AND recipient = $2
+     GROUP BY fee_type, recipient`,
+    [STAKING_POOL_ID, AFFIDEX_TREASURY_WALLET]
+  );
+
+  const vdmPriceUsdt = await getCurrentVdmPriceUsdt();
+
+  return result.rows.map(row => ({
+    feeType: row.fee_type,
+    recipient: row.recipient,
+    totalVdmAmount: parseFloat(row.total_vdm_amount),
+    totalUsdtValue: parseFloat(row.total_vdm_amount) * vdmPriceUsdt,
+    feeCount: parseInt(row.fee_count),
+    earliestFee: row.earliest_fee,
+    latestFee: row.latest_fee,
+    conversionNote: 'These VDM fees should be converted to SOL and sent to treasury wallet',
+    treasuryWallet: AFFIDEX_TREASURY_WALLET,
+    custodyWallet: AFFIDEX_CUSTODY_WALLET,
+  }));
+}
+
+export function getWalletAddresses() {
+  return {
+    vdmTokenAddress: VDM_TOKEN_ADDRESS,
+    custodyWallet: AFFIDEX_CUSTODY_WALLET,
+    treasuryWallet: AFFIDEX_TREASURY_WALLET,
+    note: 'VDM fees collected in custody wallet should be converted to SOL and sent to treasury wallet',
   };
 }
