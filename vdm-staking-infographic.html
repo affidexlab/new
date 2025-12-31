@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDM Staking - Complete Guide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2640 100%);
+            color: #ffffff;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 15mm;
+            background: linear-gradient(135deg, #0a1628 0%, #152238 50%, #1a2640 100%);
+            position: relative;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(74, 158, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            position: relative;
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #4A9EFF 0%, #6ec1ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header .subtitle {
+            font-size: 16px;
+            color: #4A9EFF;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header .url {
+            font-size: 13px;
+            color: #88c0ff;
+            font-weight: 500;
+        }
+        
+        .solana-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(74, 158, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #4A9EFF;
+            border: 1px solid rgba(74, 158, 255, 0.3);
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(74, 158, 255, 0.15);
+        }
+        
+        .section h2 {
+            font-size: 16px;
+            color: #4A9EFF;
+            margin-bottom: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section h3 {
+            font-size: 13px;
+            color: #4A9EFF;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .section p, .section li {
+            font-size: 10px;
+            line-height: 1.5;
+            color: #d0e0ff;
+            margin-bottom: 6px;
+        }
+        
+        .section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .section li {
+            padding-left: 15px;
+            position: relative;
+            margin-bottom: 5px;
+        }
+        
+        .section li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #4A9EFF;
+            font-weight: bold;
+        }
+        
+        .highlight-box {
+            background: rgba(255, 165, 0, 0.1);
+            border: 2px solid rgba(255, 165, 0, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .highlight-box h2 {
+            color: #ffb347;
+            font-size: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .highlight-box p {
+            font-size: 10px;
+            line-height: 1.5;
+            color: #ffd8a8;
+            margin-bottom: 6px;
+        }
+        
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .step {
+            flex: 1;
+            background: rgba(74, 158, 255, 0.08);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #4A9EFF, #6ec1ff);
+            border-radius: 50%;
+            color: #0a1628;
+            font-weight: 700;
+            font-size: 12px;
+            line-height: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .step p {
+            font-size: 9px;
+            line-height: 1.4;
+            color: #d0e0ff;
+        }
+        
+        .duration-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .duration-card {
+            background: rgba(74, 158, 255, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid rgba(74, 158, 255, 0.3);
+            text-align: center;
+        }
+        
+        .duration-card.featured {
+            border-color: #4A9EFF;
+            background: rgba(74, 158, 255, 0.15);
+        }
+        
+        .duration-card h4 {
+            font-size: 13px;
+            color: #4A9EFF;
+            margin-bottom: 6px;
+        }
+        
+        .duration-card .apy {
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        
+        .faq-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .faq-item {
+            background: rgba(74, 158, 255, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(74, 158, 255, 0.15);
+        }
+        
+        .faq-item strong {
+            color: #4A9EFF;
+            font-size: 10px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .faq-item p {
+            font-size: 9px;
+            color: #d0e0ff;
+            line-height: 1.4;
+        }
+        
+        .support-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .support-item {
+            background: rgba(74, 158, 255, 0.08);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            text-align: center;
+        }
+        
+        .support-item h4 {
+            font-size: 11px;
+            color: #4A9EFF;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .support-item p {
+            font-size: 8px;
+            color: #a8c5e6;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .support-item .link {
+            font-size: 8px;
+            color: #4A9EFF;
+            font-weight: 600;
+        }
+        
+        .cta {
+            text-align: center;
+            padding: 18px;
+            background: linear-gradient(135deg, #4A9EFF 0%, #357abd 100%);
+            border-radius: 10px;
+            margin-top: 15px;
+            box-shadow: 0 4px 20px rgba(74, 158, 255, 0.3);
+        }
+        
+        .cta h2 {
+            font-size: 20px;
+            color: #ffffff;
+            margin-bottom: 6px;
+            font-weight: 800;
+        }
+        
+        .cta p {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 4px;
+        }
+        
+        .cta .social {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 4px;
+        }
+        
+        .icon {
+            font-size: 16px;
+            vertical-align: middle;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .feature-item {
+            background: rgba(74, 158, 255, 0.08);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(74, 158, 255, 0.2);
+        }
+        
+        .feature-item h4 {
+            font-size: 11px;
+            color: #4A9EFF;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .feature-item p {
+            font-size: 8.5px;
+            color: #d0e0ff;
+            line-height: 1.3;
+        }
+        
+        @media print {
+            body {
+                background: none;
+            }
+            .container {
+                width: 100%;
+                margin: 0;
+                padding: 10mm;
+                page-break-after: avoid;
+            }
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="solana-badge">⚡ POWERED BY SOLANA</div>
+            <div class="logo-container">
+                <img src="SAVE_20251218_112959.jpg" alt="VDM Logo" class="logo">
+                <img src="IMG_20251216_152453_749.jpg" alt="DecaFlow Logo" class="logo">
+            </div>
+            <h1>Start Staking VDM Today</h1>
+            <p class="subtitle">Earn Up to 19% APY in USDT Rewards</p>
+            <p class="url">decaflow.xyz/staking</p>
+        </div>
+
+        <div class="grid-2">
+            <div class="section">
+                <h2>📊 What is VDM Staking?</h2>
+                <p>VDM Staking allows you to lock your VDM tokens on the Solana blockchain to earn passive income in USDT. By staking, you support the network's security and growth while earning competitive rewards based on your chosen duration.</p>
+            </div>
+            
+            <div class="section">
+                <h2>⚡ Why Stake with DecaFlow?</h2>
+                <ul>
+                    <li>Competitive APY up to 19%</li>
+                    <li>Earn stable USDT rewards</li>
+                    <li>No maximum limit</li>
+                    <li>Secure & transparent on Solana</li>
+                    <li>Simple, user-friendly interface</li>
+                    <li>Official VDM + DecaFlow partnership</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 How to Stake VDM</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <p>Connect your Solana wallet (Phantom, Solflare, etc.)</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <p>Choose stake amount (minimum 1,000 VDM)</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <p>Select duration: 3, 6, or 12 months</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <p>Confirm transaction in your wallet</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <p>Track rewards in real-time on dashboard</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💰 Staking Durations & Rewards</h2>
+            <div class="duration-cards">
+                <div class="duration-card">
+                    <h4>3 Months</h4>
+                    <div class="apy">6% APY</div>
+                    <p style="font-size: 8px; color: #a8c5e6;">Short-term option</p>
+                </div>
+                <div class="duration-card">
+                    <h4>6 Months</h4>
+                    <div class="apy">12% APY</div>
+                    <p style="font-size: 8px; color: #a8c5e6;">Medium-term option</p>
+                </div>
+                <div class="duration-card featured">
+                    <h4>12 Months</h4>
+                    <div class="apy">19% APY</div>
+                    <p style="font-size: 8px; color: #4A9EFF;">⭐ Best value!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="highlight-box">
+            <h2>⚠️ Important Information</h2>
+            <p><strong>🔒 No Early Unstaking:</strong> You can't unstake until the expiration of your duration. Tokens are locked for the full period you selected. Plan accordingly.</p>
+            <p><strong>💎 Minimum Stake:</strong> Minimum stake amount is 1,000 VDM tokens. There is no maximum limit.</p>
+            <p><strong>👛 One Stake Per Wallet:</strong> Each wallet can only have one active stake at a time.</p>
+            <p><strong>💵 Rewards in USDT:</strong> Rewards are paid in USDT. Your principal is returned in VDM at maturity.</p>
+        </div>
+
+        <div class="section">
+            <h2>🔐 Security & Fees</h2>
+            <div class="grid-2" style="margin-top: 10px;">
+                <div class="feature-item">
+                    <h4>🛡️ Blockchain Security</h4>
+                    <p>Your funds are secured on the Solana Blockchain with full transparency and non-custodial architecture.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>👛 Supported Wallets</h4>
+                    <p>Phantom, Solflare, and any other Solana-compatible wallet.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>💸 Deposit Fee</h4>
+                    <p>2.5% fee on deposits (deducted automatically when you stake).</p>
+                </div>
+                <div class="feature-item">
+                    <h4>💸 Withdrawal Fee</h4>
+                    <p>13% fee on withdrawals (deducted automatically at maturity).</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>❓ Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <strong>Can I unstake early?</strong>
+                    <p>No, early unstaking is not permitted. Your tokens are locked for the full duration you selected.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>Are my funds secured?</strong>
+                    <p>Yes, it is secured on the Solana Blockchain with full transparency and non-custodial architecture.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>Which wallets are supported?</strong>
+                    <p>Phantom, Solflare wallets and any other Solana-compatible wallet.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>Are there any hidden fees?</strong>
+                    <p>No. Only 2.5% deposit fee and 13% withdrawal fee. These are clearly displayed and deducted automatically.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>What is the minimum staking amount?</strong>
+                    <p>The minimum stake is 1,000 VDM tokens. There is no maximum limit for staking.</p>
+                </div>
+                <div class="faq-item">
+                    <strong>What network is VDM staking on?</strong>
+                    <p>VDM Staking operates on the Solana blockchain. Ensure your wallet is connected to Solana mainnet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>💬 Support & Resources</h2>
+            <div class="support-grid">
+                <div class="support-item">
+                    <h4>📖 Documentation</h4>
+                    <p>Read full staking documentation and technical guides</p>
+                    <div class="link">docs.decaflow.xyz</div>
+                </div>
+                <div class="support-item">
+                    <h4>👥 Community</h4>
+                    <p>Join Discord & Telegram for real-time help</p>
+                    <div class="link">t.me/DecaFlow</div>
+                </div>
+                <div class="support-item">
+                    <h4>🛠️ Technical Support</h4>
+                    <p>Contact Amber Lab support for account issues</p>
+                    <div class="link">support@decaflow.xyz</div>
+                </div>
+                <div class="support-item">
+                    <h4>📊 Track Stake</h4>
+                    <p>Monitor your position and rewards anytime</p>
+                    <div class="link">decaflow.xyz/staking</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta">
+            <h2>Stake Now at decaflow.xyz/staking</h2>
+            <p>Start earning USDT rewards today with VDM Staking</p>
+            <p class="social">Follow us: @DecaFlowXYZ | VDM Community: vdm.network</p>
+            <p style="font-size: 8px; color: rgba(255,255,255,0.7); margin-top: 8px;">⚠️ Please read all terms carefully before staking. Cryptocurrency investments involve risk.</p>
+        </div>
+    </div>
+</body>
+</html>
