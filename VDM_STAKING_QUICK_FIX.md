@@ -61,57 +61,59 @@ Based on the symptoms (balance showing 0 and price unavailable), here are the mo
 - **QuickNode**: https://quicknode.com - 50 requests/second free tier  
 - **Alchemy**: https://alchemy.com - 300M compute units/month free
 
-## Issue #2: VDM Token Has No Liquidity on DexScreener 💰
+## Issue #2: VDM Price Not Available 💰
 
-**The Problem**: DexScreener API returns no trading pairs for VDM token.
+**The Problem**: The price fetching system can't get VDM price.
 
-**Check if this is the issue**: Visit this URL in your browser:
+**Current Setup**: 
+- 🥇 **CoinMarketCap** (Primary source)
+- 🥈 **DexScreener** (Backup source)
+- 🔧 **Manual Fallback** (Emergency)
+
+### Solution A: Setup CoinMarketCap (Recommended)
+
+**VDM Price Source Priority:**
+1. CoinMarketCap (Primary) - Most reliable
+2. DexScreener (Backup) - If CMC fails
+3. Manual fallback - If both fail
+
+**Setup CoinMarketCap** (takes 5 minutes):
+1. Sign up at https://pro.coinmarketcap.com/signup (FREE)
+2. Get your API key from the dashboard
+3. Add to backend environment:
+   ```bash
+   COINMARKETCAP_API_KEY=your-api-key-here
+   ```
+4. Redeploy backend
+
+**Free plan includes:**
+- 10,000 API calls/month (enough for launch)
+- Real-time VDM price data
+- No credit card required
+
+**See full setup guide:** @COINMARKETCAP_SETUP_GUIDE.md
+
+### Solution B: Use DexScreener Only
+
+**Check if VDM is on DexScreener**: Visit this URL:
 ```
 https://api.dexscreener.com/latest/dex/tokens/B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5
 ```
 
-If you see `"pairs": []` (empty array), then VDM has no liquidity pools.
+If you see `"pairs": []` (empty array), VDM has no liquidity pools on DEXes yet.
 
-**The Fix**: Add a fallback price
+**If VDM has pairs**, the system will automatically use DexScreener as backup when CoinMarketCap is not configured.
 
-Edit `backend/src/services/solanaStakingService.js`:
+### Solution C: Add Manual Fallback
 
-Replace the `getCurrentVdmPriceUsdtInfo` function:
-
-```javascript
-export async function getCurrentVdmPriceUsdtInfo() {
-  // Try cache first
-  if (vdmPriceCache.priceUsd > 0 && Date.now() - vdmPriceCache.timestamp < VDM_PRICE_CACHE_TTL) {
-    return { ...vdmPriceCache };
-  }
-
-  // Try DexScreener
-  try {
-    const priceUsd = await getVdmPriceFromDexScreener();
-    vdmPriceCache = { priceUsd, timestamp: Date.now(), source: 'dexscreener' };
-    return { ...vdmPriceCache };
-  } catch (error) {
-    console.warn('DexScreener price fetch failed:', error?.message || error);
-  }
-
-  // Fallback to manual price (update this regularly)
-  // TODO: Get VDM price from your team or use a different price feed
-  const FALLBACK_PRICE = parseFloat(process.env.VDM_FALLBACK_PRICE || '0.00012');
-  
-  console.log(`Using fallback VDM price: $${FALLBACK_PRICE}`);
-  
-  return { 
-    priceUsd: FALLBACK_PRICE, 
-    timestamp: Date.now(), 
-    source: 'fallback-manual' 
-  };
-}
-```
+If both CoinMarketCap and DexScreener fail, add a fallback price:
 
 Add to your backend's `.env` file:
 ```bash
 VDM_FALLBACK_PRICE=0.00012
 ```
+
+⚠️ **Update this value regularly** - it doesn't auto-update.
 
 Then redeploy your backend.
 
