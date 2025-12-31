@@ -12,16 +12,15 @@ export const SolanaWalletContextProvider: FC<{ children: ReactNode }> = ({ child
 
     if (raw) {
       if (/^https?:\/\//i.test(raw)) {
-        console.log('Using custom Solana RPC endpoint');
+        console.log('✅ Using custom Solana RPC endpoint');
         return raw;
       }
 
       console.error('Invalid VITE_SOLANA_RPC_URL (must start with http:// or https://). Falling back to default public Solana RPC.');
-      return clusterApiUrl('mainnet-beta');
     }
 
-    console.warn('Using default public Solana RPC - consider using a dedicated RPC provider like Helius, QuickNode, or Alchemy for better reliability');
-    return clusterApiUrl('mainnet-beta');
+    console.log('⚙️ Using public Solana RPC endpoint: https://api.mainnet-beta.solana.com');
+    return 'https://api.mainnet-beta.solana.com';
   }, []);
 
   const wallets = useMemo(
