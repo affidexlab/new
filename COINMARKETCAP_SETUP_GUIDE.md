@@ -153,39 +153,36 @@ curl -H "X-CMC_PRO_API_KEY: YOUR_API_KEY" \
 
 ### API Call Frequency
 
-Current configuration:
-- **Cache TTL**: 60 seconds (1 minute)
-- **Expected calls**: ~1,440 per day (1 per minute)
-- **Monthly calls**: ~43,200 per month
+Current configuration (default):
+- **Cache TTL**: 5 minutes
+- **Expected calls**: ~288 per day
+- **Monthly calls**: ~8,640 per month
 - **Free plan limit**: 10,000 per month
 
-**⚠️ Note**: With default settings, you'll exceed the free plan limit.
+✅ Default configuration stays within the free plan.
 
-### Recommendations:
+### Customize cache time
 
-**Option 1: Increase cache time** (Recommended for Free Plan)
-Edit `backend/src/services/solanaStakingService.js`:
-```javascript
-// Change from 60 seconds to 5 minutes
-const VDM_PRICE_CACHE_TTL = 300_000; // 5 minutes = 300 seconds
-```
-
-This reduces calls to:
-- ~288 calls per day
-- ~8,640 calls per month
-- ✅ Stays within free plan limit
-
-**Option 2: Upgrade to Hobbyist Plan** ($29/month)
-- 100K calls per month
-- No need to change cache settings
-- More frequent price updates
-
-**Option 3: Use DexScreener as Primary**
-If VDM is not listed on CoinMarketCap yet, you can temporarily use DexScreener:
+Set this environment variable on the backend:
 ```bash
-# Backend .env
-COINMARKETCAP_API_KEY=  # Leave empty or remove
+VDM_PRICE_CACHE_TTL_MS=300000
 ```
+
+Examples:
+- 60 seconds: `VDM_PRICE_CACHE_TTL_MS=60000` (may exceed free tier)
+- 5 minutes: `VDM_PRICE_CACHE_TTL_MS=300000` (default)
+- 10 minutes: `VDM_PRICE_CACHE_TTL_MS=600000`
+
+### Important: Ensure correct token mapping
+
+CoinMarketCap's `symbol=VDM` can collide with other tokens.
+To ensure we're fetching the correct VDM, set at least one of:
+```bash
+COINMARKETCAP_VDM_ID=...
+COINMARKETCAP_VDM_SLUG=...
+```
+
+If those aren’t set, the backend will still try `symbol=VDM` and then `address/platform`, but those can fail depending on listing data.
 
 ## Troubleshooting
 
@@ -213,7 +210,7 @@ COINMARKETCAP_API_KEY=  # Leave empty or remove
 **Cause**: Rate limit exceeded (too many requests).
 
 **Solution**:
-1. Increase `VDM_PRICE_CACHE_TTL` to reduce calls
+1. Increase `VDM_PRICE_CACHE_TTL_MS` to reduce calls
 2. Check if you're making unexpected API calls
 3. Consider upgrading to higher plan
 4. System will automatically fall back to DexScreener

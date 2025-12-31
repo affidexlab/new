@@ -83,6 +83,9 @@ Based on the symptoms (balance showing 0 and price unavailable), here are the mo
 3. Add to backend environment:
    ```bash
    COINMARKETCAP_API_KEY=your-api-key-here
+   COINMARKETCAP_VDM_ID=   # recommended
+   # OR
+   COINMARKETCAP_VDM_SLUG= # recommended
    ```
 4. Redeploy backend
 

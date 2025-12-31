@@ -8,8 +8,11 @@ const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 const COINMARKETCAP_API = 'https://pro-api.coinmarketcap.com';
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex';
 
-const VDM_PRICE_CACHE_TTL = 60_000;
+const VDM_PRICE_CACHE_TTL = Number(process.env.VDM_PRICE_CACHE_TTL_MS || 300_000);
 let vdmPriceCache = { priceUsd: 0, timestamp: 0, source: 'none' };
+
+const CMC_NETWORK_CACHE_TTL = 86_400_000;
+let cmcNetworkCache = { solanaNetworkId: null, timestamp: 0 };
 
 async function fetchJsonWithTimeout(url, timeoutMs, headers = {}) {
   const controller = new AbortController();
@@ -31,37 +34,180 @@ async function fetchJsonWithTimeout(url, timeoutMs, headers = {}) {
   }
 }
 
-async function getVdmPriceFromCoinMarketCap() {
+function pickCmcTokenData(data) {
+  const entries = Object.values(data?.data || {});
+  if (entries.length === 0) return null;
+
+  const matchByAddress = entries.find((t) => {
+    const addr = (t?.platform?.token_address || t?.platform?.tokenAddress || '').toString();
+    return addr && addr.toLowerCase() === VDM_TOKEN_ADDRESS.toLowerCase();
+  });
+
+  return matchByAddress || entries[0];
+}
+
+function extractFirstNumber(obj, paths) {
+  for (const p of paths) {
+    try {
+      const parts = p.split('.');
+      let cur = obj;
+      for (const part of parts) {
+        if (cur == null) break;
+        cur = cur[part];
+      }
+      const n = Number(cur);
+      if (Number.isFinite(n) && n > 0) return n;
+    } catch {
+    }
+  }
+  return null;
+}
+
+async function cmcQuotesLatest(queryParams) {
   const apiKey = process.env.COINMARKETCAP_API_KEY;
-  
   if (!apiKey) {
     throw new Error('CoinMarketCap API key not configured');
   }
 
-  const url = `${COINMARKETCAP_API}/v2/cryptocurrency/quotes/latest?address=${VDM_TOKEN_ADDRESS}&platform=solana`;
-  
-  const { response, data } = await fetchJsonWithTimeout(
-    url,
-    7000,
-    { 'X-CMC_PRO_API_KEY': apiKey }
-  );
+  const params = new URLSearchParams({ convert: 'USD', ...queryParams });
+  const url = `${COINMARKETCAP_API}/v2/cryptocurrency/quotes/latest?${params.toString()}`;
+
+  const { response, data } = await fetchJsonWithTimeout(url, 7000, { 'X-CMC_PRO_API_KEY': apiKey });
 
   if (!response.ok) {
-    throw new Error(`CoinMarketCap API error: ${response.status}`);
+    const msg = data?.status?.error_message || `HTTP ${response.status}`;
+    throw new Error(`CoinMarketCap API error: ${msg}`);
   }
 
-  if (data?.status?.error_code !== 0) {
+  if (data?.status?.error_code && data.status.error_code !== 0) {
     throw new Error(data?.status?.error_message || 'CoinMarketCap API error');
   }
 
-  const tokenData = Object.values(data?.data || {})[0];
-  const priceUsd = tokenData?.quote?.USD?.price;
+  const tokenData = pickCmcTokenData(data);
+  const priceUsd = Number(tokenData?.quote?.USD?.price);
 
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
     throw new Error('Invalid price data from CoinMarketCap');
   }
 
   return priceUsd;
+}
+
+async function getCmcDexSolanaNetworkId() {
+  const explicit = (process.env.COINMARKETCAP_DEX_SOLANA_NETWORK_ID || '').trim();
+  if (explicit) return explicit;
+
+  if (cmcNetworkCache.solanaNetworkId && Date.now() - cmcNetworkCache.timestamp < CMC_NETWORK_CACHE_TTL) {
+    return cmcNetworkCache.solanaNetworkId;
+  }
+
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    throw new Error('CoinMarketCap API key not configured');
+  }
+
+  const url = `${COINMARKETCAP_API}/v4/dex/networks/list`;
+  const { response, data } = await fetchJsonWithTimeout(url, 7000, { 'X-CMC_PRO_API_KEY': apiKey });
+
+  if (!response.ok) {
+    const msg = data?.status?.error_message || `HTTP ${response.status}`;
+    throw new Error(`CoinMarketCap DEX API error: ${msg}`);
+  }
+
+  const networks = Array.isArray(data?.data) ? data.data : Array.isArray(data?.networks) ? data.networks : [];
+  const sol = networks.find((n) => {
+    const name = (n?.name || '').toString().toLowerCase();
+    const slug = (n?.slug || '').toString().toLowerCase();
+    return name === 'solana' || slug === 'solana';
+  });
+
+  const id = sol?.id?.toString();
+  if (!id) {
+    throw new Error('Failed to resolve CoinMarketCap DEX network id for Solana');
+  }
+
+  cmcNetworkCache = { solanaNetworkId: id, timestamp: Date.now() };
+  return id;
+}
+
+async function getVdmPriceFromCoinMarketCapDex() {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    throw new Error('CoinMarketCap API key not configured');
+  }
+
+  const networkId = await getCmcDexSolanaNetworkId();
+  const params = new URLSearchParams({
+    contract_address: VDM_TOKEN_ADDRESS,
+    network_id: networkId,
+    convert: 'USD',
+  });
+  const url = `${COINMARKETCAP_API}/v4/dex/pairs/quotes/latest?${params.toString()}`;
+
+  const { response, data } = await fetchJsonWithTimeout(url, 7000, { 'X-CMC_PRO_API_KEY': apiKey });
+
+  if (!response.ok) {
+    const msg = data?.status?.error_message || `HTTP ${response.status}`;
+    throw new Error(`CoinMarketCap DEX API error: ${msg}`);
+  }
+
+  const candidates = [
+    extractFirstNumber(data, ['data.0.quote.USD.price', 'data.0.quote.USD.price_usd', 'data.0.price_usd', 'data.0.priceUsd', 'data.0.price']),
+    extractFirstNumber(data, ['data.quote.USD.price', 'data.quote.USD.price_usd', 'data.price_usd', 'data.priceUsd', 'data.price']),
+    extractFirstNumber(data, ['pairs.0.quote.USD.price', 'pairs.0.quote.USD.price_usd', 'pairs.0.price_usd', 'pairs.0.priceUsd', 'pairs.0.price']),
+    extractFirstNumber(data, ['data.pairs.0.quote.USD.price', 'data.pairs.0.quote.USD.price_usd', 'data.pairs.0.price_usd', 'data.pairs.0.priceUsd', 'data.pairs.0.price']),
+  ].filter((x) => Number.isFinite(x) && x > 0);
+
+  const priceUsd = candidates[0] || null;
+  if (!priceUsd) {
+    throw new Error('Invalid price data from CoinMarketCap DEX API');
+  }
+
+  return priceUsd;
+}
+
+async function getVdmPriceFromCoinMarketCap() {
+  const cmcId = (process.env.COINMARKETCAP_VDM_ID || '').trim();
+  const cmcSlug = (process.env.COINMARKETCAP_VDM_SLUG || '').trim();
+  const cmcSymbol = (process.env.COINMARKETCAP_VDM_SYMBOL || 'VDM').trim();
+
+  if (cmcId) {
+    try {
+      return await cmcQuotesLatest({ id: cmcId });
+    } catch (e) {
+      console.warn('CoinMarketCap id lookup failed:', e?.message || e);
+    }
+  }
+
+  if (cmcSlug) {
+    try {
+      return await cmcQuotesLatest({ slug: cmcSlug });
+    } catch (e) {
+      console.warn('CoinMarketCap slug lookup failed:', e?.message || e);
+    }
+  }
+
+  if (cmcSymbol) {
+    try {
+      return await cmcQuotesLatest({ symbol: cmcSymbol });
+    } catch (e) {
+      console.warn('CoinMarketCap symbol lookup failed:', e?.message || e);
+    }
+  }
+
+  try {
+    return await cmcQuotesLatest({ address: VDM_TOKEN_ADDRESS, platform: 'solana' });
+  } catch (e) {
+    console.warn('CoinMarketCap address/platform lookup failed:', e?.message || e);
+  }
+
+  try {
+    return await getVdmPriceFromCoinMarketCapDex();
+  } catch (e) {
+    console.warn('CoinMarketCap DEX price lookup failed:', e?.message || e);
+  }
+
+  throw new Error('CoinMarketCap could not resolve VDM price (set COINMARKETCAP_VDM_ID/COINMARKETCAP_VDM_SLUG or enable DEX API access)');
 }
 
 async function getVdmPriceFromDexScreener() {
