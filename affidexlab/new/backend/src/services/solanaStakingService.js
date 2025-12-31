@@ -8,7 +8,7 @@ const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 const COINMARKETCAP_API = 'https://pro-api.coinmarketcap.com';
 const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex';
 
-const VDM_PRICE_CACHE_TTL = 60_000;
+const VDM_PRICE_CACHE_TTL = Number(process.env.VDM_PRICE_CACHE_TTL_MS || 300_000);
 let vdmPriceCache = { priceUsd: 0, timestamp: 0, source: 'none' };
 
 async function fetchJsonWithTimeout(url, timeoutMs, headers = {}) {
@@ -31,37 +31,84 @@ async function fetchJsonWithTimeout(url, timeoutMs, headers = {}) {
   }
 }
 
-async function getVdmPriceFromCoinMarketCap() {
+function pickCmcTokenData(data) {
+  const entries = Object.values(data?.data || {});
+  if (entries.length === 0) return null;
+
+  const matchByAddress = entries.find((t) => {
+    const addr = (t?.platform?.token_address || t?.platform?.tokenAddress || '').toString();
+    return addr && addr.toLowerCase() === VDM_TOKEN_ADDRESS.toLowerCase();
+  });
+
+  return matchByAddress || entries[0];
+}
+
+async function cmcQuotesLatest(queryParams) {
   const apiKey = process.env.COINMARKETCAP_API_KEY;
-  
   if (!apiKey) {
     throw new Error('CoinMarketCap API key not configured');
   }
 
-  const url = `${COINMARKETCAP_API}/v2/cryptocurrency/quotes/latest?address=${VDM_TOKEN_ADDRESS}&platform=solana`;
-  
-  const { response, data } = await fetchJsonWithTimeout(
-    url,
-    7000,
-    { 'X-CMC_PRO_API_KEY': apiKey }
-  );
+  const params = new URLSearchParams({ convert: 'USD', ...queryParams });
+  const url = `${COINMARKETCAP_API}/v2/cryptocurrency/quotes/latest?${params.toString()}`;
+
+  const { response, data } = await fetchJsonWithTimeout(url, 7000, { 'X-CMC_PRO_API_KEY': apiKey });
 
   if (!response.ok) {
-    throw new Error(`CoinMarketCap API error: ${response.status}`);
+    const msg = data?.status?.error_message || `HTTP ${response.status}`;
+    throw new Error(`CoinMarketCap API error: ${msg}`);
   }
 
-  if (data?.status?.error_code !== 0) {
+  if (data?.status?.error_code && data.status.error_code !== 0) {
     throw new Error(data?.status?.error_message || 'CoinMarketCap API error');
   }
 
-  const tokenData = Object.values(data?.data || {})[0];
-  const priceUsd = tokenData?.quote?.USD?.price;
+  const tokenData = pickCmcTokenData(data);
+  const priceUsd = Number(tokenData?.quote?.USD?.price);
 
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
     throw new Error('Invalid price data from CoinMarketCap');
   }
 
   return priceUsd;
+}
+
+async function getVdmPriceFromCoinMarketCap() {
+  const cmcId = (process.env.COINMARKETCAP_VDM_ID || '').trim();
+  const cmcSlug = (process.env.COINMARKETCAP_VDM_SLUG || '').trim();
+  const cmcSymbol = (process.env.COINMARKETCAP_VDM_SYMBOL || 'VDM').trim();
+
+  if (cmcId) {
+    try {
+      return await cmcQuotesLatest({ id: cmcId });
+    } catch (e) {
+      console.warn('CoinMarketCap id lookup failed:', e?.message || e);
+    }
+  }
+
+  if (cmcSlug) {
+    try {
+      return await cmcQuotesLatest({ slug: cmcSlug });
+    } catch (e) {
+      console.warn('CoinMarketCap slug lookup failed:', e?.message || e);
+    }
+  }
+
+  if (cmcSymbol) {
+    try {
+      return await cmcQuotesLatest({ symbol: cmcSymbol });
+    } catch (e) {
+      console.warn('CoinMarketCap symbol lookup failed:', e?.message || e);
+    }
+  }
+
+  try {
+    return await cmcQuotesLatest({ address: VDM_TOKEN_ADDRESS, platform: 'solana' });
+  } catch (e) {
+    console.warn('CoinMarketCap address/platform lookup failed:', e?.message || e);
+  }
+
+  throw new Error('CoinMarketCap could not resolve VDM price (set COINMARKETCAP_VDM_ID or COINMARKETCAP_VDM_SLUG)');
 }
 
 async function getVdmPriceFromDexScreener() {
