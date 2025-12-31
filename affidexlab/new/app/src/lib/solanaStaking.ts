@@ -2,7 +2,8 @@ import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.
 import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token';
 
 export const VDM_TOKEN_ADDRESS = 'B2a9z1fwTvLXMDoaA3pm4MLXtfMjA3nQLs2dSNivCwS5';
-export const AFFIDEX_CUSTODY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
+export const AFFIDEX_CUSTODY_WALLET = 'EacwKwV6DwnGKmZ192bmF2jnmg15PJytwEc9n98537eR';
+export const AFFIDEX_TREASURY_WALLET = '3Z2y4VUjDYU6sapVFfmZAStGDaTrYcCjXinwZqBgMopk';
 
 export const MIN_STAKE_AMOUNT = 1_000;
 

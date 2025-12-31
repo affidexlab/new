@@ -307,4 +307,42 @@ router.post('/admin/investments/:investmentId/returns', [
   }
 });
 
+router.get('/admin/fee-conversions', async (req, res) => {
+  try {
+    const { getPendingFeeConversions } = await import('../../services/solanaStakingService.js');
+    const feeConversions = await getPendingFeeConversions();
+
+    res.json({
+      success: true,
+      data: feeConversions,
+    });
+  } catch (error) {
+    console.error('Get pending fee conversions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get pending fee conversions',
+      message: error.message,
+    });
+  }
+});
+
+router.get('/admin/wallet-addresses', async (req, res) => {
+  try {
+    const { getWalletAddresses } = await import('../../services/solanaStakingService.js');
+    const addresses = getWalletAddresses();
+
+    res.json({
+      success: true,
+      data: addresses,
+    });
+  } catch (error) {
+    console.error('Get wallet addresses error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get wallet addresses',
+      message: error.message,
+    });
+  }
+});
+
 export default router;
