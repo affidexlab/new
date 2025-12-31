@@ -14,13 +14,17 @@ Add these to your backend deployment (Render.com, Vercel, etc.):
 # Free plan: 10,000 calls/month
 COINMARKETCAP_API_KEY=your-coinmarketcap-api-key-here
 
-# REQUIRED (to ensure correct token): set ONE of these
+# OPTIONAL (recommended if token is listed on CoinMarketCap 'cryptocurrency' pages)
 # Preferred: explicit CoinMarketCap ID or slug for VDM
 COINMARKETCAP_VDM_ID=
 COINMARKETCAP_VDM_SLUG=
 
 # Optional: symbol lookup (can collide with other tokens named VDM)
 COINMARKETCAP_VDM_SYMBOL=VDM
+
+# OPTIONAL (for DexScan tokens like https://dex.coinmarketcap.com/token/solana/<CA>/)
+# If not set, backend auto-discovers Solana network_id via /v4/dex/networks/list
+COINMARKETCAP_DEX_SOLANA_NETWORK_ID=
 
 # ============================================
 # OPTIONAL: PRICE CACHE TTL
