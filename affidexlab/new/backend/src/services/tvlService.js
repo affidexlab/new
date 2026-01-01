@@ -159,7 +159,7 @@ export async function calculateTVL() {
     const stakingTableExists = await hasStakingTable();
     if (stakingTableExists) {
       const stakingResult = await query(
-        `SELECT COALESCE(SUM(staked_amount), 0) as total_staked
+        `SELECT COALESCE(SUM(staked_amount * vdm_price_usdt_snapshot), 0) as total_staked
          FROM solana_staking_positions
          WHERE status = 'active'`
       ).catch(() => ({ rows: [{ total_staked: 0 }] }));
