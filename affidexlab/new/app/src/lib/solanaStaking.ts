@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { getAssociatedTokenAddress, createAssociatedTokenAccountIdempotentInstruction, createTransferInstruction, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 async function retryRpcCall<T>(
   fn: () => Promise<T>,
@@ -437,12 +437,32 @@ export async function transferVDMAndStake(
     tokenProgramId
   );
 
+  const fromTokenAccountInfo = await retryRpcCall(() => conn.getAccountInfo(fromTokenAccount));
+  if (!fromTokenAccountInfo) {
+    throw new Error('VDM token account not found for your wallet.');
+  }
+
   const toTokenAccount = await getAssociatedTokenAddress(
     vdmMint,
     custodyWallet,
-    false,
+    true,
     tokenProgramId
   );
+
+  const transaction = new Transaction();
+
+  const toTokenAccountInfo = await retryRpcCall(() => conn.getAccountInfo(toTokenAccount));
+  if (!toTokenAccountInfo) {
+    transaction.add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        walletAdapter.publicKey,
+        toTokenAccount,
+        custodyWallet,
+        vdmMint,
+        tokenProgramId
+      )
+    );
+  }
 
   const amountInSmallestUnit = Math.floor(amount * Math.pow(10, VDM_TOKEN_DECIMALS));
 
@@ -455,7 +475,7 @@ export async function transferVDMAndStake(
     tokenProgramId
   );
 
-  const transaction = new Transaction().add(transferInstruction);
+  transaction.add(transferInstruction);
 
   const { blockhash, lastValidBlockHeight } = await retryRpcCall(() => conn.getLatestBlockhash('finalized'));
   transaction.recentBlockhash = blockhash;
@@ -514,10 +534,16 @@ export async function registerOffchainStake(
     }),
   });
 
-  const data = await response.json();
+  const raw = await response.text();
+  let data: any;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    throw new Error(`Failed to register stake (HTTP ${response.status})`);
+  }
 
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to register stake');
+  if (!response.ok || !data?.success) {
+    throw new Error(data?.error || `Failed to register stake (HTTP ${response.status})`);
   }
 
   return data.data;
