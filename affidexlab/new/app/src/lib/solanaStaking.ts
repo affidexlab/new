@@ -30,7 +30,8 @@ async function retryRpcCall<T>(
 
 const FALLBACK_SOLANA_RPC_URLS = [
   'https://api.mainnet-beta.solana.com',
-  'https://rpc.ankr.com/solana',
+  'https://solana-mainnet.rpc.extrnode.com',
+  'https://solana.public-rpc.com',
 ] as const;
 
 function shouldFallbackRpc(error: any): boolean {
@@ -47,25 +48,33 @@ function shouldFallbackRpc(error: any): boolean {
 }
 
 async function getWorkingConnection(primary: Connection): Promise<Connection> {
+  console.log('🔌 Testing primary Solana RPC connection...');
   try {
-    await retryRpcCall(() => primary.getLatestBlockhash('processed'), 1);
+    await retryRpcCall(() => primary.getLatestBlockhash('processed'), 2);
+    console.log('✅ Primary RPC connection working');
     return primary;
-  } catch (e) {
+  } catch (e: any) {
+    console.warn('⚠️  Primary RPC failed:', e?.message);
     if (!shouldFallbackRpc(e)) {
+      console.log('   Error not RPC-related, continuing with primary');
       return primary;
     }
   }
 
+  console.log('🔄 Trying fallback RPC endpoints...');
   for (const url of FALLBACK_SOLANA_RPC_URLS) {
     try {
+      console.log(`   Testing ${url}...`);
       const c = new Connection(url, 'confirmed');
       await retryRpcCall(() => c.getLatestBlockhash('processed'), 2);
       console.log(`✅ Using fallback Solana RPC: ${url}`);
       return c;
-    } catch {
+    } catch (e: any) {
+      console.warn(`   ❌ Failed: ${e?.message}`);
     }
   }
 
+  console.warn('⚠️  All fallback RPCs failed, using primary');
   return primary;
 }
 
@@ -239,59 +248,83 @@ export async function getVDMTokenBalance(
   connection: Connection,
   walletAddress: PublicKey
 ): Promise<number> {
-  console.log('🔍 Fetching VDM balance for wallet:', walletAddress.toString());
-  console.log('   VDM Token Address:', VDM_TOKEN_ADDRESS);
+  console.log('\n🔍 === VDM BALANCE FETCH START ===');
+  console.log('   Wallet:', walletAddress.toString());
+  console.log('   VDM Token:', VDM_TOKEN_ADDRESS);
+  console.log('   Timestamp:', new Date().toISOString());
 
-  const run = async (conn: Connection): Promise<number> => {
+  const run = async (conn: Connection, rpcLabel: string): Promise<number> => {
+    console.log(`\n📊 Fetching balance via ${rpcLabel}...`);
+    
     const programId = await getVdmTokenProgramId(conn);
-    console.log('   Detected token program:', programId.toString());
+    console.log('   Token Program ID:', programId.toString());
 
     let total = 0;
 
     try {
-      console.log('   Scanning primary token program...');
-      total += await sumTokenBalanceByProgram(conn, walletAddress, programId);
-    } catch (e) {
-      console.warn('⚠️  Primary token-program balance scan failed:', (e as any)?.message || e);
+      console.log('   [1/2] Scanning primary token program...');
+      const primaryBalance = await sumTokenBalanceByProgram(conn, walletAddress, programId);
+      total += primaryBalance;
+      console.log(`   Primary program balance: ${primaryBalance}`);
+    } catch (e: any) {
+      console.error('   ❌ Primary scan failed:', e?.message || e);
+      throw e;
     }
 
     const altProgramId = programId.equals(TOKEN_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     try {
-      console.log('   Scanning alternative token program...');
-      total += await sumTokenBalanceByProgram(conn, walletAddress, altProgramId);
-    } catch {
-      console.log('   No accounts in alternative program');
+      console.log('   [2/2] Scanning alternative token program...');
+      const altBalance = await sumTokenBalanceByProgram(conn, walletAddress, altProgramId);
+      total += altBalance;
+      console.log(`   Alternative program balance: ${altBalance}`);
+    } catch (e: any) {
+      console.log('   No accounts in alternative program (this is normal)');
     }
 
-    console.log(`💰 ✅ VDM Balance Total: ${total.toLocaleString()} VDM`);
+    console.log(`\n💰 ✅ TOTAL VDM BALANCE: ${total.toLocaleString()} VDM`);
     return total;
   };
 
   try {
     const primaryConn = await getWorkingConnection(connection);
+    
     try {
-      return await run(primaryConn);
+      const balance = await run(primaryConn, 'primary RPC');
+      console.log('\n✅ === VDM BALANCE FETCH SUCCESS ===\n');
+      return balance;
     } catch (e: any) {
+      console.error('❌ Primary RPC balance fetch failed:', e?.message);
+      
       if (!shouldFallbackRpc(e)) {
+        console.error('   Error is not RPC-related, re-throwing');
         throw e;
       }
+      
+      console.log('   Attempting fallback RPCs...');
     }
 
     for (const url of FALLBACK_SOLANA_RPC_URLS) {
       try {
+        console.log(`\n🔄 Trying fallback RPC: ${url}`);
         vdmTokenProgramIdCache = null;
         const fallbackConn = new Connection(url, 'confirmed');
-        return await run(fallbackConn);
-      } catch {
+        const balance = await run(fallbackConn, url);
+        console.log('\n✅ === VDM BALANCE FETCH SUCCESS (fallback) ===\n');
+        return balance;
+      } catch (e: any) {
+        console.error(`   ❌ Fallback ${url} failed:`, e?.message);
       }
     }
 
+    console.error('\n❌ All RPC endpoints failed, returning 0');
     return 0;
   } catch (error: any) {
-    console.error('❌ Error fetching VDM balance:', error);
+    console.error('\n❌ === VDM BALANCE FETCH FAILED ===');
     console.error('   Wallet:', walletAddress.toString());
     console.error('   VDM Token:', VDM_TOKEN_ADDRESS);
-    console.error('   Error details:', error?.message || error);
+    console.error('   Error:', error?.message || error);
+    console.error('   Stack:', error?.stack);
+    console.error('===================================\n');
     return 0;
   }
 }
