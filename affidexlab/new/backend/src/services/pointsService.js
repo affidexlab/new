@@ -426,7 +426,7 @@ export const getGlobalMetrics = async () => {
         ? query(
             `SELECT 
               COUNT(*) as total_stakes,
-              COALESCE(SUM(staked_value_usdt_snapshot), 0) as total_staking_volume
+              COALESCE(SUM(staked_amount), 0) as total_staking_volume
              FROM solana_staking_positions 
              WHERE status IN ('active', 'completed')`
           ).catch(() => ({ rows: [{ total_stakes: 0, total_staking_volume: 0 }] }))
