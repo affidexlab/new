@@ -3,21 +3,28 @@ import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_2022_PROGRA
 
 async function retryRpcCall<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  delayMs: number = 1000
+  maxRetries: number = 5,
+  delayMs: number = 800
 ): Promise<T> {
   let lastError: any;
   for (let i = 0; i < maxRetries; i++) {
     try {
-      return await fn();
+      const result = await fn();
+      if (i > 0) {
+        console.log(`✅ RPC call succeeded on attempt ${i + 1}`);
+      }
+      return result;
     } catch (error: any) {
       lastError = error;
-      console.warn(`RPC call failed (attempt ${i + 1}/${maxRetries}):`, error?.message || error);
+      console.warn(`⚠️  RPC call failed (attempt ${i + 1}/${maxRetries}):`, error?.message || error);
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+        const delay = delayMs * Math.pow(1.5, i);
+        console.log(`   Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
+  console.error(`❌ RPC call failed after ${maxRetries} attempts`);
   throw lastError;
 }
 
