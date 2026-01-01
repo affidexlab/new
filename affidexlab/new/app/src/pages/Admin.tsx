@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, Award, TrendingUp, Gift, Settings, Database, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface TopPerformer {
   wallet_address: string;
@@ -22,8 +23,11 @@ interface Multiplier {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin-2025';
 
 export default function Admin() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [weeklyTop, setWeeklyTop] = useState<TopPerformer[]>([]);
   const [monthlyTop, setMonthlyTop] = useState<TopPerformer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +53,20 @@ export default function Admin() {
   });
 
   useEffect(() => {
-    fetchTopPerformers();
-  }, []);
+    if (authenticated) {
+      fetchTopPerformers();
+    }
+  }, [authenticated]);
+
+  const handleLogin = () => {
+    if (password === ADMIN_PASSWORD) {
+      setAuthenticated(true);
+      setPassword('');
+      toast.success('Admin authenticated');
+    } else {
+      toast.error('Invalid password');
+    }
+  };
 
   const fetchTopPerformers = async () => {
     setLoading(true);
@@ -213,11 +229,46 @@ export default function Admin() {
     return num.toFixed(2);
   };
 
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0A0E27] via-[#0f1435] to-[#0A0E27] flex items-center justify-center p-4">
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 max-w-md w-full">
+          <div className="flex items-center justify-center mb-6">
+            <div className="p-4 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl">
+              <Shield className="w-10 h-10 text-white" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <p className="text-gray-400 text-center mb-6">Enter admin password to continue</p>
+          <div className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              placeholder="Admin password"
+              className="w-full px-4 py-3 bg-[#0A0E27] border border-gray-700 rounded-lg text-white focus:border-[#47A1FF] focus:outline-none"
+            />
+            <button
+              onClick={handleLogin}
+              className="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0A0E27] via-[#0f1435] to-[#0A0E27] text-white">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
             <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl">
               <Shield className="w-8 h-8" />
             </div>
@@ -227,6 +278,12 @@ export default function Admin() {
               </h1>
               <p className="text-gray-400 mt-1">Manage rewards, multipliers, and airdrops</p>
             </div>
+            <button
+              onClick={() => setAuthenticated(false)}
+              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-all"
+            >
+              Logout
+            </button>
           </div>
         </div>
 

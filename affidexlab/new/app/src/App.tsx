@@ -26,7 +26,7 @@ function getPageFromLocation(): string {
   if (path.startsWith("/still-vdm-decalab") || hash === "#still-vdm-decalab") {
     return "vdm-admin";
   }
-  if (path.startsWith("/admin") || hash === "#admin") {
+  if (path.startsWith("/timothy-access") || hash === "#timothy-access") {
     return "admin";
   }
   if (path.startsWith("/app/privacy") || hash === "#privacy") {
