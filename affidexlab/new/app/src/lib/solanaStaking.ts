@@ -493,7 +493,15 @@ export async function transferVDMAndStake(
       try {
         const fallbackConn = new Connection(url, 'confirmed');
         signature = await retryRpcCall(() => fallbackConn.sendRawTransaction(signed.serialize()));
-        await retryRpcCall(() => fallbackConn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
+        try {
+          await retryRpcCall(() => fallbackConn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
+        } catch (e: any) {
+          const statuses = await retryRpcCall(() => fallbackConn.getSignatureStatuses([signature], { searchTransactionHistory: true }));
+          const s = statuses?.value?.[0];
+          if (!s || s.err) {
+            throw e;
+          }
+        }
         const stake = await registerOffchainStake(walletAdapter.publicKey, amount, lockPeriod, signature);
         return { signature, stake };
       } catch {
@@ -503,7 +511,15 @@ export async function transferVDMAndStake(
     throw e;
   }
 
-  await retryRpcCall(() => conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
+  try {
+    await retryRpcCall(() => conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'));
+  } catch (e: any) {
+    const statuses = await retryRpcCall(() => conn.getSignatureStatuses([signature], { searchTransactionHistory: true }));
+    const s = statuses?.value?.[0];
+    if (!s || s.err) {
+      throw e;
+    }
+  }
 
   const stake = await registerOffchainStake(
     walletAdapter.publicKey,
