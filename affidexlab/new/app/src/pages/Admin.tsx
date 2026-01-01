@@ -269,14 +269,15 @@ export default function Admin() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl">
-              <Shield className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                Admin Dashboard
-              </h1>
-              <p className="text-gray-400 mt-1">Manage rewards, multipliers, and airdrops</p>
+              <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl">
+                <Shield className="w-8 h-8" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                  Admin Dashboard
+                </h1>
+                <p className="text-gray-400 mt-1">Manage rewards, multipliers, and airdrops</p>
+              </div>
             </div>
             <button
               onClick={() => setAuthenticated(false)}
