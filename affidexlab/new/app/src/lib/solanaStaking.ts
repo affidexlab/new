@@ -30,8 +30,6 @@ async function retryRpcCall<T>(
 
 const FALLBACK_SOLANA_RPC_URLS = [
   'https://api.mainnet-beta.solana.com',
-  'https://solana-mainnet.rpc.extrnode.com',
-  'https://solana.public-rpc.com',
 ] as const;
 
 function shouldFallbackRpc(error: any): boolean {
