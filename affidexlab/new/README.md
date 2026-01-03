@@ -1,6 +1,6 @@
-# DeFiSwap - Cross-Chain Swap Aggregator
+# DecaFlow Protocol - Arbitrum AI Privacy Infrastructure
 
-A production-ready DeFi protocol on Arbitrum with swap aggregation, cross-chain bridging, and MEV protection.
+An Arbitrum-native privacy infrastructure layer featuring AI-powered MEV protection, programmable DLMM pools, and privacy-as-a-service SDK.
 
 ## Features
 

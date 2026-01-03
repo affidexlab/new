@@ -8,12 +8,16 @@ import VDMAdmin from "./pages/VDMAdmin";
 import SolanaStaking from "./pages/SolanaStaking";
 import InvestorMetrics from "./pages/InvestorMetrics";
 import Quests from "./pages/Quests";
+import MEVDashboard from "./pages/MEVDashboard";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/mev-dashboard") || hash === "#mev-dashboard") {
+    return "mev-dashboard";
+  }
   if (path.startsWith("/investor-metrics") || hash === "#investor-metrics") {
     return "investor-metrics";
   }
@@ -61,6 +65,7 @@ export default function App() {
   return (
     <TransactionEventsProvider>
       {currentPage === "home" && <Landing />}
+      {currentPage === "mev-dashboard" && <MEVDashboard />}
       {currentPage === "investor-metrics" && (
         <div className="min-h-screen bg-[#0A0E27] text-white">
           <InvestorMetrics />

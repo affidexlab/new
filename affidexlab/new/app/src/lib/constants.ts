@@ -136,12 +136,13 @@ import { getAddress } from "viem";
 export const SWAP_FEE_BPS = 150; // 1.5% fee (150 basis points)
 export const TREASURY_WALLET = getAddress((import.meta.env.VITE_TREASURY_WALLET as string) || "0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901");
 
-// FeeRouter addresses per chain (deployed with security hardening)
+// FeeRouter addresses per chain (deployed with onchain fee enforcement)
 export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
-  42161: "0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3", // Arbitrum
-  8453: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Base
-  137: "0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd", // Polygon
-  43114: "0x41475aDeB1172905Dd1085FBe525e1A79487e49C", // Avalanche
+  42161: "0xaaC3cf9C55950AB26f5e6739FcF162E708b54f96", // Arbitrum - Jan 3, 2026
+  8453: "0xf0c700d5362D91058c1b74cA8f93BA12aB6E160f", // Base - Jan 3, 2026
+  137: "0x5d5D469Db59D3832897a62704A9f2bd947F171Cf", // Polygon - Jan 3, 2026
+  43114: "0xC66b78eF1d29D2214F9eF455057a106A5cbD1bf0", // Avalanche - Jan 3, 2026
+  10: "0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89", // Optimism - Jan 3, 2026
 };
 
 // Coingecko platform IDs for chain token prices

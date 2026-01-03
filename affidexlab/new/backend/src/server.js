@@ -14,6 +14,7 @@ import pointsRoutes from './routes/v1/points.js';
 import leaderboardRoutes from './routes/v1/leaderboard.js';
 import solanaStakingRoutes from './routes/v1/solana-staking.js';
 import investorMetricsRoutes from './routes/v1/investor-metrics.js';
+import mevRoutes from './routes/v1/mev.js';
 
 dotenv.config();
 
@@ -154,6 +155,7 @@ app.use('/v1/points', pointsRoutes);
 app.use('/v1/leaderboard', leaderboardRoutes);
 app.use('/v1/solana-staking', solanaStakingRoutes);
 app.use('/v1/investor-metrics', investorMetricsRoutes);
+app.use('/v1/mev', mevRoutes); // MEV prediction and risk scoring
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {

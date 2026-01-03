@@ -258,6 +258,7 @@ export default function Landing() {
                 <span>VDM Staking</span>
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
+              <a href="/mev-dashboard" className="text-gray-400 hover:text-[#47A1FF] transition">MEV Analytics</a>
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#47A1FF] transition">Docs</a>
@@ -304,6 +305,7 @@ export default function Landing() {
                 <span>VDM Staking</span>
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
+              <a href="/mev-dashboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">MEV Analytics</a>
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Docs</a>
@@ -351,14 +353,14 @@ export default function Landing() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition group">
                 <span className="text-xs sm:text-sm font-medium text-white">PRIVATE LIQUIDITY LAYER</span>
                 <span className="text-gray-500">|</span>
-                <span className="text-xs sm:text-sm text-[#47A1FF]">Built on Base</span>
+                <span className="text-xs sm:text-sm text-[#47A1FF]">Arbitrum Native</span>
                 <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
               </div>
 
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
                 <span className="block animate-fade-in-up">Privacy Swaps.</span>
                 <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
-                  DLMM Liquidity. Base Native.
+                  DLMM Liquidity. MEV Protected.
                 </span>
               </h1>
 
