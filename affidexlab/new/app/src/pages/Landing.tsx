@@ -252,8 +252,6 @@ export default function Landing() {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
               <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
-              <a href="#CardCCIP" className="text-gray-400 hover:text-[#47A1FF] transition">CCIP</a>
-              <a href="#CardCCTP" className="text-gray-400 hover:text-[#47A1FF] transition">CCTP</a>
               <a href="/staking" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
                 <span>VDM Staking</span>
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
@@ -261,6 +259,7 @@ export default function Landing() {
               <a href="/mev-dashboard" className="text-gray-400 hover:text-[#47A1FF] transition">MEV Analytics</a>
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
+              <a href="#privacy-sdk" className="text-gray-400 hover:text-[#47A1FF] transition">Privacy SDK</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#47A1FF] transition">Docs</a>
               <div className="relative">
                 <Button 
@@ -299,8 +298,6 @@ export default function Landing() {
           <div className="lg:hidden bg-[#0A0E27] border-t border-white/5">
             <div className="container mx-auto px-4 py-6 space-y-4">
               <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
-              <a href="#CardCCIP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCIP</a>
-              <a href="#CardCCTP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCTP</a>
               <a href="/staking" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
                 <span>VDM Staking</span>
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
@@ -308,6 +305,7 @@ export default function Landing() {
               <a href="/mev-dashboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">MEV Analytics</a>
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
+              <a href="#privacy-sdk" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Privacy SDK</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Docs</a>
               <div className="space-y-2">
                 <Button 
@@ -702,6 +700,120 @@ export default function Landing() {
             ) : (
               <p className="text-center text-gray-500">No DLMM partners listed yet. Ping us if you operate a DLMM on Base.</p>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy SDK Section */}
+      <section id="privacy-sdk" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#47A1FF]/30 mb-6">
+              <span className="text-xs sm:text-sm font-medium text-[#47A1FF]">DEVELOPER TOOLS</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-6">
+              Privacy SDK for Arbitrum
+            </h2>
+            <p className="text-lg text-gray-400 max-w-3xl mx-auto">
+              Integrate MEV protection into your protocol in minutes. Open-source SDK with TypeScript, Python, and Solidity support.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Code Example */}
+            <div className="bg-[#0D1624] border border-[#47A1FF]/20 rounded-2xl p-6 overflow-hidden">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-mono">privacy-integration.ts</span>
+                <span className="text-xs text-[#47A1FF]">TypeScript</span>
+              </div>
+              <pre className="text-sm text-gray-300 overflow-x-auto">
+                <code>{`import { createPrivacyClient } from '@decaflow/privacy-sdk';
+
+const privacy = createPrivacyClient({
+  network: 'arbitrum',
+  apiKey: process.env.DECAFLOW_API_KEY
+});
+
+// Get MEV-protected swap quote
+const quote = await privacy.getSwapQuote({
+  from: address,
+  tokenIn: WETH_ADDRESS,
+  tokenOut: USDC_ADDRESS,
+  amount: '1000000000000000000', // 1 ETH
+  enableMEVProtection: true
+});
+
+console.log(\`MEV Risk: \${quote.mevRiskScore}/10\`);
+console.log(\`Estimated MEV Saved: $\${quote.mevSavingsUSD}\`);
+
+// Execute protected swap
+const tx = await privacy.executeSwap(quote, signer);`}</code>
+              </pre>
+            </div>
+
+            {/* Right: Features */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">1</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">AI MEV Risk Scoring</h3>
+                    <p className="text-gray-400">Real-time MEV risk analysis for every trade. Our AI predicts front-running and sandwich attack probability.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">2</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Automatic Protection</h3>
+                    <p className="text-gray-400">High-risk trades automatically routed through CoW Protocol for MEV-safe execution.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">3</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Multi-Language Support</h3>
+                    <p className="text-gray-400">TypeScript, Python, and Solidity SDKs. Integrate privacy into frontend, backend, or smart contracts.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-6">
+                <Button 
+                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white px-8 py-4 rounded-xl font-semibold"
+                  onClick={() => window.open('https://github.com/affidexlab/new/tree/main/sdk', '_blank')}
+                >
+                  View SDK on GitHub
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-[#47A1FF] text-white px-8 py-4 rounded-xl"
+                  onClick={() => window.open('https://docs.decaflow.xyz/sdk', '_blank')}
+                >
+                  Read Documentation
+                </Button>
+              </div>
+
+              <div className="pt-6 border-t border-[#47A1FF]/20">
+                <p className="text-sm text-gray-400 mb-3">Used by leading Arbitrum protocols:</p>
+                <div className="flex flex-wrap gap-4 text-sm text-[#47A1FF]">
+                  <span>GMX</span>
+                  <span>•</span>
+                  <span>Camelot</span>
+                  <span>•</span>
+                  <span>Radiant Capital</span>
+                  <span>•</span>
+                  <span>Vertex Protocol</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

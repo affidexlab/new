@@ -75,17 +75,7 @@ export default function App() {
       {currentPage === "leaderboard" && <Leaderboard />}
       {currentPage === "vdm-admin" && <VDMAdmin />}
       {currentPage === "admin" && <Admin />}
-      {currentPage === "privacy" && (
-        <div className="min-h-screen bg-[#0A0E27] text-white">
-          <div className="container mx-auto px-4 py-8">
-            <div className="mb-8 text-center">
-              <h1 className="text-4xl font-bold mb-2">Privacy Swap</h1>
-              <p className="text-gray-400">Trade with complete anonymity using MEV protection</p>
-            </div>
-            <PrivacySwap />
-          </div>
-        </div>
-      )}
+      {currentPage === "privacy" && <AppPage initialTab="privacy" />}
       {currentPage === "app" && <AppPage />}
       {currentPage === "quests" && <Quests />}
     </TransactionEventsProvider>
