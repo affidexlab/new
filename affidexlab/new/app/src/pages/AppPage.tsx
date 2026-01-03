@@ -10,8 +10,12 @@ import { OptimizedImage } from "@/components/OptimizedImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCampaignStats, type GlobalStats, type CampaignStats } from "@/hooks/useCampaignStats";
 
-export default function AppPage() {
-  const [activeTab, setActiveTab] = useState("swap");
+interface AppPageProps {
+  initialTab?: string;
+}
+
+export default function AppPage({ initialTab = "swap" }: AppPageProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const { globalStats, campaignStats, loading: campaignLoading } = useCampaignStats(45000);
 
   return (
@@ -59,7 +63,7 @@ export default function AppPage() {
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-8 sm:py-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5 mb-8 bg-[#0D1624] border border-[#1E2940] p-1 rounded-xl">
+          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-6 mb-8 bg-[#0D1624] border border-[#1E2940] p-1 rounded-xl">
             <TabsTrigger 
               value="swap" 
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3396FF] data-[state=active]:to-[#47A1FF] data-[state=active]:text-white rounded-lg transition-all"
@@ -90,6 +94,12 @@ export default function AppPage() {
             >
               Points
             </TabsTrigger>
+            <TabsTrigger 
+              value="privacy" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3396FF] data-[state=active]:to-[#47A1FF] data-[state=active]:text-white rounded-lg transition-all"
+            >
+              Privacy
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="swap" className="mt-0">
@@ -110,6 +120,16 @@ export default function AppPage() {
 
           <TabsContent value="points" className="mt-0">
             <PointsDashboard />
+          </TabsContent>
+
+          <TabsContent value="privacy" className="mt-0">
+            <div className="max-w-3xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Privacy Swap</h2>
+                <p className="text-gray-400">Trade with MEV protection using private order flow submission</p>
+              </div>
+              <SwapApp isPrivacyMode={true} />
+            </div>
           </TabsContent>
         </Tabs>
       </main>
