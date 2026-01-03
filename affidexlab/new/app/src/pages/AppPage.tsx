@@ -133,13 +133,13 @@ export default function AppPage() {
                 <OptimizedImage src="/images/social/discord.png" alt="Discord" className="w-6 h-6" />
               </a>
               <a 
-                href="https://base.org/" 
+                href="https://arbitrum.io/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1E2940] hover:border-[#47A1FF]/50 transition bg-[#0D1624]"
               >
-                <img src="/images/chains/base.png" alt="Base" className="w-4 h-4" />
-                <span className="text-[10px] text-gray-400">Powered by Base</span>
+                <img src="/images/chains/arbitrum.png" alt="Base" className="w-4 h-4" />
+                <span className="text-[10px] text-gray-400">Built on Arbitrum</span>
               </a>
             </div>
 

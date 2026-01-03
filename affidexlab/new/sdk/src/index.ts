@@ -1,3 +1,8 @@
+// Privacy SDK exports
+export { PrivacyClient, createPrivacyClient } from './privacy/PrivacyClient';
+export type { PrivacyConfig, SwapParams, SwapQuote, SwapExecution } from './privacy/PrivacyClient';
+
+// Widget & Hook exports
 export { useSwapQuote } from './hooks/useSwapQuote';
 export { useBridgeQuote } from './hooks/useBridgeQuote';
 export { useLiquidityPools } from './hooks/useLiquidityPools';
