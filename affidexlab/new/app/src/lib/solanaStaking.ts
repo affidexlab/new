@@ -428,7 +428,19 @@ export async function transferVDMAndStake(
 
   const vdmMint = new PublicKey(VDM_TOKEN_ADDRESS);
   const custodyWallet = new PublicKey(AFFIDEX_CUSTODY_WALLET);
+  const treasuryWallet = new PublicKey(AFFIDEX_TREASURY_WALLET);
   const tokenProgramId = await getVdmTokenProgramId(conn);
+
+  console.log('\n💰 === VDM STAKING TRANSFER START ===');
+  console.log('   Total Amount:', amount, 'VDM');
+  
+  const depositFee = calculateDepositFee(amount);
+  const netStakeAmount = calculateNetStakedVdm(amount);
+  
+  console.log('   Deposit Fee (2.5%):', depositFee, 'VDM');
+  console.log('   Net Stake Amount:', netStakeAmount, 'VDM');
+  console.log('   Custody Wallet:', custodyWallet.toString());
+  console.log('   Treasury Wallet:', treasuryWallet.toString());
 
   const fromTokenAccount = await getAssociatedTokenAddress(
     vdmMint,
@@ -442,21 +454,29 @@ export async function transferVDMAndStake(
     throw new Error('VDM token account not found for your wallet.');
   }
 
-  const toTokenAccount = await getAssociatedTokenAddress(
+  const custodyTokenAccount = await getAssociatedTokenAddress(
     vdmMint,
     custodyWallet,
     true,
     tokenProgramId
   );
 
+  const treasuryTokenAccount = await getAssociatedTokenAddress(
+    vdmMint,
+    treasuryWallet,
+    true,
+    tokenProgramId
+  );
+
   const transaction = new Transaction();
 
-  const toTokenAccountInfo = await retryRpcCall(() => conn.getAccountInfo(toTokenAccount));
-  if (!toTokenAccountInfo) {
+  const custodyAccountInfo = await retryRpcCall(() => conn.getAccountInfo(custodyTokenAccount));
+  if (!custodyAccountInfo) {
+    console.log('   Creating custody token account...');
     transaction.add(
       createAssociatedTokenAccountIdempotentInstruction(
         walletAdapter.publicKey,
-        toTokenAccount,
+        custodyTokenAccount,
         custodyWallet,
         vdmMint,
         tokenProgramId
@@ -464,18 +484,44 @@ export async function transferVDMAndStake(
     );
   }
 
-  const amountInSmallestUnit = Math.floor(amount * Math.pow(10, VDM_TOKEN_DECIMALS));
+  const treasuryAccountInfo = await retryRpcCall(() => conn.getAccountInfo(treasuryTokenAccount));
+  if (!treasuryAccountInfo) {
+    console.log('   Creating treasury token account...');
+    transaction.add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        walletAdapter.publicKey,
+        treasuryTokenAccount,
+        treasuryWallet,
+        vdmMint,
+        tokenProgramId
+      )
+    );
+  }
 
-  const transferInstruction = createTransferInstruction(
+  const netStakeAmountInSmallestUnit = Math.floor(netStakeAmount * Math.pow(10, VDM_TOKEN_DECIMALS));
+  const depositFeeInSmallestUnit = Math.floor(depositFee * Math.pow(10, VDM_TOKEN_DECIMALS));
+
+  console.log('   Transfer 1: Net stake to custody:', netStakeAmountInSmallestUnit, 'units');
+  const stakeTransferInstruction = createTransferInstruction(
     fromTokenAccount,
-    toTokenAccount,
+    custodyTokenAccount,
     walletAdapter.publicKey,
-    amountInSmallestUnit,
+    netStakeAmountInSmallestUnit,
     [],
     tokenProgramId
   );
+  transaction.add(stakeTransferInstruction);
 
-  transaction.add(transferInstruction);
+  console.log('   Transfer 2: Deposit fee to treasury:', depositFeeInSmallestUnit, 'units');
+  const feeTransferInstruction = createTransferInstruction(
+    fromTokenAccount,
+    treasuryTokenAccount,
+    walletAdapter.publicKey,
+    depositFeeInSmallestUnit,
+    [],
+    tokenProgramId
+  );
+  transaction.add(feeTransferInstruction);
 
   const { blockhash, lastValidBlockHeight } = await retryRpcCall(() => conn.getLatestBlockhash('finalized'));
   transaction.recentBlockhash = blockhash;
