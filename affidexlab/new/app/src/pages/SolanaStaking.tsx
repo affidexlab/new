@@ -313,10 +313,6 @@ export default function SolanaStaking() {
                       <span className="text-white">{grossValueUsdt ? `${grossValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
-                      <span>Deposit Fee (2.5%)</span>
-                      <span className="text-red-400">-{depositFee.toFixed(2)} VDM</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
                       <span>Net Stake Value</span>
                       <span className="text-white">{netValueUsdt ? `${netValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
@@ -324,12 +320,8 @@ export default function SolanaStaking() {
                       <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
                       <span className="text-green-400">+{estimatedRewards.toFixed(2)} USDT</span>
                     </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Withdrawal Fee (1.5%)</span>
-                      <span className="text-red-400">-{withdrawalFee.toFixed(2)} VDM</span>
-                    </div>
                     <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
-                      <span>Principal After Fees</span>
+                      <span>Estimated Principal</span>
                       <span className="text-white">{netPrincipalVdm.toFixed(2)} VDM</span>
                     </div>
                     <div className="flex justify-between text-gray-400 text-xs">
@@ -412,7 +404,7 @@ export default function SolanaStaking() {
                   <div className="space-y-3">
                     <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
                       <p className="text-green-400 font-medium mb-2">✅ Eligible for claim</p>
-                      <p className="text-xs text-gray-300">Your claim request will be processed by Affidex Lab / VDM. You will receive your VDM (minus withdrawal fee) plus USDT rewards directly to your wallet.</p>
+                      <p className="text-xs text-gray-300">Your claim request will be processed by Affidex Lab / VDM. You will receive your VDM plus USDT rewards directly to your wallet.</p>
                     </div>
                     <button
                       onClick={handleClaim}
@@ -485,27 +477,6 @@ export default function SolanaStaking() {
                     <p className="text-white font-medium">Staking Management</p>
                     <p className="text-gray-400 text-xs">All staking logic and balances are managed by DecaFlow infrastructure.</p>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#151B35]/60 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Fee Structure</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-[#0A0E27]/50 rounded-lg">
-                  <span className="text-gray-400 text-sm">Deposit Fee</span>
-                  <span className="text-white font-medium">2.5%</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-[#0A0E27]/50 rounded-lg">
-                  <span className="text-gray-400 text-sm">Withdrawal Fee</span>
-                  <span className="text-white font-medium">1.5%</span>
-                </div>
-                
-                <div className="mt-4 p-3 bg-gradient-to-r from-[#3396FF]/10 to-[#47A1FF]/10 rounded-lg border border-[#47A1FF]/30">
-                  <p className="text-xs text-gray-400 mb-1">Fees collected by:</p>
-                  <p className="text-xs text-gray-300">Affidex Lab (DecaFlow Protocol)</p>
                 </div>
               </div>
             </div>
