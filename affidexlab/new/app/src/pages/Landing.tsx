@@ -257,6 +257,10 @@ export default function Landing() {
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
               <a href="/mev-dashboard" className="text-gray-400 hover:text-[#47A1FF] transition">MEV Analytics</a>
+              <a href="/advanced-analytics" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
+                <span>Advanced Analytics</span>
+                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
               <a href="#privacy-sdk" className="text-gray-400 hover:text-[#47A1FF] transition">Privacy SDK</a>
@@ -303,6 +307,10 @@ export default function Landing() {
                 <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
               </a>
               <a href="/mev-dashboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">MEV Analytics</a>
+              <a href="/advanced-analytics" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
+                <span>Advanced Analytics</span>
+                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
               <a href="#privacy-sdk" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Privacy SDK</a>
