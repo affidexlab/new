@@ -15,6 +15,7 @@ import leaderboardRoutes from './routes/v1/leaderboard.js';
 import solanaStakingRoutes from './routes/v1/solana-staking.js';
 import investorMetricsRoutes from './routes/v1/investor-metrics.js';
 import mevRoutes from './routes/v1/mev.js';
+import analyticsRoutes from './routes/v1/analytics.js';
 
 dotenv.config();
 
@@ -140,10 +141,24 @@ app.get('/v1', (_req, res) => {
         quote: 'POST /v1/bridge/quote',
         execute: 'POST /v1/bridge/execute',
         status: 'GET /v1/bridge/status/{trackingId}'
+      },
+      mev: {
+        riskScore: 'POST /v1/mev/risk-score',
+        historical: 'GET /v1/mev/historical/{chainId}',
+        savings: 'POST /v1/mev/savings-estimate'
+      },
+      analytics: {
+        userStats: 'GET /v1/analytics/user/{address}/stats',
+        userHistory: 'GET /v1/analytics/user/{address}/history',
+        leaderboard: 'GET /v1/analytics/leaderboard',
+        tokens: 'GET /v1/analytics/tokens/{tokenAddress}',
+        protocols: 'GET /v1/analytics/protocols',
+        subscribe: 'POST /v1/analytics/alerts/subscribe',
+        export: 'GET /v1/analytics/export'
       }
     },
     documentation: 'https://docs.decaflow.xyz/api',
-    authentication: 'X-Partner-ID header required'
+    authentication: 'X-Partner-ID header required for swap/liquidity/bridge'
   });
 });
 
@@ -156,6 +171,7 @@ app.use('/v1/leaderboard', leaderboardRoutes);
 app.use('/v1/solana-staking', solanaStakingRoutes);
 app.use('/v1/investor-metrics', investorMetricsRoutes);
 app.use('/v1/mev', mevRoutes); // MEV prediction and risk scoring
+app.use('/v1/analytics', analyticsRoutes); // Advanced analytics and user stats
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
