@@ -4,6 +4,7 @@
   "installCommand": "cd affidexlab/new/app && bun install",
   "framework": "vite",
   "devCommand": "cd affidexlab/new/app && bun run dev",
+  "crons": [],
   "rewrites": [
     {
       "source": "/(.*)",
