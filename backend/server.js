@@ -122,5 +122,20 @@ app.get('/api/socket/quote', [
   }
 });
 
+// Import analytics routes
+import analyticsRoutes from './src/routes/v1/analytics.js';
+
+// Import services
+import './src/services/mempoolMonitor.js';
+import './src/services/timeboostService.js';
+
+// Register analytics API routes
+app.use('/v1/analytics', analyticsRoutes);
+
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Backend running on :${port}`));
+const server = app.listen(port, () => {
+  console.log(`Backend running on :${port}`);
+  console.log('✅ Analytics API enabled at /v1/analytics');
+  console.log('✅ Mempool monitor initialized');
+  console.log('✅ Timeboost service initialized');
+});

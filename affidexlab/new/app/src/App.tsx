@@ -9,12 +9,16 @@ import SolanaStaking from "./pages/SolanaStaking";
 import InvestorMetrics from "./pages/InvestorMetrics";
 import Quests from "./pages/Quests";
 import MEVDashboard from "./pages/MEVDashboard";
+import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/advanced-analytics") || hash === "#advanced-analytics") {
+    return "advanced-analytics";
+  }
   if (path.startsWith("/mev-dashboard") || hash === "#mev-dashboard") {
     return "mev-dashboard";
   }
@@ -65,6 +69,7 @@ export default function App() {
   return (
     <TransactionEventsProvider>
       {currentPage === "home" && <Landing />}
+      {currentPage === "advanced-analytics" && <AdvancedAnalytics />}
       {currentPage === "mev-dashboard" && <MEVDashboard />}
       {currentPage === "investor-metrics" && (
         <div className="min-h-screen bg-[#0A0E27] text-white">

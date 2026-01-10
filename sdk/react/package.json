@@ -1,0 +1,33 @@
+{
+  "name": "@decaflow/react-hooks",
+  "version": "0.1.0",
+  "description": "React hooks for DecaFlow MEV protection",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "react",
+    "hooks",
+    "decaflow",
+    "mev",
+    "defi",
+    "arbitrum"
+  ],
+  "author": "DecaFlow",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "wagmi": ">=2.0.0",
+    "viem": ">=2.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}
