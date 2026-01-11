@@ -868,7 +868,7 @@ const tx = await privacy.executeSwap(quote, signer);`}</code>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinMarketCap</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">CoinGecko</a></li>
                 <li><a href="#" className="hover:text-[#47A1FF] transition">DexScreener</a></li>
-                <li><a href="https://basescan.org" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Base Explorer</a></li>
+                <li><a href="https://arbiscan.io" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Arbitrum Explorer</a></li>
               </ul>
             </div>
 
@@ -907,7 +907,7 @@ const tx = await privacy.executeSwap(quote, signer);`}</code>
 
           {/* Copyright */}
           <div className="border-t border-[#47A1FF]/10 pt-8 text-center text-sm text-gray-500">
-            <p>Copyright © DecaFlow 2025 | Powered by Base</p>
+            <p>Copyright © DecaFlow 2025 | Built on Arbitrum</p>
           </div>
         </div>
       </footer>
