@@ -38,6 +38,8 @@ export const query = async (text, params) => {
   }
 };
 
+export const getPool = async () => pool;
+
 export const getClient = async () => {
   const client = await pool.connect();
   return client;
