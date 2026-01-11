@@ -120,6 +120,19 @@ export function MEVDashboard() {
               </button>
             ))}
           </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-[#1E2940] bg-[#0D1624]/60 px-4 py-3">
+            <div className="text-sm text-gray-400">
+              Quick view. For heatmaps, bot tracking, and wallet-specific stats, use{' '}
+              <a href="/advanced-analytics" className="text-[#47A1FF] hover:text-white transition">Advanced Analytics</a>.
+            </div>
+            <a
+              href="/advanced-analytics"
+              className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
+            >
+              Open Advanced Analytics
+            </a>
+          </div>
         </div>
 
         {loading ? (
