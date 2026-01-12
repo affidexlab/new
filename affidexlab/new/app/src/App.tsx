@@ -10,12 +10,24 @@ import InvestorMetrics from "./pages/InvestorMetrics";
 import Quests from "./pages/Quests";
 import MEVDashboard from "./pages/MEVDashboard";
 import AdvancedAnalytics from "./pages/AdvancedAnalytics";
+import SDKLanding from "./pages/SDKLanding";
+import DashboardLanding from "./pages/DashboardLanding";
+import Pricing from "./pages/Pricing";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
   const hash = window.location.hash;
   
+  if (path.startsWith("/sdk") || hash === "#sdk") {
+    return "sdk-landing";
+  }
+  if (path.startsWith("/dashboard-product") || hash === "#dashboard-product") {
+    return "dashboard-landing";
+  }
+  if (path.startsWith("/pricing") || hash === "#pricing") {
+    return "pricing";
+  }
   if (path.startsWith("/advanced-analytics") || hash === "#advanced-analytics") {
     return "advanced-analytics";
   }
@@ -69,6 +81,9 @@ export default function App() {
   return (
     <TransactionEventsProvider>
       {currentPage === "home" && <Landing />}
+      {currentPage === "sdk-landing" && <SDKLanding />}
+      {currentPage === "dashboard-landing" && <DashboardLanding />}
+      {currentPage === "pricing" && <Pricing />}
       {currentPage === "advanced-analytics" && <AdvancedAnalytics />}
       {currentPage === "mev-dashboard" && <MEVDashboard />}
       {currentPage === "investor-metrics" && (
