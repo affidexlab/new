@@ -1,0 +1,37 @@
+# Source files (only dist should be published)
+src/
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+rollup.config.js
+.eslintrc.js
+.prettierrc
+
+# Tests
+__tests__/
+*.test.ts
+*.spec.ts
+coverage/
+
+# CI/CD
+.github/
+.circleci/
+
+# Documentation source
+docs/
+
+# Examples
+examples/
+
+# Development
+.vscode/
+.idea/
+*.log
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
