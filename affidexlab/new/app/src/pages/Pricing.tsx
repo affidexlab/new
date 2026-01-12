@@ -10,7 +10,7 @@ export default function Pricing() {
       <div className="pt-20 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#3396FF] via-[#47A1FF] to-[#3396FF] bg-clip-text text-transparent">
               Simple, Transparent Pricing
             </h1>
             
@@ -18,12 +18,12 @@ export default function Pricing() {
               Start free, scale as you grow. No hidden fees.
             </p>
 
-            <div className="inline-flex items-center gap-4 bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-full p-2">
+            <div className="inline-flex items-center gap-4 bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-full p-2">
               <button
                 onClick={() => setBillingPeriod('monthly')}
                 className={`px-6 py-2 rounded-full transition ${
                   billingPeriod === 'monthly'
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                    ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -33,7 +33,7 @@ export default function Pricing() {
                 onClick={() => setBillingPeriod('yearly')}
                 className={`px-6 py-2 rounded-full transition ${
                   billingPeriod === 'yearly'
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                    ? 'bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -49,10 +49,10 @@ export default function Pricing() {
             <h2 className="text-3xl font-bold mb-8 text-center">🔒 Privacy SDK Pricing</h2>
             
             <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 hover:border-[#3396FF]/40 transition">
                 <div className="flex items-center gap-2 mb-4">
-                  <Zap className="h-6 w-6 text-purple-400" />
-                  <div className="text-sm font-bold text-purple-400">FREE</div>
+                  <Zap className="h-6 w-6 text-[#47A1FF]" />
+                  <div className="text-sm font-bold text-[#47A1FF]">FREE</div>
                 </div>
                 
                 <div className="text-4xl font-bold mb-2">
@@ -85,19 +85,19 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://docs.decaflow.xyz/sdk/quickstart', '_blank')} className="w-full bg-purple-600 hover:bg-purple-700">
+                <Button onClick={() => window.open('https://docs.decaflow.xyz/sdk/quickstart', '_blank')} className="w-full bg-[#3396FF] hover:bg-[#2986EF]">
                   Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur border-2 border-purple-500/50 rounded-2xl p-8 relative transform md:scale-105">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 rounded-full text-sm font-bold">
+              <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/20 backdrop-blur border-2 border-[#3396FF]/50 rounded-2xl p-8 relative transform md:scale-105">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-4 py-1 rounded-full text-sm font-bold">
                   MOST POPULAR
                 </div>
                 
                 <div className="flex items-center gap-2 mb-4">
-                  <Shield className="h-6 w-6 text-purple-400" />
-                  <div className="text-sm font-bold text-purple-400">PREMIUM</div>
+                  <Shield className="h-6 w-6 text-[#47A1FF]" />
+                  <div className="text-sm font-bold text-[#47A1FF]">PREMIUM</div>
                 </div>
                 
                 <div className="text-4xl font-bold mb-2">
@@ -137,15 +137,15 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/premium', '_blank')} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/premium', '_blank')} className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                   Contact Sales <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 hover:border-[#3396FF]/40 transition">
                 <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-6 w-6 text-purple-400" />
-                  <div className="text-sm font-bold text-purple-400">ENTERPRISE</div>
+                  <TrendingUp className="h-6 w-6 text-[#47A1FF]" />
+                  <div className="text-sm font-bold text-[#47A1FF]">ENTERPRISE</div>
                 </div>
                 
                 <div className="text-4xl font-bold mb-2">Custom</div>
@@ -179,7 +179,7 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} variant="outline" className="w-full border-[#3396FF]/30 hover:bg-[#3396FF]/10">
                   Contact Us <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -190,8 +190,8 @@ export default function Pricing() {
             <h2 className="text-3xl font-bold mb-8 text-center">📊 MEV Dashboard Pricing</h2>
             
             <div className="grid md:grid-cols-4 gap-6">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">FREE</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-6 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">FREE</div>
                 <div className="text-3xl font-bold mb-4">$0</div>
                 <p className="text-gray-300 mb-6 text-sm">For individual users</p>
                 
@@ -214,13 +214,13 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.location.href = '/mev-dashboard'} className="w-full bg-purple-600 hover:bg-purple-700 text-sm py-2">
+                <Button onClick={() => window.location.href = '/mev-dashboard'} className="w-full bg-[#3396FF] hover:bg-[#2986EF] text-sm py-2">
                   Start Free
                 </Button>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">PRO</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-6 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">PRO</div>
                 <div className="text-3xl font-bold mb-1">
                   ${billingPeriod === 'monthly' ? '99' : '82'}
                 </div>
@@ -248,17 +248,17 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/pro', '_blank')} variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10 text-sm py-2">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/pro', '_blank')} variant="outline" className="w-full border-[#3396FF]/30 hover:bg-[#3396FF]/10 text-sm py-2">
                   Upgrade
                 </Button>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur border-2 border-purple-500/50 rounded-2xl p-6 relative">
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-0.5 rounded-full text-xs font-bold">
+              <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/20 backdrop-blur border-2 border-[#3396FF]/50 rounded-2xl p-6 relative">
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-3 py-0.5 rounded-full text-xs font-bold">
                   POPULAR
                 </div>
                 
-                <div className="text-sm font-bold text-purple-400 mb-2">ENTERPRISE</div>
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">ENTERPRISE</div>
                 <div className="text-3xl font-bold mb-1">
                   ${billingPeriod === 'monthly' ? '499' : '415'}
                 </div>
@@ -286,13 +286,13 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm py-2">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-sm py-2">
                   Contact Sales
                 </Button>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">CUSTOM</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-6 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">CUSTOM</div>
                 <div className="text-3xl font-bold mb-4">Custom</div>
                 <p className="text-gray-300 mb-6 text-sm">For institutions</p>
                 
@@ -315,7 +315,7 @@ export default function Pricing() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/custom', '_blank')} variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10 text-sm py-2">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/custom', '_blank')} variant="outline" className="w-full border-[#3396FF]/30 hover:bg-[#3396FF]/10 text-sm py-2">
                   Contact Us
                 </Button>
               </div>
@@ -323,22 +323,22 @@ export default function Pricing() {
 
             <div className="mt-8 text-center">
               <p className="text-gray-400 mb-4">🎓 <strong>Academic Researchers</strong>: Get Enterprise tier for FREE</p>
-              <Button onClick={() => window.open('https://decaflow.xyz/academic', '_blank')} variant="link" className="text-purple-400 hover:text-purple-300">
+              <Button onClick={() => window.open('https://decaflow.xyz/academic', '_blank')} variant="link" className="text-[#47A1FF] hover:text-[#3396FF]">
                 Apply for Academic Program →
               </Button>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-12 text-center">
+          <div className="bg-gradient-to-r from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-2xl p-12 text-center">
             <h2 className="text-3xl font-bold mb-4">Need a Custom Plan?</h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
               We offer flexible pricing for protocols with unique requirements
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={() => window.open('https://calendly.com/decaflow/custom-plan', '_blank')} size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              <Button onClick={() => window.open('https://calendly.com/decaflow/custom-plan', '_blank')} size="lg" className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                 Schedule Call <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button onClick={() => window.open('mailto:sales@decaflow.xyz', '_blank')} variant="outline" size="lg" className="border-purple-500/30 hover:bg-purple-500/10">
+              <Button onClick={() => window.open('mailto:sales@decaflow.xyz', '_blank')} variant="outline" size="lg" className="border-[#3396FF]/30 hover:bg-[#3396FF]/10">
                 Email Sales
               </Button>
             </div>
@@ -348,29 +348,29 @@ export default function Pricing() {
             <h2 className="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
             
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-2 text-purple-400">Can I start free and upgrade later?</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-2 text-[#47A1FF]">Can I start free and upgrade later?</h3>
                 <p className="text-gray-300 text-sm">
                   Yes! Start with the free tier and upgrade anytime. No credit card required to start.
                 </p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-2 text-purple-400">What payment methods do you accept?</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-2 text-[#47A1FF]">What payment methods do you accept?</h3>
                 <p className="text-gray-300 text-sm">
                   We accept credit cards, bank transfers, and crypto (USDC, ETH) for annual plans.
                 </p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-2 text-purple-400">Can I cancel anytime?</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-2 text-[#47A1FF]">Can I cancel anytime?</h3>
                 <p className="text-gray-300 text-sm">
                   Yes, cancel anytime. No long-term contracts. Annual plans are non-refundable.
                 </p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6">
-                <h3 className="text-lg font-bold mb-2 text-purple-400">Do you offer discounts for DAOs?</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6">
+                <h3 className="text-lg font-bold mb-2 text-[#47A1FF]">Do you offer discounts for DAOs?</h3>
                 <p className="text-gray-300 text-sm">
                   Yes! Contact us for special DAO pricing and governance-based payment options.
                 </p>
