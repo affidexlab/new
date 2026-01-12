@@ -19,9 +19,7 @@ export default function SDKLanding() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/images/decaflow-logo.svg" alt="DecaFlow" className="h-8" onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}/>
+              <img src="/images/branding/wordmark-500.png" alt="DecaFlow" className="h-8" />
               <div>
                 <div className="font-bold text-xl">DecaFlow SDK</div>
                 <div className="text-xs text-gray-400">Privacy Protection for DeFi</div>

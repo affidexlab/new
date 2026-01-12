@@ -1,13 +1,47 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, ArrowRight, Zap, Shield, TrendingUp } from "lucide-react";
+import { Check, X, ArrowRight, Zap, Shield, TrendingUp, Menu } from "lucide-react";
 
 export default function Pricing() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0E27] via-[#1a1f3a] to-[#0A0E27] text-white">
-      <div className="pt-20 pb-20 px-6">
+      <nav className="fixed top-0 w-full bg-[#0A0E27]/80 backdrop-blur-xl border-b border-white/5 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/images/branding/wordmark-500.png" alt="DecaFlow" className="h-8" />
+            </div>
+
+            <div className="hidden md:flex items-center gap-8">
+              <a href="/" className="text-sm hover:text-[#47A1FF] transition">Home</a>
+              <a href="/sdk" className="text-sm hover:text-[#47A1FF] transition">SDK</a>
+              <a href="/dashboard-product" className="text-sm hover:text-[#47A1FF] transition">Dashboard</a>
+              <a href="/pricing" className="text-sm hover:text-[#47A1FF] transition font-bold text-[#47A1FF]">Pricing</a>
+              <Button onClick={() => window.location.href = '/app'} className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
+                Launch App <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden">
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 space-y-4">
+              <a href="/" className="block text-sm hover:text-[#47A1FF] transition">Home</a>
+              <a href="/sdk" className="block text-sm hover:text-[#47A1FF] transition">SDK</a>
+              <a href="/dashboard-product" className="block text-sm hover:text-[#47A1FF] transition">Dashboard</a>
+              <a href="/pricing" className="block text-sm hover:text-[#47A1FF] transition font-bold text-[#47A1FF]">Pricing</a>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      <div className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#3396FF] via-[#47A1FF] to-[#3396FF] bg-clip-text text-transparent">
