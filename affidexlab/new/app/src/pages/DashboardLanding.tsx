@@ -58,11 +58,11 @@ export default function DashboardLanding() {
             </div>
 
             <div className="hidden md:flex items-center gap-8">
-              <button onClick={() => scrollToSection('features')} className="text-sm hover:text-purple-400 transition">Features</button>
-              <button onClick={() => scrollToSection('use-cases')} className="text-sm hover:text-purple-400 transition">Use Cases</button>
-              <button onClick={() => scrollToSection('pricing')} className="text-sm hover:text-purple-400 transition">Pricing</button>
-              <button onClick={() => scrollToSection('api')} className="text-sm hover:text-purple-400 transition">API</button>
-              <Button onClick={() => window.location.href = '/mev-dashboard'} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              <button onClick={() => scrollToSection('features')} className="text-sm hover:text-[#47A1FF] transition">Features</button>
+              <button onClick={() => scrollToSection('use-cases')} className="text-sm hover:text-[#47A1FF] transition">Use Cases</button>
+              <button onClick={() => scrollToSection('pricing')} className="text-sm hover:text-[#47A1FF] transition">Pricing</button>
+              <button onClick={() => scrollToSection('api')} className="text-sm hover:text-[#47A1FF] transition">API</button>
+              <Button onClick={() => window.location.href = '/mev-dashboard'} className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                 View Dashboard <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -74,10 +74,10 @@ export default function DashboardLanding() {
 
           {mobileMenuOpen && (
             <div className="md:hidden mt-4 pb-4 space-y-4">
-              <button onClick={() => scrollToSection('features')} className="block text-sm hover:text-purple-400 transition">Features</button>
-              <button onClick={() => scrollToSection('use-cases')} className="block text-sm hover:text-purple-400 transition">Use Cases</button>
-              <button onClick={() => scrollToSection('pricing')} className="block text-sm hover:text-purple-400 transition">Pricing</button>
-              <button onClick={() => scrollToSection('api')} className="block text-sm hover:text-purple-400 transition">API</button>
+              <button onClick={() => scrollToSection('features')} className="block text-sm hover:text-[#47A1FF] transition">Features</button>
+              <button onClick={() => scrollToSection('use-cases')} className="block text-sm hover:text-[#47A1FF] transition">Use Cases</button>
+              <button onClick={() => scrollToSection('pricing')} className="block text-sm hover:text-[#47A1FF] transition">Pricing</button>
+              <button onClick={() => scrollToSection('api')} className="block text-sm hover:text-[#47A1FF] transition">API</button>
             </div>
           )}
         </div>
@@ -86,11 +86,11 @@ export default function DashboardLanding() {
       <div className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-block mb-6 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-medium">
+            <div className="inline-block mb-6 px-4 py-2 bg-[#3396FF]/10 border border-[#3396FF]/20 rounded-full text-[#47A1FF] text-sm font-medium">
               📊 Real-Time • Multi-Chain • Free to Start
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-[#3396FF] via-[#47A1FF] to-[#3396FF] bg-clip-text text-transparent">
               The Most Comprehensive MEV Intelligence Platform for Arbitrum
             </h1>
             
@@ -99,25 +99,25 @@ export default function DashboardLanding() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Button onClick={() => window.location.href = '/mev-dashboard'} size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg px-8 py-6">
+              <Button onClick={() => window.location.href = '/mev-dashboard'} size="lg" className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-lg px-8 py-6">
                 Explore Dashboard <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button onClick={() => window.open('https://docs.decaflow.xyz/api', '_blank')} variant="outline" size="lg" className="border-purple-500/30 hover:bg-purple-500/10 text-lg px-8 py-6">
+              <Button onClick={() => window.open('https://docs.decaflow.xyz/api', '_blank')} variant="outline" size="lg" className="border-[#3396FF]/30 hover:bg-[#3396FF]/10 text-lg px-8 py-6">
                 API Documentation
               </Button>
             </div>
 
-            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 max-w-5xl mx-auto">
+            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 max-w-5xl mx-auto">
               <div className="grid md:grid-cols-3 gap-8">
                 <div>
-                  <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">
+                  <div className="text-4xl md:text-5xl font-bold text-[#47A1FF] mb-2">
                     ${(liveStats.totalMevUsd / 1000000).toFixed(2)}M
                   </div>
                   <div className="text-gray-300">Total MEV Extracted</div>
                   <div className="text-sm text-gray-500 mt-1">Last 30 days</div>
                 </div>
                 <div>
-                  <div className="text-4xl md:text-5xl font-bold text-pink-400 mb-2">
+                  <div className="text-4xl md:text-5xl font-bold text-[#47A1FF] mb-2">
                     {(liveStats.affectedTxs / 1000).toFixed(0)}k+
                   </div>
                   <div className="text-gray-300">Affected Transactions</div>
@@ -136,7 +136,7 @@ export default function DashboardLanding() {
 
           <div id="preview" className="mb-20">
             <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center">Live Dashboard Preview</h2>
-            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-4 hover:border-purple-500/40 transition cursor-pointer" onClick={() => window.location.href = '/mev-dashboard'}>
+            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-4 hover:border-[#3396FF]/40 transition cursor-pointer" onClick={() => window.location.href = '/mev-dashboard'}>
               <img 
                 src="/images/mev-dashboard-preview.png" 
                 alt="MEV Dashboard Preview" 
@@ -146,7 +146,7 @@ export default function DashboardLanding() {
                 }}
               />
               <div className="text-center mt-4">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                <Button className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                   Open Live Dashboard <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -156,23 +156,23 @@ export default function DashboardLanding() {
           <div id="who-uses" className="mb-20">
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Who Uses It</h2>
             <div className="grid md:grid-cols-4 gap-6">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6 text-center hover:border-purple-500/40 transition">
-                <TrendingUp className="h-12 w-12 text-purple-400 mb-4 mx-auto" />
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6 text-center hover:border-[#3396FF]/40 transition">
+                <TrendingUp className="h-12 w-12 text-[#47A1FF] mb-4 mx-auto" />
                 <h3 className="text-xl font-bold mb-2">Trading Firms</h3>
                 <p className="text-gray-300 text-sm">Optimize routing, avoid MEV</p>
               </div>
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6 text-center hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6 text-center hover:border-[#3396FF]/40 transition">
                 <Shield className="h-12 w-12 text-green-400 mb-4 mx-auto" />
                 <h3 className="text-xl font-bold mb-2">Protocols</h3>
                 <p className="text-gray-300 text-sm">Understand user impact, justify MEV protection</p>
               </div>
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6 text-center hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6 text-center hover:border-[#3396FF]/40 transition">
                 <BarChart3 className="h-12 w-12 text-blue-400 mb-4 mx-auto" />
                 <h3 className="text-xl font-bold mb-2">Researchers</h3>
                 <p className="text-gray-300 text-sm">Academic research, market analysis</p>
               </div>
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-6 text-center hover:border-purple-500/40 transition">
-                <Database className="h-12 w-12 text-pink-400 mb-4 mx-auto" />
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-6 text-center hover:border-[#3396FF]/40 transition">
+                <Database className="h-12 w-12 text-[#47A1FF] mb-4 mx-auto" />
                 <h3 className="text-xl font-bold mb-2">Power Users</h3>
                 <p className="text-gray-300 text-sm">Check if you've been MEV'd, optimize trades</p>
               </div>
@@ -183,8 +183,8 @@ export default function DashboardLanding() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Key Features</h2>
             
             <div className="grid md:grid-cols-2 gap-8">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
-                <BarChart3 className="h-12 w-12 text-purple-400 mb-4" />
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
+                <BarChart3 className="h-12 w-12 text-[#47A1FF] mb-4" />
                 <h3 className="text-2xl font-bold mb-4">Real-time MEV tracking across 6 chains</h3>
                 <p className="text-gray-300 mb-4">Monitor MEV extraction in real-time across Arbitrum, Base, Ethereum, Polygon, Avalanche, and Optimism</p>
                 <ul className="space-y-2 text-gray-300">
@@ -194,7 +194,7 @@ export default function DashboardLanding() {
                 </ul>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
                 <Shield className="h-12 w-12 text-green-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4">Protocol-level breakdowns</h3>
                 <p className="text-gray-300 mb-4">See exactly how much MEV affects each protocol and their users</p>
@@ -205,7 +205,7 @@ export default function DashboardLanding() {
                 </ul>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
                 <Database className="h-12 w-12 text-blue-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4">Wallet-specific MEV exposure analysis</h3>
                 <p className="text-gray-300 mb-4">Check if your wallet has been affected by MEV attacks</p>
@@ -216,7 +216,7 @@ export default function DashboardLanding() {
                 </ul>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
                 <Bell className="h-12 w-12 text-orange-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4">Custom alerts for MEV spikes</h3>
                 <p className="text-gray-300 mb-4">Get notified when MEV activity spikes on your protocol or wallet</p>
@@ -227,8 +227,8 @@ export default function DashboardLanding() {
                 </ul>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
-                <TrendingUp className="h-12 w-12 text-pink-400 mb-4" />
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
+                <TrendingUp className="h-12 w-12 text-[#47A1FF] mb-4" />
                 <h3 className="text-2xl font-bold mb-4">Historical trends and analytics</h3>
                 <p className="text-gray-300 mb-4">Analyze MEV patterns over time and identify trends</p>
                 <ul className="space-y-2 text-gray-300">
@@ -238,7 +238,7 @@ export default function DashboardLanding() {
                 </ul>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8 hover:border-purple-500/40 transition">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8 hover:border-[#3396FF]/40 transition">
                 <Code className="h-12 w-12 text-yellow-400 mb-4" />
                 <h3 className="text-2xl font-bold mb-4">API access for custom integrations</h3>
                 <p className="text-gray-300 mb-4">Integrate MEV data into your own applications and dashboards</p>
@@ -251,12 +251,12 @@ export default function DashboardLanding() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-12 mb-20">
+          <div className="bg-gradient-to-r from-[#3396FF]/10 to-[#47A1FF]/10 border border-[#3396FF]/20 rounded-2xl p-12 mb-20">
             <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">Data You Can't Get Elsewhere</h2>
             <div className="max-w-3xl mx-auto">
               <p className="text-xl text-gray-300 text-center mb-8">
                 Most MEV dashboards show searcher profits.<br/>
-                <span className="text-2xl font-bold text-purple-400">We show victim losses.</span><br/>
+                <span className="text-2xl font-bold text-[#47A1FF]">We show victim losses.</span><br/>
                 That's the data protocols and users actually need.
               </p>
               <div className="grid md:grid-cols-2 gap-6">
@@ -286,26 +286,26 @@ export default function DashboardLanding() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Use Cases</h2>
             
             <div className="space-y-6">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8">
-                <h3 className="text-2xl font-bold mb-3 text-purple-400">Trading Firms</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8">
+                <h3 className="text-2xl font-bold mb-3 text-[#47A1FF]">Trading Firms</h3>
                 <p className="text-gray-300 text-lg">"Optimize routing, avoid MEV"</p>
                 <p className="text-gray-400 mt-2">Use our API to integrate real-time MEV risk scores into your trading algorithms and routing decisions.</p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8">
                 <h3 className="text-2xl font-bold mb-3 text-green-400">Protocols</h3>
                 <p className="text-gray-300 text-lg">"Understand user impact, justify MEV protection"</p>
                 <p className="text-gray-400 mt-2">See exactly how much your users are losing to MEV and make data-driven decisions about protection.</p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8">
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8">
                 <h3 className="text-2xl font-bold mb-3 text-blue-400">Researchers</h3>
                 <p className="text-gray-300 text-lg">"Academic research, market analysis"</p>
                 <p className="text-gray-400 mt-2">Access comprehensive historical data for MEV research, papers, and market intelligence.</p>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-xl p-8">
-                <h3 className="text-2xl font-bold mb-3 text-pink-400">Users</h3>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-xl p-8">
+                <h3 className="text-2xl font-bold mb-3 text-[#47A1FF]">Users</h3>
                 <p className="text-gray-300 text-lg">"Check if you've been MEV'd, optimize trades"</p>
                 <p className="text-gray-400 mt-2">Enter your wallet address to see if you've been a victim of MEV attacks and how much you've lost.</p>
               </div>
@@ -316,8 +316,8 @@ export default function DashboardLanding() {
             <h2 className="text-3xl md:text-4xl font-bold mb-12 text-center">Pricing</h2>
             
             <div className="grid md:grid-cols-4 gap-6">
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">FREE</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">FREE</div>
                 <div className="text-4xl font-bold mb-4">$0</div>
                 <p className="text-gray-300 mb-6 text-sm">For individual users & researchers</p>
                 
@@ -340,13 +340,13 @@ export default function DashboardLanding() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.location.href = '/mev-dashboard'} className="w-full bg-purple-600 hover:bg-purple-700">
+                <Button onClick={() => window.location.href = '/mev-dashboard'} className="w-full bg-[#3396FF] hover:bg-[#2986EF]">
                   Start Free
                 </Button>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">PRO</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">PRO</div>
                 <div className="text-4xl font-bold mb-4">$99<span className="text-lg text-gray-400">/mo</span></div>
                 <p className="text-gray-300 mb-6 text-sm">For small teams & power users</p>
                 
@@ -369,17 +369,17 @@ export default function DashboardLanding() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/pro', '_blank')} variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/pro', '_blank')} variant="outline" className="w-full border-[#3396FF]/30 hover:bg-[#3396FF]/10">
                   Upgrade
                 </Button>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur border-2 border-purple-500/50 rounded-2xl p-8 relative">
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-1 rounded-full text-sm font-bold">
+              <div className="bg-gradient-to-br from-[#3396FF]/20 to-[#47A1FF]/20 backdrop-blur border-2 border-[#3396FF]/50 rounded-2xl p-8 relative">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-4 py-1 rounded-full text-sm font-bold">
                   POPULAR
                 </div>
                 
-                <div className="text-sm font-bold text-purple-400 mb-2">ENTERPRISE</div>
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">ENTERPRISE</div>
                 <div className="text-4xl font-bold mb-4">$499<span className="text-lg text-gray-400">/mo</span></div>
                 <p className="text-gray-300 mb-6 text-sm">For trading firms & large protocols</p>
                 
@@ -402,13 +402,13 @@ export default function DashboardLanding() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/enterprise', '_blank')} className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                   Contact Sales
                 </Button>
               </div>
 
-              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition">
-                <div className="text-sm font-bold text-purple-400 mb-2">CUSTOM</div>
+              <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8 hover:border-[#3396FF]/40 transition">
+                <div className="text-sm font-bold text-[#47A1FF] mb-2">CUSTOM</div>
                 <div className="text-4xl font-bold mb-4">Custom</div>
                 <p className="text-gray-300 mb-6 text-sm">For institutions & funds</p>
                 
@@ -431,7 +431,7 @@ export default function DashboardLanding() {
                   </li>
                 </ul>
 
-                <Button onClick={() => window.open('https://calendly.com/decaflow/custom', '_blank')} variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10">
+                <Button onClick={() => window.open('https://calendly.com/decaflow/custom', '_blank')} variant="outline" className="w-full border-[#3396FF]/30 hover:bg-[#3396FF]/10">
                   Contact Us
                 </Button>
               </div>
@@ -439,7 +439,7 @@ export default function DashboardLanding() {
 
             <div className="mt-8 text-center">
               <p className="text-gray-400 mb-4">🎓 Academic Researchers: Get Enterprise tier for FREE</p>
-              <Button onClick={() => window.open('https://decaflow.xyz/academic', '_blank')} variant="link" className="text-purple-400 hover:text-purple-300">
+              <Button onClick={() => window.open('https://decaflow.xyz/academic', '_blank')} variant="link" className="text-[#47A1FF] hover:text-[#3396FF]">
                 Apply for Academic Program →
               </Button>
             </div>
@@ -448,10 +448,10 @@ export default function DashboardLanding() {
           <div id="api" className="mb-20">
             <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center">API Documentation</h2>
             
-            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-purple-500/20 rounded-2xl p-8">
+            <div className="bg-[#1a1f3a]/50 backdrop-blur border border-[#3396FF]/20 rounded-2xl p-8">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-2xl font-bold mb-4 text-purple-400">Key Endpoints</h3>
+                  <h3 className="text-2xl font-bold mb-4 text-[#47A1FF]">Key Endpoints</h3>
                   <div className="space-y-3 font-mono text-sm">
                     <div className="bg-black/40 rounded p-3">
                       <div className="text-green-400 mb-1">GET /api/v1/mev/overview</div>
@@ -473,7 +473,7 @@ export default function DashboardLanding() {
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold mb-4 text-pink-400">Example Response</h3>
+                  <h3 className="text-2xl font-bold mb-4 text-[#47A1FF]">Example Response</h3>
                   <div className="bg-black/40 rounded-xl p-4 font-mono text-sm overflow-x-auto">
                     <pre className="text-gray-300">{`{
   "totalMevUsd": 6240000,
@@ -497,23 +497,23 @@ export default function DashboardLanding() {
               </div>
 
               <div className="mt-8 text-center">
-                <Button onClick={() => window.open('https://docs.decaflow.xyz/api', '_blank')} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                <Button onClick={() => window.open('https://docs.decaflow.xyz/api', '_blank')} className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90">
                   View Full API Docs <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur border border-purple-500/30 rounded-2xl p-12 text-center">
+          <div className="bg-gradient-to-r from-[#3396FF]/20 to-[#47A1FF]/20 backdrop-blur border border-[#3396FF]/30 rounded-2xl p-12 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Access MEV Intelligence?</h2>
             <p className="text-xl text-gray-300 mb-8">
               Start exploring the most comprehensive MEV data platform for Arbitrum
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={() => window.location.href = '/mev-dashboard'} size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg px-8 py-6">
+              <Button onClick={() => window.location.href = '/mev-dashboard'} size="lg" className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-lg px-8 py-6">
                 Explore Dashboard <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button onClick={() => window.open('https://calendly.com/decaflow/demo', '_blank')} variant="outline" size="lg" className="border-purple-500/30 hover:bg-purple-500/10 text-lg px-8 py-6">
+              <Button onClick={() => window.open('https://calendly.com/decaflow/demo', '_blank')} variant="outline" size="lg" className="border-[#3396FF]/30 hover:bg-[#3396FF]/10 text-lg px-8 py-6">
                 Book API Demo
               </Button>
             </div>
@@ -525,10 +525,10 @@ export default function DashboardLanding() {
         <div className="max-w-7xl mx-auto text-center text-gray-400">
           <p>&copy; 2026 DecaFlow. All rights reserved.</p>
           <div className="flex justify-center gap-6 mt-4">
-            <a href="https://twitter.com/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition">Twitter</a>
-            <a href="https://github.com/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition">GitHub</a>
-            <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition">Docs</a>
-            <a href="https://discord.gg/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition">Discord</a>
+            <a href="https://twitter.com/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Twitter</a>
+            <a href="https://github.com/affidexlab/decaflow-privacy-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">GitHub</a>
+            <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Docs</a>
+            <a href="https://discord.gg/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Discord</a>
           </div>
         </div>
       </footer>
