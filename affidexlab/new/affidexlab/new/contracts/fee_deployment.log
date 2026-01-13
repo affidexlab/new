@@ -1,0 +1,171 @@
+
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║           🔐 FEE ENFORCEMENT DEPLOYMENT SYSTEM 🔐                ║
+║                                                                  ║
+║  Deploying FeeRouter with Onchain Fee Enforcement                ║
+║  Treasury: 0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901                   ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+  
+
+🔑 Generating Fee Signer Hot Key (Server Key)...
+
+✅ Fee Signer Generated:
+   Address: 0x22eF33134a279227Aec8ce329bB51ca49595E33a
+   Private Key: 0x199bcd7918677f51b38c7f85cace8ce2245cee4ddc64296ac62ef6ff34140950
+
+⚠️  SAVE THIS KEY SECURELY - It will be used by the backend server
+
+📦 Compiling FeeRouter.sol with OpenZeppelin dependencies...
+
+✅ Compilation successful
+
+
+======================================================================
+🚀 DEPLOYING TO ARBITRUM (Chain ID: 42161)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 0.000184801727144 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 0.01 gwei
+   Estimated cost: 0.00001124011 native tokens
+
+📝 Deploying FeeRouter contract...
+✅ FeeRouter deployed at: 0xaaC3cf9C55950AB26f5e6739FcF162E708b54f96
+   📊 View: https://arbiscan.io/address/0xaaC3cf9C55950AB26f5e6739FcF162E708b54f96
+
+🔐 Whitelisting 0x Exchange Proxy (0xDef1C0ded9bec7F1a1670819833240f027b25EfF)...
+✅ Whitelisted 0x Exchange Proxy
+   📊 Tx: https://arbiscan.io/tx/0xe55b66af508910ce0f4da75bedfecb57fbcde76a4b8cf3fa74fa4baf6d8dda75
+   ✓ Verification: SUCCESS
+
+======================================================================
+🚀 DEPLOYING TO BASE (Chain ID: 8453)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 0.000051411196940604 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 0.002347071 gwei
+   Estimated cost: 0.000002638133621781 native tokens
+
+📝 Deploying FeeRouter contract...
+✅ FeeRouter deployed at: 0xf0c700d5362D91058c1b74cA8f93BA12aB6E160f
+   📊 View: https://basescan.org/address/0xf0c700d5362D91058c1b74cA8f93BA12aB6E160f
+
+🔐 Whitelisting 0x Exchange Proxy (0xDef1C0ded9bec7F1a1670819833240f027b25EfF)...
+✅ Whitelisted 0x Exchange Proxy
+   📊 Tx: https://basescan.org/tx/0x45479ce897657356c9d5eac3b3f0eff66ecbdbbacd156c1c3aa08e62edd232a3
+   ✓ Verification: FAILED
+
+======================================================================
+🚀 DEPLOYING TO POLYGON (Chain ID: 137)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 3.074212708156331551 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 33.916681202 gwei
+   Estimated cost: 0.038122722754541222 native tokens
+
+📝 Deploying FeeRouter contract...
+✅ FeeRouter deployed at: 0x5d5D469Db59D3832897a62704A9f2bd947F171Cf
+   📊 View: https://polygonscan.com/address/0x5d5D469Db59D3832897a62704A9f2bd947F171Cf
+
+🔐 Whitelisting 0x Exchange Proxy (0xDef1C0ded9bec7F1a1670819833240f027b25EfF)...
+✅ Whitelisted 0x Exchange Proxy
+   📊 Tx: https://polygonscan.com/tx/0xce201e81c3569b66b1663df8c8a77a1becfd434fc4a45c28b21fc42bdb96ddc3
+   ✓ Verification: SUCCESS
+
+======================================================================
+🚀 DEPLOYING TO AVALANCHE (Chain ID: 43114)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 0.033455410249106706 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 0.069139704 gwei
+   Estimated cost: 0.000077713787832744 native tokens
+
+📝 Deploying FeeRouter contract...
+✅ FeeRouter deployed at: 0xC66b78eF1d29D2214F9eF455057a106A5cbD1bf0
+   📊 View: https://snowtrace.io/address/0xC66b78eF1d29D2214F9eF455057a106A5cbD1bf0
+
+🔐 Whitelisting 0x Exchange Proxy (0xDef1C0ded9bec7F1a1670819833240f027b25EfF)...
+✅ Whitelisted 0x Exchange Proxy
+   📊 Tx: https://snowtrace.io/tx/0xe46fe5291952fbafd51d07150e03a2a2685d66594e2f1b40bd23f860c588c9de
+   ✓ Verification: SUCCESS
+
+======================================================================
+🚀 DEPLOYING TO OPTIMISM (Chain ID: 10)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 0.000155211623396193 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 0.0010048 gwei
+   Estimated cost: 0.0000011294062528 native tokens
+
+📝 Deploying FeeRouter contract...
+✅ FeeRouter deployed at: 0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89
+   📊 View: https://optimistic.etherscan.io/address/0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89
+
+🔐 Whitelisting 0x Exchange Proxy (0xDef1C0ded9bec7F1a1670819833240f027b25EfF)...
+✅ Whitelisted 0x Exchange Proxy
+   📊 Tx: https://optimistic.etherscan.io/tx/0x0ee12e2d35ce7c0ab07182695ddcad25d5b844be9043dc21a7d729a48fd43da5
+   ✓ Verification: SUCCESS
+
+======================================================================
+🚀 DEPLOYING TO ETHEREUM (Chain ID: 1)
+======================================================================
+📍 Deployer: 0x65B7A307A7e67e38840b91f9a36BF8DFE6e02901
+💰 Balance: 0.000104372991518328 native tokens
+⛽ Estimating deployment gas...
+   Gas estimate: 1124011
+   Gas price: 0.072334374 gwei
+   Estimated cost: 0.000081304632054114 native tokens
+
+📝 Deploying FeeRouter contract...
+❌ Deployment error on Ethereum: Returned error: the method eth_sendRawTransaction does not exist/is not available
+
+======================================================================
+📊 DEPLOYMENT SUMMARY
+======================================================================
+
+✅ Successfully deployed to 5 chain(s):
+
+  Arbitrum     (42161): 0xaaC3cf9C55950AB26f5e6739FcF162E708b54f96
+  Base         (8453 ): 0xf0c700d5362D91058c1b74cA8f93BA12aB6E160f
+  Polygon      (137  ): 0x5d5D469Db59D3832897a62704A9f2bd947F171Cf
+  Avalanche    (43114): 0xC66b78eF1d29D2214F9eF455057a106A5cbD1bf0
+  Optimism     (10   ): 0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89
+
+✅ Deployment info saved to fee_enforcement_deployment.json
+
+======================================================================
+📝 NEXT STEPS - UPDATE CONSTANTS.TS
+======================================================================
+
+1. Update app/src/lib/constants.ts with these addresses:
+
+export const ROUTER_ADDRESSES: Partial<Record<number, `0x${string}`>> = {
+  10: "0x291D676e1F4Fa11B15c6B3bA082798DaAAd8AE89", // Optimism
+  137: "0x5d5D469Db59D3832897a62704A9f2bd947F171Cf", // Polygon
+  8453: "0xf0c700d5362D91058c1b74cA8f93BA12aB6E160f", // Base
+  42161: "0xaaC3cf9C55950AB26f5e6739FcF162E708b54f96", // Arbitrum
+  43114: "0xC66b78eF1d29D2214F9eF455057a106A5cbD1bf0", // Avalanche
+};
+
+2. Update backend environment variables:
+
+FEE_SIGNER_PRIVATE_KEY=0x199bcd7918677f51b38c7f85cace8ce2245cee4ddc64296ac62ef6ff34140950
+FEE_SIGNER_ADDRESS=0x22eF33134a279227Aec8ce329bB51ca49595E33a
+TREASURY_ADDRESS=0x65b7a307a7e67e38840b91f9a36bf8dfe6e02901
+SWAP_FEE_BPS=150 # 1.5% fee
+
+======================================================================
+✅ DEPLOYMENT COMPLETE
+======================================================================
+

@@ -1,0 +1,1461 @@
+import { useState, useEffect } from "react";
+import { useAccount, useBalance, useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignTypedData } from "wagmi";
+import { parseUnits, formatUnits, erc20Abi, createPublicClient, http } from "viem";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { EnhancedTokenSelector } from "@/components/EnhancedTokenSelector";
+import { ChainSelector } from "@/components/ChainSelector";
+import { SlippageSettings, SlippageConfig, getSlippagePercentage } from "@/components/SlippageSettings";
+import { DustWarning, TransactionTimeoutSettings } from "@/components/DustWarning";
+import { TOKENS_BY_CHAIN, CHAIN_IDS, SECURITY_SETTINGS, API_ENDPOINTS, TREASURY_WALLET, SWAP_FEE_BPS, ROUTER_ADDRESSES, COW_SETTLEMENTS, ZEROX_SAFE_TO_ADDRESSES } from "@/lib/constants";
+import { getNativePriceUSD, getTokenPriceUSD } from "@/lib/prices";
+import { usePointsTracking } from "@/hooks/usePointsTracking";
+import { mainnet as viemMainnet, arbitrum as viemArbitrum, avalanche as viemAvalanche, base as viemBase, optimism as viemOptimism, polygon as viemPolygon } from "viem/chains";
+import { bestRoute, QuoteResponse } from "@/lib/aggregators";
+import { getLiquidityRouterAddress, LIQUIDITY_ROUTER_ABI, LIQUIDITY_ROUTER_ADDRESSES } from "@/lib/liquidityRouter";
+import { calculateMinimumOutput } from "@/lib/routerIntegration";
+import { ArrowDownUp, Loader2, FileText, Fuel, ChevronDown, Wallet, ExternalLink, Shield, Settings2 } from "lucide-react";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+
+export default function SwapApp() {
+  const { address, isConnected, chain } = useAccount();
+  const { emitTransactionComplete } = useTransactionEvents();
+  const { trackSwap } = usePointsTracking();
+  const publicClients = {
+    [CHAIN_IDS.BASE]: createPublicClient({ chain: viemBase, transport: http("https://mainnet.base.org") }),
+    [CHAIN_IDS.ETHEREUM]: createPublicClient({ chain: viemMainnet, transport: http("https://eth.llamarpc.com") }),
+    [CHAIN_IDS.ARBITRUM]: createPublicClient({ chain: viemArbitrum, transport: http("https://arbitrum.llamarpc.com") }),
+    [CHAIN_IDS.AVALANCHE]: createPublicClient({ chain: viemAvalanche, transport: http("https://api.avax.network/ext/bc/C/rpc") }),
+    [CHAIN_IDS.OPTIMISM]: createPublicClient({ chain: viemOptimism, transport: http("https://mainnet.optimism.io") }),
+    [CHAIN_IDS.POLYGON]: createPublicClient({ chain: viemPolygon, transport: http("https://polygon-rpc.com") }),
+  } as const;
+  const [selectedChainId, setSelectedChainId] = useState(CHAIN_IDS.BASE);
+  const [fromToken, setFromToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][0]);
+  const [toToken, setToToken] = useState(TOKENS_BY_CHAIN[CHAIN_IDS.BASE][2]);
+  const [fromAmount, setFromAmount] = useState("");
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [fromBalanceFallback, setFromBalanceFallback] = useState<string | null>(null);
+  const [toBalanceFallback, setToBalanceFallback] = useState<string | null>(null);
+  const [isFromFallbackLoading, setIsFromFallbackLoading] = useState(false);
+  const [isToFallbackLoading, setIsToFallbackLoading] = useState(false);
+  const [slippageConfig, setSlippageConfig] = useState<SlippageConfig>({ mode: "smart", customValue: 0.5 });
+  const [showFeeDetails, setShowFeeDetails] = useState(false);
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [timeoutMinutes, setTimeoutMinutes] = useState(20);
+  const [showSettings, setShowSettings] = useState(false);
+  const [nativePriceUSD, setNativePriceUSD] = useState<number>(0);
+  const [fromTokenPriceUSD, setFromTokenPriceUSD] = useState<number>(0);
+  const [feeAmountWei, setFeeAmountWei] = useState<bigint>(0n);
+  const [netAmountWei, setNetAmountWei] = useState<bigint>(0n);
+  const [recentSwaps, setRecentSwaps] = useState<{
+    hash: string;
+    fromSymbol: string;
+    toSymbol: string;
+    amount: string;
+    chainId: number;
+    timestamp: number;
+  }[]>([]);
+  const [lastToastHash, setLastToastHash] = useState<string | null>(null);
+
+  const cowSupported = !!API_ENDPOINTS[selectedChainId]?.cow;
+
+  // Load and unify historical swaps from both localStorage keys
+  useEffect(() => {
+    try {
+      // Load from new key (decaflow_recent_swaps_v2)
+      const newSwapsRaw = localStorage.getItem("decaflow_recent_swaps_v2");
+      const newSwaps = newSwapsRaw ? JSON.parse(newSwapsRaw) : [];
+
+      // Load from old key (decaflow_swaps) and transform to new format
+      const oldSwapsRaw = localStorage.getItem("decaflow_swaps");
+      const oldSwaps = oldSwapsRaw ? JSON.parse(oldSwapsRaw) : [];
+      
+      // Transform old format to new format
+      const transformedOldSwaps = oldSwaps.map((swap: any) => ({
+        hash: swap.hash,
+        fromSymbol: swap.fromToken || "Unknown",
+        toSymbol: "Unknown", // Old format doesn't store toToken symbol
+        amount: swap.amount || "0",
+        chainId: swap.chainId || CHAIN_IDS.BASE,
+        timestamp: swap.timestamp || Date.now(),
+      })).filter((s: any) => s.hash); // Only include swaps with valid hash
+
+      // Merge and deduplicate by hash
+      const allSwaps = [...newSwaps, ...transformedOldSwaps];
+      const uniqueSwaps = allSwaps.reduce((acc: any[], swap: any) => {
+        if (!acc.find(s => s.hash === swap.hash)) {
+          acc.push(swap);
+        }
+        return acc;
+      }, []);
+
+      // Sort by timestamp (most recent first) and take top 10
+      const sortedSwaps = uniqueSwaps
+        .sort((a: any, b: any) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+
+      setRecentSwaps(sortedSwaps);
+
+      // Save unified list back to localStorage
+      if (sortedSwaps.length > 0) {
+        localStorage.setItem("decaflow_recent_swaps_v2", JSON.stringify(sortedSwaps.slice(0, 5)));
+      }
+    } catch (error) {
+      console.error("Failed to load historical swaps:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isConnected && chain?.id) {
+      const supportedChains = Object.values(CHAIN_IDS);
+      if (supportedChains.includes(chain.id) && chain.id !== selectedChainId) {
+        setSelectedChainId(chain.id);
+      }
+    }
+  }, [isConnected, chain?.id, selectedChainId]);
+
+  useEffect(() => {
+    const tokens = TOKENS_BY_CHAIN[selectedChainId];
+    if (tokens) {
+      setFromToken(tokens[0]);
+      setToToken(tokens[2] || tokens[1]);
+      setFromAmount("");
+      setQuote(null);
+    }
+    (async () => {
+      try {
+        const p = await getNativePriceUSD(selectedChainId);
+        setNativePriceUSD(p || 0);
+      } catch {
+        setNativePriceUSD(0);
+      }
+    })();
+  }, [selectedChainId]);
+
+  const { data: fromBalance, isLoading: isFromBalanceLoading, refetch: refetchFromBalance, isError: isFromBalanceError } = useBalance({
+    address,
+    token: fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : fromToken.address as `0x${string}`,
+    chainId: selectedChainId,
+    enabled: !!address && !!fromToken && isConnected && chain?.id === selectedChainId,
+    refetchInterval: 10000,
+  });
+
+  const { data: toBalance, isLoading: isToBalanceLoading, refetch: refetchToBalance, isError: isToBalanceError } = useBalance({
+    address,
+    token: toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? undefined : toToken.address as `0x${string}`,
+    chainId: selectedChainId,
+    enabled: !!address && !!toToken && isConnected && chain?.id === selectedChainId,
+    refetchInterval: 10000,
+  });
+
+  useEffect(() => {
+    const shouldFetch = !!address && !!fromToken && isConnected && chain?.id === selectedChainId;
+    if (!shouldFetch) {
+      setFromBalanceFallback(null);
+      setIsFromFallbackLoading(false);
+      return;
+    }
+
+    if (!isFromBalanceError) {
+      setFromBalanceFallback(null);
+      return;
+    }
+
+    const client = publicClients[selectedChainId];
+    if (!client) return;
+
+    let cancelled = false;
+    setIsFromFallbackLoading(true);
+
+    (async () => {
+      try {
+        let rawBalance: bigint;
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          rawBalance = await client.getBalance({ address: address as `0x${string}` });
+        } else {
+          rawBalance = await client.readContract({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address as `0x${string}`],
+          }) as bigint;
+        }
+        if (!cancelled) {
+          setFromBalanceFallback(formatUnits(rawBalance, fromToken.decimals));
+        }
+      } catch (error) {
+        console.error("Fallback from balance error", error);
+        if (!cancelled) {
+          setFromBalanceFallback(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFromFallbackLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chain?.id, fromToken, isConnected, isFromBalanceError, selectedChainId]);
+
+  useEffect(() => {
+    const shouldFetch = !!address && !!toToken && isConnected && chain?.id === selectedChainId;
+    if (!shouldFetch) {
+      setToBalanceFallback(null);
+      setIsToFallbackLoading(false);
+      return;
+    }
+
+    if (!isToBalanceError) {
+      setToBalanceFallback(null);
+      return;
+    }
+
+    const client = publicClients[selectedChainId];
+    if (!client) return;
+
+    let cancelled = false;
+    setIsToFallbackLoading(true);
+
+    (async () => {
+      try {
+        let rawBalance: bigint;
+        if (toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          rawBalance = await client.getBalance({ address: address as `0x${string}` });
+        } else {
+          rawBalance = await client.readContract({
+            address: toToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address as `0x${string}`],
+          }) as bigint;
+        }
+        if (!cancelled) {
+          setToBalanceFallback(formatUnits(rawBalance, toToken.decimals));
+        }
+      } catch (error) {
+        console.error("Fallback to balance error", error);
+        if (!cancelled) {
+          setToBalanceFallback(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsToFallbackLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chain?.id, toToken, isConnected, isToBalanceError, selectedChainId]);
+
+  const allowanceSpender = quote?.routerData
+    ? getLiquidityRouterAddress(selectedChainId)
+    : quote?.data?.allowanceTarget;
+
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? fromToken.address as `0x${string}` : undefined,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address && allowanceSpender ? [address, allowanceSpender as `0x${string}`] : undefined,
+    enabled: !!address && !!allowanceSpender && fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  });
+
+  const { data: approvalHash, writeContract: approve } = useWriteContract();
+  const { data: swapHash, sendTransaction } = useSendTransaction();
+  const { data: feeHash, sendTransaction: sendFeeTransaction } = useSendTransaction();
+  const { data: feeTokenHash, writeContract: sendFeeTokenTransaction } = useWriteContract();
+  const { data: directRouterHash, writeContract: writeDirectRouter } = useWriteContract();
+  const { writeContract: writeContractGeneric } = useWriteContract();
+  const { isLoading: isApproving, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isSwapping, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({ hash: swapHash });
+  const { isLoading: isDirectRouterSwapping, isSuccess: isDirectRouterSwapSuccess } = useWaitForTransactionReceipt({ hash: directRouterHash });
+  const { isLoading: isSendingFee, isSuccess: isFeeSuccess } = useWaitForTransactionReceipt({ hash: feeHash });
+  const { isLoading: isSendingFeeToken, isSuccess: isFeeTokenSuccess } = useWaitForTransactionReceipt({ hash: feeTokenHash });
+  const { signTypedDataAsync } = useSignTypedData();
+  const [pendingSwapData, setPendingSwapData] = useState<{ to: string; data: string; value?: bigint } | null>(null);
+
+  useEffect(() => {
+    if (isApprovalSuccess) {
+      toast.success("Approval successful!", {
+        description: "You can now proceed with the swap",
+      });
+      refetchAllowance();
+    }
+  }, [isApprovalSuccess, approvalHash, refetchAllowance]);
+
+  useEffect(() => {
+    if (isSwapSuccess || isDirectRouterSwapSuccess) {
+      refetchFromBalance();
+      refetchToBalance();
+      setPendingSwapData(null);
+    }
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, refetchFromBalance, refetchToBalance]);
+
+  // After fee transaction completes, execute the actual swap
+  useEffect(() => {
+    if ((isFeeSuccess || isFeeTokenSuccess) && pendingSwapData) {
+      toast.success("Fee sent to treasury!", {
+        description: "Now executing swap...",
+      });
+      sendTransaction(pendingSwapData);
+    }
+  }, [isFeeSuccess, isFeeTokenSuccess, pendingSwapData, sendTransaction]);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      refetchFromBalance();
+      refetchToBalance();
+    }
+  }, [isConnected, address, selectedChainId, fromToken, toToken, refetchFromBalance, refetchToBalance]);
+
+  useEffect(() => {
+    if (isSwapSuccess || isDirectRouterSwapSuccess) {
+      const txHash = directRouterHash || swapHash;
+      
+      if (txHash && txHash !== lastToastHash) {
+        setLastToastHash(txHash);
+        toast.success("Swap successful!", {
+          description: (
+            <div className="flex flex-col gap-1">
+              <span>{`Swapped ${fromAmount} ${fromToken.symbol} for ${toToken.symbol}`}</span>
+              {txHash && (
+                <a
+                  href={getExplorerUrl(txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#47A1FF] underline-offset-2 hover:underline"
+                >
+                  View on explorer
+                </a>
+              )}
+            </div>
+          ),
+        });
+
+        const now = Date.now();
+        const entry = {
+          hash: txHash,
+          fromSymbol: fromToken.symbol,
+          toSymbol: toToken.symbol,
+          amount: fromAmount,
+          chainId: selectedChainId,
+          timestamp: now,
+        };
+        setRecentSwaps(prev => {
+          const next = [entry, ...prev].slice(0, 5);
+          try {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("decaflow_recent_swaps_v2", JSON.stringify(next));
+            }
+          } catch {}
+          return next;
+        });
+
+        // Also persist to decaflow_swaps for analytics/landing stats
+        try {
+          if (typeof window !== "undefined") {
+            const key = "decaflow_swaps";
+            const prevRaw = localStorage.getItem(key);
+            const prevSwaps = prevRaw ? JSON.parse(prevRaw) : [];
+            const swapEntry = {
+              hash: txHash,
+              address,
+              type: "swap",
+              amount: fromAmount,
+              amountUSD: undefined,
+              timestamp: now,
+              fromToken: fromToken.symbol,
+              chainId: selectedChainId,
+            };
+            prevSwaps.push(swapEntry);
+            localStorage.setItem(key, JSON.stringify(prevSwaps));
+          }
+        } catch (e) {
+          console.error("Failed to persist decaflow_swaps entry", e);
+        }
+
+        emitTransactionComplete({
+          type: 'swap',
+          txHash,
+          timestamp: Date.now(),
+        });
+
+        (async () => {
+          try {
+            const amountNum = parseFloat(fromAmount || "0");
+            if (!amountNum) return;
+            const priceUSD = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+              ? await getNativePriceUSD(selectedChainId)
+              : await getTokenPriceUSD(selectedChainId, fromToken.address);
+            const amountUSD = amountNum * (priceUSD || 0);
+
+            try {
+              if (typeof window !== "undefined") {
+                const key = "decaflow_swaps";
+                const prevRaw = localStorage.getItem(key);
+                const prevSwaps = prevRaw ? JSON.parse(prevRaw) : [];
+                if (prevSwaps.length > 0) {
+                  const last = prevSwaps[prevSwaps.length - 1];
+                  if (last.hash === txHash && (last.amountUSD === undefined || last.amountUSD === null)) {
+                    last.amountUSD = amountUSD.toFixed(2);
+                    prevSwaps[prevSwaps.length - 1] = last;
+                    localStorage.setItem(key, JSON.stringify(prevSwaps));
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to backfill amountUSD for decaflow_swaps", e);
+            }
+
+            await trackSwap(
+              txHash,
+              fromToken.address,
+              toToken.address,
+              amountUSD,
+              selectedChainId
+            );
+          } catch (error) {
+            console.error("Failed to track swap points", error);
+          }
+        })();
+      }
+      setFromAmount("");
+      setQuote(null);
+    }
+  }, [isSwapSuccess, isDirectRouterSwapSuccess, swapHash, directRouterHash, lastToastHash, fromAmount, fromToken.symbol, fromToken.address, toToken.symbol, toToken.address, selectedChainId, address, emitTransactionComplete, trackSwap]);
+
+  const requestCountRef = { current: 0 } as { current: number };
+  const lastResetRef = { current: Date.now() } as { current: number };
+
+  useEffect(() => {
+    if (!fromAmount || !fromToken || !toToken || !address) {
+      setQuote(null);
+      return;
+    }
+
+    const fetchQuote = async () => {
+      // Rate limit: max 30 requests/min
+      const now = Date.now();
+      if (now - lastResetRef.current > 60000) {
+        lastResetRef.current = now;
+        requestCountRef.current = 0;
+      }
+      if (requestCountRef.current >= 30) {
+        toast.error("Too many requests, please wait");
+        return;
+      }
+      requestCountRef.current++;
+
+      // Validate inputs
+      const amountNum = parseFloat(fromAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        setQuote(null);
+        return;
+      }
+      if (fromToken.decimals < 0 || fromToken.decimals > 18) {
+        toast.error("Invalid token decimals");
+        setQuote(null);
+        return;
+      }
+
+      setIsQuoting(true);
+      try {
+        const grossWei = parseUnits(fromAmount, fromToken.decimals);
+        if (grossWei === 0n) throw new Error("Amount too small");
+
+        const WETH_ADDRESSES: Record<number, string> = {
+          1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+          42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+          10: "0x4200000000000000000000000000000000000006",
+          8453: "0x4200000000000000000000000000000000000006",
+          137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+          43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+        };
+        
+        const fromIsETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+        const toIsETH = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+        const fromIsWETH = fromToken.address.toLowerCase() === WETH_ADDRESSES[selectedChainId]?.toLowerCase();
+        const toIsWETH = toToken.address.toLowerCase() === WETH_ADDRESSES[selectedChainId]?.toLowerCase();
+        const isWrapUnwrap = (fromIsWETH && toIsETH) || (fromIsETH && toIsWETH);
+
+        if (isWrapUnwrap) {
+          setFeeAmountWei(0n);
+          setNetAmountWei(grossWei);
+          const pseudoQuote: QuoteResponse = {
+            provider: "0x",
+            price: "1",
+            estimatedOutput: grossWei.toString(),
+            estimatedGas: "0",
+            route: fromIsWETH ? "Unwrap WETH to ETH" : "Wrap ETH to WETH",
+            data: { type: fromIsWETH ? "unwrap" : "wrap" },
+          };
+          setQuote(pseudoQuote);
+          return;
+        }
+
+        const fee = (grossWei * BigInt(SWAP_FEE_BPS)) / 10000n;
+        if (fee === 0n) throw new Error("Amount too small to pay fee");
+        const net = grossWei - fee;
+        if (net === 0n) throw new Error("Amount insufficient after fee");
+        setFeeAmountWei(fee);
+        setNetAmountWei(net);
+        const slippagePercentage = getSlippagePercentage(slippageConfig);
+        const hasDirectRouter = !!LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
+
+        const quoteResult = await bestRoute({
+          fromToken: fromToken.address,
+          toToken: toToken.address,
+          amount: net.toString(),
+          fromAddress: address,
+          chainId: selectedChainId,
+          privacy: !hasDirectRouter && privacyMode && cowSupported,
+          slippagePercentage,
+          timeoutMs: Math.max(SECURITY_SETTINGS.MIN_TIMEOUT_MS, Math.min(timeoutMinutes * 60 * 1000, SECURITY_SETTINGS.MAX_TIMEOUT_MS)),
+          useDirectRouter: hasDirectRouter,
+        });
+        setQuote(quoteResult);
+      } catch (error) {
+        logger.error("Quote error", error);
+        if (error instanceof Error && error.name === "AbortError") {
+          toast.error("Request timed out", {
+            description: `Quote request exceeded ${timeoutMinutes} minute timeout`,
+          });
+        } else {
+          toast.error("Failed to get quote", {
+            description: "Unable to fetch quote. Please adjust amount or try again.",
+          });
+        }
+        setQuote(null);
+      } finally {
+        setIsQuoting(false);
+      }
+    };
+
+    const debounce = setTimeout(fetchQuote, 1000);
+    return () => clearTimeout(debounce);
+  }, [fromAmount, fromToken, toToken, address, slippageConfig, selectedChainId, privacyMode, cowSupported, timeoutMinutes]);
+
+  const needsApproval = fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" && 
+                       allowanceSpender &&
+                       (!allowance || BigInt(allowance.toString()) < (netAmountWei || 0n));
+
+  const handleApprove = () => {
+    if (!allowanceSpender) {
+      toast.error("Missing approval target");
+      return;
+    }
+    
+    try {
+      approve({
+        address: fromToken.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [allowanceSpender as `0x${string}`, parseUnits(fromAmount, fromToken.decimals)],
+      });
+      toast.info("Approval requested", {
+        description: "Please confirm in your wallet",
+      });
+    } catch (error) {
+      toast.error("Approval failed", {
+        description: error instanceof Error ? error.message : "Please try again",
+      });
+    }
+  };
+
+  const handleSwap = async () => {
+    if (!quote) {
+      toast.error("No quote available");
+      return;
+    }
+
+    const WETH_ADDRESSES: Record<number, string> = {
+      1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      10: "0x4200000000000000000000000000000000000006",
+      8453: "0x4200000000000000000000000000000000000006",
+      137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+      43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+    };
+
+    const fromIsETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+    const toIsETH = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+    const chainId = selectedChainId;
+    const fromIsWETH = fromToken.address.toLowerCase() === WETH_ADDRESSES[chainId]?.toLowerCase();
+    const toIsWETH = toToken.address.toLowerCase() === WETH_ADDRESSES[chainId]?.toLowerCase();
+    const isWrapUnwrap = (fromIsWETH && toIsETH) || (fromIsETH && toIsWETH);
+
+    if (isWrapUnwrap) {
+      const amountWei = parseUnits(fromAmount, fromToken.decimals);
+      if (amountWei === 0n) {
+        toast.error("Amount too small");
+        return;
+      }
+      const wethAddress = WETH_ADDRESSES[chainId] as `0x${string}`;
+      const WETH_ABI = [
+        { type: "function", name: "deposit", stateMutability: "payable", inputs: [], outputs: [] },
+        { type: "function", name: "withdraw", stateMutability: "nonpayable", inputs: [{ name: "wad", type: "uint256" }], outputs: [] },
+      ] as const;
+      try {
+        if (fromIsETH && toIsWETH) {
+          await writeContractGeneric({
+            address: wethAddress,
+            abi: WETH_ABI,
+            functionName: "deposit",
+            args: [],
+            value: amountWei,
+          });
+        } else if (fromIsWETH && toIsETH) {
+          await writeContractGeneric({
+            address: wethAddress,
+            abi: WETH_ABI,
+            functionName: "withdraw",
+            args: [amountWei],
+          });
+        }
+        toast.info("Wrap/unwrap submitted", {
+          description: "Please confirm in your wallet",
+        });
+      } catch (error) {
+        toast.error("Wrap/unwrap failed", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      }
+      return;
+    }
+
+    const liquidityRouterAddress = LIQUIDITY_ROUTER_ADDRESSES[selectedChainId];
+    if (quote.routerData && liquidityRouterAddress) {
+      try {
+        const deadline = Math.floor(Date.now() / 1000) + 1200;
+        const amountIn = parseUnits(fromAmount, fromToken.decimals);
+        const slippagePercent = getSlippagePercentage(slippageConfig);
+        const amountOutMin = calculateMinimumOutput(quote.routerData.estimatedOutput, slippagePercent);
+        const routerData = quote.routerData;
+        const isNativeETH = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+        const fromTokenAddr = isNativeETH ? "0x4200000000000000000000000000000000000006" : fromToken.address;
+        const toTokenAddr = toToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "0x0000000000000000000000000000000000000000" : toToken.address;
+
+        if (routerData.provider === "uniswap_v3" && routerData.fee) {
+          await writeDirectRouter({
+            address: liquidityRouterAddress as `0x${string}`,
+            abi: LIQUIDITY_ROUTER_ABI,
+            functionName: "swapExactInputUniswapV3",
+            args: [
+              fromTokenAddr as `0x${string}`,
+              toTokenAddr as `0x${string}`,
+              routerData.fee,
+              amountIn,
+              amountOutMin,
+              BigInt(deadline),
+            ],
+            value: isNativeETH ? amountIn : undefined,
+          });
+        } else if (routerData.provider === "aerodrome" && routerData.aerodromeRoutes) {
+          const updatedRoutes = routerData.aerodromeRoutes.map(route => ({
+            ...route,
+            from: route.from === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+              ? "0x4200000000000000000000000000000000000006" as `0x${string}`
+              : route.from,
+            to: route.to === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as `0x${string}`
+              ? "0x0000000000000000000000000000000000000000" as `0x${string}`
+              : route.to,
+          }));
+
+          await writeDirectRouter({
+            address: liquidityRouterAddress as `0x${string}`,
+            abi: LIQUIDITY_ROUTER_ABI,
+            functionName: "swapExactInputAerodrome",
+            args: [
+              updatedRoutes,
+              amountIn,
+              amountOutMin,
+              BigInt(deadline),
+            ],
+            value: isNativeETH ? amountIn : undefined,
+          });
+        }
+
+        toast.info("Swap submitted", {
+          description: "Please confirm in your wallet",
+        });
+      } catch (error) {
+        toast.error("Swap failed", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+      }
+      return;
+    }
+
+    if (!quote.data) {
+      toast.error("No quote available");
+      return;
+    }
+
+    // Privacy mode via CoW Protocol
+    if (privacyMode && quote.provider === "cow") {
+      try {
+        // CoW settlement contract by chain
+        const cowSettlement = (COW_SETTLEMENTS as any)[selectedChainId] as `0x${string}` | undefined;
+        if (!cowSettlement) {
+          toast.error("CoW Protocol not supported on this chain");
+          return;
+        }
+        // CoW only supports ERC20
+        if (fromToken.address !== "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          // Step 1: Transfer fee to treasury (if fee > 0)
+          if (feeAmountWei > 0n) {
+            try {
+              await writeContractGeneric({
+                address: fromToken.address as `0x${string}`,
+                abi: erc20Abi,
+                functionName: "transfer",
+                args: [TREASURY_WALLET, feeAmountWei],
+              });
+              toast.success("Fee sent to treasury", { description: "Now approving CoW settlement..." });
+            } catch (feeError) {
+              toast.error("Fee transfer failed", { description: "Please try again" });
+              return;
+            }
+          }
+
+          // Step 2: Ensure approval for ERC20 sell token to settlement (net amount)
+          if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
+            approve({
+              address: fromToken.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [cowSettlement, netAmountWei],
+            });
+            toast.info("Approval requested for CoW", { description: "Please confirm in your wallet" });
+            return; // wait user to approve then swap again
+          }
+        }
+
+        // Build CoW order
+        const sellAmount = netAmountWei; // swap only net amount
+        const estOut = BigInt(quote.estimatedOutput);
+        const slippagePercent = getSlippagePercentage(slippageConfig);
+        const minBuy = estOut - (estOut * BigInt(Math.floor(slippagePercent * 1000)) / BigInt(1000 * 100));
+
+        const validTo = Math.floor(Date.now() / 1000) + 10 * 60; // 10 minutes
+        const order = {
+          sellToken: fromToken.address,
+          buyToken: toToken.address,
+          sellAmount: sellAmount.toString(),
+          buyAmount: minBuy.toString(),
+          validTo,
+          appData: "0x" + "0".repeat(64),
+          feeAmount: "0",
+          kind: "sell" as const,
+          partiallyFillable: false,
+          sellTokenBalance: "erc20",
+          buyTokenBalance: "erc20",
+          from: address as `0x${string}`,
+          receiver: address as `0x${string}`,
+        };
+
+        // EIP-712 signing
+        const domain = { name: "Gnosis Protocol", version: "v2", chainId: selectedChainId, verifyingContract: cowSettlement } as const;
+        const types = {
+          Order: [
+            { name: "sellToken", type: "address" },
+            { name: "buyToken", type: "address" },
+            { name: "receiver", type: "address" },
+            { name: "sellAmount", type: "uint256" },
+            { name: "buyAmount", type: "uint256" },
+            { name: "validTo", type: "uint32" },
+            { name: "appData", type: "bytes32" },
+            { name: "feeAmount", type: "uint256" },
+            { name: "kind", type: "string" },
+            { name: "partiallyFillable", type: "bool" },
+            { name: "sellTokenBalance", type: "string" },
+            { name: "buyTokenBalance", type: "string" },
+          ],
+        } as const;
+
+        const signature = await signTypedDataAsync({ domain, types, primaryType: "Order", message: order });
+
+        // Submit to CoW
+        const res = await fetch("https://api.cow.fi/arbitrum/api/v1/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...order, signature, signingScheme: "eip712" }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j.description || res.statusText);
+        }
+        const uid = await res.json();
+        toast.success("Privacy order submitted", {
+          description: `Order UID: ${uid}`,
+        });
+        return;
+      } catch (error) {
+        toast.error("Privacy swap failed", {
+          description: error instanceof Error ? error.message : "Please try again",
+        });
+        return;
+      }
+    }
+
+    // If Router is configured, use single-tx batching when possible
+    const router = ROUTER_ADDRESSES[selectedChainId];
+    if (router && quote.provider === "0x") {
+      const ZEROX_ALLOWANCE = quote.data.allowanceTarget as `0x${string}`;
+      const ZEROX_TO = quote.data.to as `0x${string}`;
+      const ZEROX_DATA = quote.data.data as `0x${string}`;
+
+      // Validate 0x targets
+      const { getAddress, isHex } = await import("viem");
+      try {
+        const toChecksum = getAddress(ZEROX_TO);
+        const allowChecksum = getAddress(ZEROX_ALLOWANCE);
+        const safeSet = ZEROX_SAFE_TO_ADDRESSES[selectedChainId];
+        if (!safeSet || !safeSet.has(toChecksum.toLowerCase())) {
+          toast.error("Unrecognized 0x contract", { description: toChecksum });
+          return;
+        }
+        if (!isHex(ZEROX_DATA)) {
+          toast.error("Invalid transaction data");
+          return;
+        }
+      } catch {
+        toast.error("Invalid 0x quote data");
+        return;
+      }
+
+      const feeBps = SWAP_FEE_BPS;
+      const grossWei = parseUnits(fromAmount, fromToken.decimals);
+
+      const routerAbi = [
+        { "type":"function","name":"execute0xWithFee","inputs":[
+          {"name":"sellToken","type":"address"},
+          {"name":"grossAmount","type":"uint256"},
+          {"name":"feeBps","type":"uint256"},
+          {"name":"treasury","type":"address"},
+          {"name":"allowanceTarget","type":"address"},
+          {"name":"target","type":"address"},
+          {"name":"data","type":"bytes"}
+        ],"outputs":[],"stateMutability":"nonpayable"},
+        { "type":"function","name":"execute0xWithFeeETH","inputs":[
+          {"name":"feeBps","type":"uint256"},
+          {"name":"treasury","type":"address"},
+          {"name":"target","type":"address"},
+          {"name":"data","type":"bytes"}
+        ],"outputs":[],"stateMutability":"payable"}
+      ] as const;
+
+      try {
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          await writeContractGeneric({
+            abi: routerAbi,
+            address: router as `0x${string}`,
+            functionName: "execute0xWithFeeETH",
+            args: [BigInt(feeBps), TREASURY_WALLET as `0x${string}`, ZEROX_TO, ZEROX_DATA],
+            value: grossWei,
+          });
+        } else {
+          // Ensure user approval to router for gross amount
+          // This uses the existing approval flow if needed
+          if (!allowance || BigInt(allowance.toString()) < grossWei) {
+            await approve({
+              address: fromToken.address as `0x${string}`,
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [router as `0x${string}`, grossWei],
+            });
+            toast.info("Approved router for token spend. Please confirm swap.");
+            return;
+          }
+
+          await writeContractGeneric({
+            abi: routerAbi,
+            address: router as `0x${string}`,
+            functionName: "execute0xWithFee",
+            args: [
+              fromToken.address as `0x${string}`,
+              grossWei,
+              BigInt(feeBps),
+              TREASURY_WALLET as `0x${string}`,
+              ZEROX_ALLOWANCE,
+              ZEROX_TO,
+              ZEROX_DATA,
+            ],
+          });
+        }
+        toast.info("Swap requested", { description: "Please confirm in your wallet" });
+        return;
+      } catch (routerError) {
+        logger.error("FeeRouter swap failed, using fallback", routerError);
+        toast.warning("Using alternative swap method", { description: "Primary router unavailable" });
+        // Fallback to direct swap below
+      }
+    }
+
+    // Fallback: Two-transaction flow (Fee → Swap)
+    // This path should rarely be hit since FeeRouter is deployed on most chains
+    // Fee is sent first, then swap executes after confirmation
+    try {
+      if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+        // Native ETH: Send fee to treasury first
+        if (feeAmountWei > 0n) {
+          // Store swap data for execution after fee completes
+          setPendingSwapData({
+            to: quote.data.to,
+            data: quote.data.data,
+            value: netAmountWei,
+          });
+          // Send fee transaction (will wait for confirmation before swap)
+          sendFeeTransaction({
+            to: TREASURY_WALLET,
+            value: feeAmountWei,
+          });
+          toast.info("Sending fee to treasury...", { 
+            description: "Swap will execute automatically after fee confirmation" 
+          });
+        } else {
+          // No fee, direct swap
+          sendTransaction({
+            to: quote.data.to,
+            data: quote.data.data,
+            value: netAmountWei,
+          });
+          toast.info("Swap requested", { description: "Please confirm in your wallet" });
+        }
+      } else {
+        // ERC20: Ensure approval for net amount to 0x first
+        const allowanceTarget = quote.data.allowanceTarget as `0x${string}`;
+        if (!allowance || BigInt(allowance.toString()) < netAmountWei) {
+          approve({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [allowanceTarget, netAmountWei],
+          });
+          toast.info("Approval requested", { description: "Please confirm and retry swap" });
+          return;
+        }
+        
+        // Send fee to treasury first
+        if (feeAmountWei > 0n) {
+          // Store swap data for execution after fee completes
+          setPendingSwapData({
+            to: quote.data.to,
+            data: quote.data.data,
+          });
+          // Send fee token transaction (will wait for confirmation before swap)
+          sendFeeTokenTransaction({
+            address: fromToken.address as `0x${string}`,
+            abi: erc20Abi,
+            functionName: "transfer",
+            args: [TREASURY_WALLET, feeAmountWei],
+          });
+          toast.info("Sending fee to treasury...", { 
+            description: "Swap will execute automatically after fee confirmation" 
+          });
+        } else {
+          // No fee, direct swap
+          sendTransaction({
+            to: quote.data.to,
+            data: quote.data.data,
+          });
+          toast.info("Swap requested", { description: "Please confirm in your wallet" });
+        }
+      }
+    } catch (error) {
+      logger.error("Swap error", error);
+      toast.error("Swap failed", {
+        description: error instanceof Error ? error.message : "Please try again",
+      });
+      setPendingSwapData(null);
+    }
+  };
+
+  const handleMaxClick = () => {
+    if (fromBalance) {
+      const maxAmount = fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+        ? Math.max(0, parseFloat(fromBalance.formatted) - 0.001).toString()
+        : fromBalance.formatted;
+      setFromAmount(maxAmount);
+    }
+  };
+
+  const switchTokens = () => {
+    const tempToken = fromToken;
+    setFromToken(toToken);
+    setToToken(tempToken);
+    setFromAmount("");
+  };
+
+  const toAmountDisplay = quote ? formatUnits(BigInt(quote.estimatedOutput), toToken.decimals) : "0";
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (fromToken.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+          // native token uses native price we already fetched
+          setFromTokenPriceUSD(nativePriceUSD || 0);
+        } else {
+          const p = await getTokenPriceUSD(selectedChainId, fromToken.address);
+          setFromTokenPriceUSD(p || 0);
+        }
+      } catch {
+        setFromTokenPriceUSD(0);
+      }
+    })();
+  }, [fromToken, selectedChainId, nativePriceUSD]);
+
+  const calculateFeeUSD = () => {
+    if (!quote) return 0;
+    
+    // For direct router quotes (Aerodrome/Uniswap V3)
+    if (quote.routerData) {
+      const estimatedGas = quote.routerData.estimatedGas || "150000";
+      // Use a reasonable gas price for L2s (Base is ~0.001 Gwei typically)
+      const gasPrice = selectedChainId === CHAIN_IDS.BASE ? "1000000" : "50000000000";
+      const gasCostWei = BigInt(estimatedGas) * BigInt(gasPrice);
+      const gasCostNative = parseFloat(formatUnits(gasCostWei, 18));
+      const price = nativePriceUSD || 0;
+      return gasCostNative * price;
+    }
+    
+    // For 0x quotes
+    if (!quote?.data?.estimatedGas) return 0;
+    const gasPrice = quote.data.gasPrice || "50000000000";
+    const gasCostWei = BigInt(quote.data.estimatedGas) * BigInt(gasPrice);
+    const gasCostNative = parseFloat(formatUnits(gasCostWei, 18));
+    const price = nativePriceUSD || 0;
+    return gasCostNative * price;
+  };
+
+  const calculateValueUSD = () => {
+    const amount = parseFloat(fromAmount || "0");
+    const price = fromTokenPriceUSD || 0;
+    return amount * price;
+  };
+
+  const calculateSlippageAmount = () => {
+    if (!quote) return "0";
+    const slippagePercent = getSlippagePercentage(slippageConfig);
+    const outputAmount = parseFloat(formatUnits(BigInt(quote.estimatedOutput), toToken.decimals));
+    const slippageAmount = (outputAmount * slippagePercent) / 100;
+    return slippageAmount.toFixed(6);
+  };
+
+  const getExplorerUrlForChain = (chainId: number, hash: string) => {
+    const explorers: Record<number, string> = {
+      [CHAIN_IDS.ARBITRUM]: "https://arbiscan.io/tx/",
+      [CHAIN_IDS.AVALANCHE]: "https://snowtrace.io/tx/",
+      [CHAIN_IDS.BASE]: "https://basescan.org/tx/",
+      [CHAIN_IDS.OPTIMISM]: "https://optimistic.etherscan.io/tx/",
+      [CHAIN_IDS.POLYGON]: "https://polygonscan.com/tx/",
+    };
+    const base = explorers[chainId] || explorers[CHAIN_IDS.BASE];
+    return base + hash;
+  };
+
+  const getExplorerUrl = (hash: string) => {
+    return getExplorerUrlForChain(selectedChainId, hash);
+  };
+
+  return (
+    <div className="mx-auto max-w-[500px] px-4">
+      <div className="rounded-3xl bg-[#0B1221]/80 backdrop-blur-sm border border-[#1E2940] p-6 shadow-2xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Swap</h2>
+          <div className="flex items-center gap-2">
+            {cowSupported && (
+              <button
+                onClick={() => setPrivacyMode(!privacyMode)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition ${
+                  privacyMode
+                    ? "bg-green-500/20 border-green-500/50 text-green-400"
+                    : "bg-gray-500/20 border-gray-500/50 text-gray-400"
+                }`}
+              >
+                <Shield size={14} />
+                <span className="text-xs font-medium">Privacy</span>
+              </button>
+            )}
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <button className="p-2 hover:bg-white/5 rounded-lg transition">
+                  <Settings2 size={18} className="text-gray-400" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="bg-[#0B1221] border border-[#1E2940] text-white max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Transaction Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-3">Slippage Tolerance</h3>
+                    <SlippageSettings value={slippageConfig} onChange={setSlippageConfig} />
+                  </div>
+                  <div className="border-t border-[#1E2940] pt-6">
+                    <TransactionTimeoutSettings
+                      timeoutMinutes={timeoutMinutes}
+                      onChange={setTimeoutMinutes}
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {quote?.routerData && getLiquidityRouterAddress(selectedChainId) && (
+          <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <Shield size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-sm">
+                <p className="text-blue-300 font-medium mb-1">DecaFlow Router Contract</p>
+                <p className="text-gray-300 text-xs leading-relaxed mb-2">
+                  If your wallet shows a security warning, you can safely proceed. This is our verified DEX aggregator contract.
+                </p>
+                <a
+                  href={`https://basescan.org/address/${getLiquidityRouterAddress(selectedChainId)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#47A1FF] text-xs hover:underline underline-offset-2 flex items-center gap-1"
+                >
+                  Verify contract on BaseScan
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-2 rounded-2xl bg-[#0D1624] border border-[#1E2940] p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <ChainSelector 
+              selectedChainId={selectedChainId} 
+              onChainChange={setSelectedChainId}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">
+                Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
+                  <span className="text-orange-400">Switch Chain</span>
+                ) : (isFromBalanceLoading || isFromFallbackLoading) ? (
+                  <Loader2 className="w-3 h-3 inline animate-spin" />
+                ) : fromBalance ? (
+                  Number(fromBalance.formatted).toFixed(4)
+                ) : fromBalanceFallback ? (
+                  Number(fromBalanceFallback).toFixed(4)
+                ) : isFromBalanceError ? (
+                  <span className="text-red-400">Error</span>
+                ) : (
+                  '0.0000'
+                )}
+              </span>
+              <button 
+                onClick={handleMaxClick}
+                disabled={!fromBalance || isFromBalanceLoading}
+                className="px-2.5 py-1 rounded-md border border-[#47A1FF]/40 bg-[#47A1FF]/5 text-[#47A1FF] hover:bg-[#47A1FF]/10 text-xs font-medium transition disabled:opacity-40"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              placeholder="0"
+              value={fromAmount}
+              onChange={(e) => setFromAmount(e.target.value)}
+              className="flex-1 border-0 bg-transparent text-5xl font-medium placeholder:text-gray-700 focus-visible:ring-0 px-0 h-auto"
+            />
+            <div className="flex-shrink-0">
+              <EnhancedTokenSelector 
+                selectedToken={fromToken} 
+                onSelect={setFromToken} 
+                tokens={TOKENS_BY_CHAIN[selectedChainId] || []}
+                chainId={selectedChainId}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="relative flex justify-center -my-3 z-10">
+          <button
+            onClick={switchTokens}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1A2332] border-2 border-[#0B1221] hover:bg-[#1E2940] transition-all"
+          >
+            <ArrowDownUp size={18} className="text-[#47A1FF]" />
+          </button>
+        </div>
+
+        <div className="mb-4 rounded-2xl bg-[#0D1624] border border-[#1E2940] p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <ChainSelector 
+              selectedChainId={selectedChainId} 
+              onChainChange={setSelectedChainId}
+            />
+            <span className="text-xs text-gray-500">
+              Balance: {isConnected && chain?.id && chain.id !== selectedChainId ? (
+                <span className="text-orange-400">Switch Chain</span>
+              ) : (isToBalanceLoading || isToFallbackLoading) ? (
+                <Loader2 className="w-3 h-3 inline animate-spin" />
+              ) : toBalance ? (
+                Number(toBalance.formatted).toFixed(4)
+              ) : toBalanceFallback ? (
+                Number(toBalanceFallback).toFixed(4)
+              ) : isToBalanceError ? (
+                <span className="text-red-400">Error</span>
+              ) : (
+                '0.0000'
+              )}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Input
+              type="text"
+              value={toAmountDisplay}
+              readOnly
+              placeholder="0"
+              className="flex-1 border-0 bg-transparent text-5xl font-medium text-gray-500 placeholder:text-gray-700 focus-visible:ring-0 px-0 h-auto cursor-default"
+            />
+            <div className="flex-shrink-0">
+              <EnhancedTokenSelector 
+                selectedToken={toToken} 
+                onSelect={setToToken} 
+                tokens={TOKENS_BY_CHAIN[selectedChainId] || []}
+                chainId={selectedChainId}
+              />
+            </div>
+          </div>
+        </div>
+
+        {fromAmount && parseFloat(fromAmount) > 0 && quote && (
+          <div className="mb-4">
+            <DustWarning
+              valueUSD={calculateValueUSD()}
+              estimatedGasCostUSD={calculateFeeUSD()}
+            />
+          </div>
+        )}
+
+        <div 
+          className="mb-4 rounded-xl bg-[#0D1624] border border-[#1E2940] p-3 cursor-pointer hover:bg-[#0D1624]/80 transition"
+          onClick={() => setShowFeeDetails(!showFeeDetails)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <FileText size={16} className="text-[#47A1FF]" />
+              <span className="text-gray-400">Route</span>
+              <span className="text-green-400 font-medium text-xs">{quote?.provider.toUpperCase() || "0x"}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Fuel size={16} className="text-[#47A1FF]" />
+              <span className="text-gray-400">Gas</span>
+              <span className="text-gray-300">~${calculateFeeUSD().toFixed(2)}</span>
+              <ChevronDown size={14} className={`text-gray-500 transition-transform ${showFeeDetails ? 'rotate-180' : ''}`} />
+            </div>
+          </div>
+          
+          {showFeeDetails && quote && (
+            <div className="mt-4 pt-4 border-t border-[#1E2940] space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Network Fee</span>
+                <span className="text-gray-300">${calculateFeeUSD().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Platform Fee</span>
+                <span className="text-gray-300">{fromAmount ? (Number(formatUnits(feeAmountWei, fromToken.decimals)).toFixed(6) + ' ' + fromToken.symbol) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Amount Swapped</span>
+                <span className="text-gray-300">{fromAmount ? (Number(formatUnits(netAmountWei, fromToken.decimals)).toFixed(6) + ' ' + fromToken.symbol) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Max Slippage</span>
+                <span className="text-gray-300">{getSlippagePercentage(slippageConfig)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Timeout</span>
+                <span className="text-gray-300">{timeoutMinutes} minutes</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Minimum Received</span>
+                <span className="text-green-400 font-medium">
+                  {(parseFloat(toAmountDisplay) - parseFloat(calculateSlippageAmount())).toFixed(6)} {toToken.symbol}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Route</span>
+                <span className="text-gray-300 text-right max-w-[200px] truncate">{quote.route}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Two-step process indicator */}
+        {(isSendingFee || isSendingFeeToken || pendingSwapData) && (
+          <div className="mb-4 rounded-xl bg-blue-500/10 border border-blue-500/30 p-4">
+            <div className="flex items-start gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-300 mb-1">
+                  {isSendingFee || isSendingFeeToken ? "Step 1/2: Sending fee to treasury..." : "Step 2/2: Executing swap..."}
+                </p>
+                <p className="text-xs text-gray-300">
+                  {isSendingFee || isSendingFeeToken 
+                    ? "Please wait for fee transaction to confirm. Swap will execute automatically."
+                    : "Fee confirmed! Executing your swap now..."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!isConnected ? (
+          <Button 
+            className="w-full h-14 bg-[#4A5B7D] hover:bg-[#556891] text-white font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <Wallet size={20} />
+            Connect Wallet
+          </Button>
+        ) : chain?.id !== selectedChainId ? (
+          <Button 
+            className="w-full h-14 bg-amber-500/20 border border-amber-500/50 text-amber-400 font-semibold text-base rounded-xl"
+            onClick={() => {
+              toast.info("Please switch network", {
+                description: "Switch to the selected network in your wallet",
+              });
+            }}
+          >
+            Wrong Network - Switch Required
+          </Button>
+        ) : needsApproval ? (
+          <Button 
+            onClick={handleApprove}
+            disabled={isApproving || !quote}
+            className="w-full h-14 bg-gradient-to-r from-[#FF9500] to-[#FFB800] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base rounded-xl transition-all"
+          >
+            {isApproving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Approving...
+              </>
+            ) : (
+              `Approve ${fromToken.symbol}`
+            )}
+          </Button>
+        ) : (isSwapping || isDirectRouterSwapping || isSendingFee || isSendingFeeToken) ? (
+          <Button 
+            className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white font-semibold text-base rounded-xl"
+            disabled
+          >
+            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            {isSendingFee || isSendingFeeToken ? "Sending fee to treasury..." : "Swapping..."}
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleSwap}
+            disabled={!quote || !fromAmount || isQuoting}
+            className="w-full h-14 bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-base rounded-xl transition-all"
+          >
+            {isQuoting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Getting quote...
+              </>
+            ) : !fromAmount ? (
+              "Enter an amount"
+            ) : !quote ? (
+              "Select tokens"
+            ) : (
+              "Swap"
+            )}
+          </Button>
+        )}
+
+        {recentSwaps.length > 0 && (
+          <div className="mt-4 rounded-xl bg-[#0D1624] border border-[#1E2940] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-400">Recent swaps</span>
+              <span className="text-[10px] text-gray-500">Last {Math.min(5, recentSwaps.length)}</span>
+            </div>
+            <div className="space-y-2">
+              {recentSwaps.slice(0, 5).map((s, idx) => (
+                <div key={s.hash + idx} className="flex items-center justify-between text-[11px] text-gray-300">
+                  <div className="flex flex-col">
+                    <span>{s.amount} {s.fromSymbol} → {s.toSymbol}</span>
+                    <a
+                      href={getExplorerUrlForChain(s.chainId, s.hash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-[#47A1FF] hover:underline underline-offset-2"
+                    >
+                      {s.hash.slice(0, 6)}...{s.hash.slice(-4)}
+                    </a>
+                  </div>
+                  <span className="text-[10px] text-gray-500">
+                    {new Date(s.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+ 
+         {(approvalHash || feeHash || feeTokenHash || swapHash) && (
+          <div className="mt-4 space-y-2">
+            {approvalHash && (
+              <a 
+                href={getExplorerUrl(approvalHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-[#47A1FF] transition"
+              >
+                View approval transaction
+                <ExternalLink size={12} />
+              </a>
+            )}
+            {(feeHash || feeTokenHash) && (
+              <a 
+                href={getExplorerUrl(feeHash || feeTokenHash || '')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs text-green-400 hover:text-green-300 transition"
+              >
+                View fee transaction (1.5% to treasury)
+                <ExternalLink size={12} />
+              </a>
+            )}
+            {swapHash && (
+              <a 
+                href={getExplorerUrl(swapHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs text-gray-400 hover:text-[#47A1FF] transition"
+              >
+                View swap transaction
+                <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
