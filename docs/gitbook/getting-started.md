@@ -1,11 +1,11 @@
 # Getting Started
 
-DecaFlow is a Base-native, multi-chain DEX for privacy-preserving swaps, bridges, and liquidity incentives.
+DecaFlow is an Arbitrum-native, multi-chain DEX for privacy-preserving swaps, bridges, and liquidity incentives.
 
 ## Supported chains
-- Base (primary)
+- Arbitrum (primary)
 - Ethereum
-- Arbitrum
+- Base
 - Optimism
 - Polygon
 - Avalanche
