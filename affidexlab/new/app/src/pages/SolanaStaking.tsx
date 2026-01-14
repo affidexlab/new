@@ -313,6 +313,10 @@ export default function SolanaStaking() {
                       <span className="text-white">{grossValueUsdt ? `${grossValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
+                      <span>Platform Fee (0.5%)</span>
+                      <span className="text-orange-400">-{depositFee.toFixed(2)} VDM</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
                       <span>Net Stake Value</span>
                       <span className="text-white">{netValueUsdt ? `${netValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
