@@ -27,8 +27,24 @@ export async function quote0x(params: QuoteParams): Promise<QuoteResponse> {
   const apiEndpoint = API_ENDPOINTS[params.chainId]?.zeroX;
   if (!apiEndpoint) throw new Error(`0x API not supported on chain ${params.chainId}`);
 
-  const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.fromToken;
-  const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" ? "ETH" : params.toToken;
+  const ETHEREUM_MAINNET = 1;
+  const POLYGON = 137;
+  const isMainnet = params.chainId === ETHEREUM_MAINNET;
+  
+  const WRAPPED_NATIVE: Record<number, string> = {
+    137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+    10: "0x4200000000000000000000000000000000000006",
+    8453: "0x4200000000000000000000000000000000000006",
+    43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+  };
+  
+  const sellToken = params.fromToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" 
+    ? (isMainnet ? "ETH" : (WRAPPED_NATIVE[params.chainId] || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"))
+    : params.fromToken;
+  const buyToken = params.toToken === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+    ? (isMainnet ? "ETH" : (WRAPPED_NATIVE[params.chainId] || "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"))
+    : params.toToken;
 
   const urlParams: Record<string, string> = {
     sellToken,
