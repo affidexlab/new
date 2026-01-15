@@ -250,7 +250,7 @@ export default function SolanaStaking() {
                     <li>VDM tokens are held securely in a custodial staking wallet during the lock period.</li>
                     <li>Staking logic and rewards are managed by DecaFlow infrastructure.</li>
                     <li>Rewards are paid in USDT to maximize flexibility and minimize volatility.</li>
-                    <li>A 0.5% platform fee applies (included in the 2.5% deposit fee).</li>
+                    <li>A 0.5% platform fee applies to cover infrastructure costs.</li>
                     <li>This version is fully managed by the DecaFlow × VDM team.</li>
                     <li>Payouts are processed by the VDM / Affidex team.</li>
                   </ul>
@@ -322,15 +322,8 @@ export default function SolanaStaking() {
                       <span className="text-white">{netValueUsdt ? `${netValueUsdt.toFixed(2)} USDT` : '—'}</span>
                     </div>
                     <div className="flex justify-between text-gray-400 text-xs">
-                      <span>Deposit fee (2.5%)</span>
-                      <span className="text-white">-{depositFee.toFixed(2)} VDM</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400 text-xs">
                       <span>Platform fee (0.5%)</span>
                       <span className="text-white">-{platformFee.toFixed(2)} VDM</span>
-                    </div>
-                    <div className="text-[11px] text-gray-600">
-                      Platform fee is shown for transparency and is included in the deposit fee.
                     </div>
                     <div className="flex justify-between text-gray-400">
                       <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
