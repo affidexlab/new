@@ -329,10 +329,6 @@ export default function SolanaStaking() {
                       <span>Estimated Rewards ({selectedPeriod?.apy}% APY)</span>
                       <span className="text-green-400">+{estimatedRewards.toFixed(2)} USDT</span>
                     </div>
-                    <div className="flex justify-between text-white font-medium pt-2 border-t border-gray-700">
-                      <span>Estimated Principal</span>
-                      <span className="text-white">{netPrincipalVdm.toFixed(2)} VDM</span>
-                    </div>
                     <div className="flex justify-between text-gray-400 text-xs">
                       <span>Lock Period</span>
                       <span className="text-white">{selectedPeriod?.months} months</span>
