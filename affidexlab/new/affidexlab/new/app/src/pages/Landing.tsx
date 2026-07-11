@@ -396,183 +396,113 @@ export default function Landing() {
         </div>
       </section>
 
+      
+
       {/* Footer */}
-      <footer className="relative bg-[#0A0E1F] border-t border-[#47A1FF]/10 py-16">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
-            {/* Brand Column */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#3396FF] to-[#47A1FF] flex items-center justify-center">
-                  <span className="text-white font-bold">D</span>
-                </div>
-                <span className="text-xl font-bold">DECAFLOW</span>
-              </div>
-              <p className="text-sm text-gray-400">
-                Where Privacy Meets Secure Cross Chain Swaps
-              </p>
-              <div className="flex gap-4">
-                <SocialIcon icon="twitter" href="https://x.com/decaflow" />
-                <SocialIcon icon="telegram" href="https://t.me/decaflowprotocol" />
-                <SocialIcon icon="discord" href="#" />
-                <SocialIcon icon="medium" href="#" />
-              </div>
-            </div>
+      export const NewFooter = () => (
+  <footer style={{
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    padding: '4rem 2rem 2.5rem',
+    background: 'rgba(0,0,0,0.3)',
+  }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', marginBottom: '4rem' }}>
 
-            {/* Find Us */}
-            <div>
-              <h3 className="font-semibold mb-4">Find Us</h3>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-[#47A1FF] transition">CoinMarketCap</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">CoinGecko</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">DexScreener</a></li>
-                <li><a href="https://basescan.org" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Base Explorer</a></li>
-              </ul>
-            </div>
-
-            {/* Socials */}
-            <div>
-              <h3 className="font-semibold mb-4">Socials</h3>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li><a href="https://t.me/decaflowprotocol" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Telegram</a></li>
-                <li><a href="https://x.com/decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-[#47A1FF] transition">Twitter/X</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Discord</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Medium</a></li>
-              </ul>
-            </div>
-
-            {/* Website */}
-            <div>
-              <h3 className="font-semibold mb-4">Website</h3>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li><a href="/" className="hover:text-[#47A1FF] transition">Home</a></li>
-                <li><a href="#CardCCIP" className="hover:text-[#47A1FF] transition">CCIP</a></li>
-                <li><a href="#CardCCTP" className="hover:text-[#47A1FF] transition">CCTP</a></li>
-                <li><a href="/app" className="hover:text-[#47A1FF] transition">DApp</a></li>
-              </ul>
-            </div>
-
-            {/* Developers */}
-            <div>
-              <h3 className="font-semibold mb-4">Developers</h3>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Gitbook</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Audit</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Report Bug</a></li>
-                <li><a href="#" className="hover:text-[#47A1FF] transition">Support</a></li>
-              </ul>
-            </div>
+        {/* Brand */}
+        <div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Deca<span style={{ color: '#3B82F6' }}>Flow</span>
           </div>
-
-          {/* Copyright */}
-          <div className="border-t border-[#47A1FF]/10 pt-8 text-center text-sm text-gray-500">
-            <p>Copyright © DecaFlow 2025 | Powered by Base</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: '1rem' }}>
+            The complete Web3 infrastructure layer. Privacy, compliance, security, and speed — in one platform.
+          </p>
+          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>
+            <div>DecaFlow Solutions Limited</div>
+            <div>RC No. 9616822</div>
+            <div>TIN: 2620351636603</div>
+            <div>Incorporated: 16 June 2026</div>
           </div>
         </div>
-      </footer>
-    </div>
-  );
-}
 
-function StatsCard({ number, label }: { number: string; label: string }) {
-  return (
-    <div className="text-center p-6 rounded-2xl bg-[#1A1F2E]/30 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition group">
-      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#47A1FF] mb-2 group-hover:scale-110 transition">
-        {number}
+        {/* Products */}
+        <div>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
+            Products
+          </div>
+          {[
+            { label: 'MEV-Protected Swap', href: '/#swap' },
+            { label: 'Bridge Aggregator', href: '/#bridge' },
+            { label: 'Compliance Monitoring', href: '/compliance' },
+            { label: 'Security Audit', href: '/audit' },
+            { label: 'Verify API', href: '/verify' },
+            { label: 'Privacy SDK', href: 'https://www.npmjs.com/package/@decaflow/privacy-sdk' },
+          ].map(l => (
+            <a key={l.label} href={l.href} style={{
+              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
+              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
+            }}>
+              {l.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Developers */}
+        <div>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
+            Developers
+          </div>
+          {[
+            { label: 'npm: @decaflow/privacy-sdk', href: 'https://www.npmjs.com/package/@decaflow/privacy-sdk' },
+            { label: 'GitHub', href: 'https://github.com/affidexlab/new' },
+            { label: 'Documentation', href: 'https://docs.decaflow.xyz' },
+            { label: 'Protocol Integrations', href: 'https://github.com/affidexlab/decaflow-integrations' },
+          ].map(l => (
+            <a key={l.label} href={l.href} style={{
+              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
+              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
+            }}>
+              {l.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Company */}
+        <div>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
+            Company
+          </div>
+          {[
+            { label: 'decaflow.xyz', href: 'https://decaflow.xyz' },
+            { label: 'decaflowsolutions@gmail.com', href: 'mailto:decaflowsolutions@gmail.com' },
+            { label: '@decaflowprotocol', href: 'https://x.com/decaflowprotocol' },
+            { label: 'Acquisition Enquiries', href: 'mailto:decaflowsolutions@gmail.com?subject=Acquisition Enquiry' },
+            { label: 'Partnership', href: 'mailto:decaflowsolutions@gmail.com?subject=Partnership Enquiry' },
+          ].map(l => (
+            <a key={l.label} href={l.href} style={{
+              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
+              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
+            }}>
+              {l.label}
+            </a>
+          ))}
+        </div>
       </div>
-      <div className="text-base sm:text-lg text-gray-400">{label}</div>
-    </div>
-  );
-}
 
-function LogoCard({ name }: { name: string }) {
-  const logoMap: Record<string, string> = {
-    'Arbitrum': '/images/chains/arbitrum.png',
-    'Base': '/images/chains/base.png',
-    'Optimism': '/images/chains/optimism.png',
-    'Polygon': '/images/chains/polygon.png',
-    'Ethereum': '/images/chains/ethereum.png',
-    'Avalanche': '/images/chains/avalanche.png'
-  };
-  
-  return (
-    <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group p-4">
-      <OptimizedImage 
-        src={logoMap[name]} 
-        alt={name} 
-        className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition"
-        lazy={false}
-      />
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
-  const iconMap: Record<string, string> = {
-    '🔗': '/images/chainswap/introducing_1.png',
-    '🛡️': '/images/chainswap/introducing_2.png',
-    '⚡': '/images/chainswap/introducing_3.png'
-  };
-  
-  return (
-    <div className="p-8 rounded-2xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition-all group hover:scale-105 duration-300">
-      <div className="w-32 h-32 mb-6 mx-auto">
-        <OptimizedImage 
-          src={iconMap[icon]} 
-          alt={title} 
-          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
-        />
+      {/* Bottom bar */}
+      <div style={{
+        borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap' as const, gap: '1rem',
+      }}>
+        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>
+          © 2026 DecaFlow Solutions Limited · All rights reserved.
+        </div>
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          {['Privacy Policy', 'Terms of Service', 'Security'].map(l => (
+            <a key={l} href="#" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', textDecoration: 'none' }}>{l}</a>
+          ))}
+        </div>
       </div>
-      <h3 className="text-2xl font-bold mb-4 group-hover:text-[#47A1FF] transition">{title}</h3>
-      <p className="text-gray-400 leading-relaxed">{description}</p>
     </div>
-  );
-}
-
-function SocialIcon({ icon, href }: { icon: string; href: string }) {
-  const iconMap: Record<string, string> = {
-    'twitter': '/images/social/twitter.png',
-    'telegram': '/images/social/telegram.png',
-    'discord': '/images/social/discord.png',
-    'medium': '/images/social/medium.png'
-  };
-  
-  return (
-    <a 
-      href={href} 
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
-    >
-      <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
-    </a>
-  );
-}
-
-<style jsx>{`
-  @keyframes scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  .animate-scroll {
-    animation: scroll 30s linear infinite;
-    will-change: transform;
-  }
-  @keyframes fade-in-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .animate-fade-in-up {
-    animation: fade-in-up 0.8s ease-out forwards;
-  }
-  .delay-100 { animation-delay: 0.1s; }
-  .delay-200 { animation-delay: 0.2s; }
-  .delay-300 { animation-delay: 0.3s; }
-  .delay-1000 { animation-delay: 1s; }
-`}</style>
+  </footer>
+);
