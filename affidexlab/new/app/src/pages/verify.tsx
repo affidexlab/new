@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import Head from 'next/head';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const FEATURES = [
@@ -208,16 +206,9 @@ export default function VerifyPage() {
   const recColor = (r: string) =>
     r === 'APPROVE' ? '#22c55e' : r === 'REVIEW' ? '#f59e0b' : '#ef4444';
 
+  useEffect(() => { document.title = "DecaFlow Verify API — Wallet Screening & Sanctions Checking"; }, []);
   return (
     <>
-      <Head>
-        <title>DecaFlow Verify API — Wallet Screening & Sanctions Checking</title>
-        <meta
-          name="description"
-          content="Global wallet screening API. Sanctions checking, mixer detection, darknet exposure, and AML risk scoring across 7 blockchain networks. Sub-100ms."
-        />
-      </Head>
-
       <div style={{ background: '#0A0E27', color: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {/* ── Nav ── */}
@@ -227,16 +218,16 @@ export default function VerifyPage() {
           position: 'sticky', top: 0, background: 'rgba(10,14,39,0.95)',
           backdropFilter: 'blur(12px)', zIndex: 100,
         }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <a href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
               Deca<span style={{ color: '#3B82F6' }}>Flow</span>
             </span>
-          </Link>
+          </a>
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-            <Link href="/compliance" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Compliance</Link>
-            <Link href="/audit" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Security Audit</Link>
-            <Link href="/verify" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Verify API</Link>
-            <Link href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Swap</Link>
+            <a href="/compliance" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Compliance</a>
+            <a href="/audit" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Security Audit</a>
+            <a href="/verify" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Verify API</a>
+            <a href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Swap</a>
             <a
               href="mailto:decaflowsolutions@gmail.com?subject=Verify API Key Request"
               style={{
