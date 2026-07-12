@@ -520,7 +520,7 @@ if (result.recommendation === 'APPROVE') {
                     ))}
                   </ul>
                   <a
-                    href="mailto:decaflowsolutions@gmail.com?subject=Compliance - " + t.name + " Plan"
+                    href={"mailto:decaflowsolutions@gmail.com?subject=Compliance - " + t.name + " Plan"}
                     style={{
                       display: 'block', textAlign: 'center', padding: '0.875rem',
                       borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem',
