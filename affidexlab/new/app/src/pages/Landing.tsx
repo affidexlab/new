@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
+import { ServicesOverview, TrustBar, StatsSection } from "@/components/HomepageAdditions";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com').trim().replace(/\/+$/, '');
 const FALLBACK_STATS = { trades: 2728, volumeUSD: 7000000, wallets: 68, tvl: 0 };
@@ -264,6 +265,9 @@ export default function Landing() {
               <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
               <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
               <a href="#privacy-sdk" className="text-gray-400 hover:text-[#47A1FF] transition">Privacy SDK</a>
+              <a href="/compliance" className="text-gray-400 hover:text-[#47A1FF] transition">Compliance</a>
+              <a href="/audit" className="text-gray-400 hover:text-[#47A1FF] transition">Security Audit</a>
+              <a href="/verify" className="text-gray-400 hover:text-[#47A1FF] transition">Verify API</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#47A1FF] transition">Docs</a>
               <div className="relative">
                 <Button 
@@ -314,6 +318,9 @@ export default function Landing() {
               <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
               <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
               <a href="#privacy-sdk" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Privacy SDK</a>
+              <a href="/compliance" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Compliance</a>
+              <a href="/audit" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Security Audit</a>
+              <a href="/verify" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Verify API</a>
               <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Docs</a>
               <div className="space-y-2">
                 <Button 
@@ -364,14 +371,14 @@ export default function Landing() {
               </div>
 
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
-                <span className="block animate-fade-in-up">Privacy Swaps.</span>
+                <span className="block animate-fade-in-up">The Complete</span>
                 <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
-                  DLMM Liquidity. MEV Protected.
+                  Web3 Infrastructure Layer
                 </span>
               </h1>
 
               <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-10 max-w-3xl lg:max-w-none animate-fade-in-up delay-200">
-                CoW Protocol privacy routing meets programmable DLMM pools so traders can move size quietly, LPs capture denser fees, and the Pioneer 100 earn outsized rewards.
+                MEV-protected swaps. On-chain AML compliance. Smart contract security audits. Global wallet screening. One platform.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-300">
@@ -840,15 +847,13 @@ const tx = await privacy.executeSwap(quote, signer);`}</code>
         </div>
       </section>
 
+      <ServicesOverview />
+      <TrustBar />
+      <StatsSection />
+
       {/* Footer */}
       <footer className="relative bg-[#0A0E1F] border-t border-[#47A1FF]/10 py-16">
-        export const NewFooter = () => (
-  <footer style={{
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    padding: '4rem 2rem 2.5rem',
-    background: 'rgba(0,0,0,0.3)',
-  }}>
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', marginBottom: '4rem' }}>
 
         {/* Brand */}
@@ -946,9 +951,11 @@ const tx = await privacy.executeSwap(quote, signer);`}</code>
           ))}
         </div>
       </div>
+        </div>
+      </footer>
     </div>
-  </footer>
-);
+  );
+}
 
 
 const formatCurrency = (value?: number, maximumFractionDigits = 0) => {
