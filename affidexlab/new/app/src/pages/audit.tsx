@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import Head from 'next/head';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const AUDIT_SCOPE = [
@@ -190,16 +188,9 @@ export default function AuditPage() {
     },
   ];
 
+  useEffect(() => { document.title = "Smart Contract Security Audit | DecaFlow"; }, []);
   return (
     <>
-      <Head>
-        <title>Smart Contract Security Audit | DecaFlow</title>
-        <meta
-          name="description"
-          content="Professional Web3 smart contract security audits. Solidity, Rust, Vyper. 7-day turnaround. From $800. Formal report on company letterhead."
-        />
-      </Head>
-
       <div style={{ background: '#0A0E27', color: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
         {/* ── Nav ── */}
@@ -209,16 +200,16 @@ export default function AuditPage() {
           position: 'sticky', top: 0, background: 'rgba(10,14,39,0.95)',
           backdropFilter: 'blur(12px)', zIndex: 100,
         }}>
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <a href="/" style={{ textDecoration: 'none' }}>
             <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
               Deca<span style={{ color: '#3B82F6' }}>Flow</span>
             </span>
-          </Link>
+          </a>
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-            <Link href="/compliance" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Compliance</Link>
-            <Link href="/audit" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Security Audit</Link>
-            <Link href="/verify" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Verify API</Link>
-            <Link href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Swap</Link>
+            <a href="/compliance" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Compliance</a>
+            <a href="/audit" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Security Audit</a>
+            <a href="/verify" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Verify API</a>
+            <a href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem' }}>Swap</a>
             <a
               href="mailto:decaflowsolutions@gmail.com?subject=Security Audit Request"
               style={{
