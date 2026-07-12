@@ -13,6 +13,9 @@ import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import SDKLanding from "./pages/SDKLanding";
 import DashboardLanding from "./pages/DashboardLanding";
 import Pricing from "./pages/Pricing";
+import Compliance from "./pages/compliance";
+import Audit from "./pages/audit";
+import Verify from "./pages/verify";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
@@ -58,6 +61,15 @@ function getPageFromLocation(): string {
   if (path.startsWith("/quests") || hash === "#quests") {
     return "quests";
   }
+  if (path.startsWith("/compliance") || hash === "#compliance") {
+    return "compliance";
+  }
+  if (path.startsWith("/audit") || hash === "#audit") {
+    return "audit";
+  }
+  if (path.startsWith("/verify") || hash === "#verify") {
+    return "verify";
+  }
   return "home";
 }
 
@@ -98,6 +110,9 @@ export default function App() {
       {currentPage === "privacy" && <AppPage initialTab="privacy" />}
       {currentPage === "app" && <AppPage />}
       {currentPage === "quests" && <Quests />}
+      {currentPage === "compliance" && <Compliance />}
+      {currentPage === "audit" && <Audit />}
+      {currentPage === "verify" && <Verify />}
     </TransactionEventsProvider>
   );
 }
