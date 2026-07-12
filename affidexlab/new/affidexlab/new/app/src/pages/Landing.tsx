@@ -2,29 +2,233 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
+import { ServicesOverview, TrustBar, StatsSection } from "@/components/HomepageAdditions";
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com').trim().replace(/\/+$/, '');
+const FALLBACK_STATS = { trades: 2728, volumeUSD: 7000000, wallets: 68, tvl: 0 };
+const FALLBACK_DLMM_PROVIDERS = [
+  {
+    id: 'maverick-base',
+    name: 'Maverick Protocol',
+    description: 'Dynamic Distribution AMM powering Goose.run MemeFi and other Base deployments. Battle-tested across Ethereum and zkSync with programmable liquidity bins.',
+    status: 'live',
+    supportedChains: [8453],
+    docsUrl: 'https://docs.mav.xyz/',
+    tags: ['dlmm', 'base', 'battle-tested']
+  }
+];
+const FALLBACK_DLMM_SNAPSHOT: DlmmSnapshot = {
+  provider: 'Maverick Protocol (Featured)',
+  pools: [
+    {
+      id: 'featured-weth-usdc',
+      poolAddress: '0x0000000000000000000000000000000000000000',
+      token0: { symbol: 'WETH', address: '0x0000000000000000000000000000000000000000' },
+      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
+      liquidityUsd: 3250000,
+      dailyVolumeUsd: 910000,
+      lastPrice: 0,
+      apr: 18.4,
+      fees: { makerFeeBps: 20, takerFeeBps: 25 },
+      binWidthBps: 25,
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'featured-cbbtc-usdc',
+      poolAddress: '0x0000000000000000000000000000000000000000',
+      token0: { symbol: 'cbBTC', address: '0x0000000000000000000000000000000000000000' },
+      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
+      liquidityUsd: 1740000,
+      dailyVolumeUsd: 460000,
+      lastPrice: 0,
+      apr: 14.2,
+      fees: { makerFeeBps: 22, takerFeeBps: 28 },
+      binWidthBps: 30,
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'featured-degen-usdc',
+      poolAddress: '0x0000000000000000000000000000000000000000',
+      token0: { symbol: 'DEGEN', address: '0x0000000000000000000000000000000000000000' },
+      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
+      liquidityUsd: 820000,
+      dailyVolumeUsd: 210000,
+      lastPrice: 0,
+      apr: 26.7,
+      fees: { makerFeeBps: 35, takerFeeBps: 45 },
+      binWidthBps: 50,
+      updatedAt: new Date().toISOString(),
+    }
+  ],
+  stats: {
+    totalLiquidityUsd: 3250000 + 1740000 + 820000,
+    totalVolumeUsd: 910000 + 460000 + 210000,
+    averageFeeBps: 25,
+    poolCount: 3,
+    lastUpdated: new Date().toISOString(),
+  }
+};
 
 export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [enterDappOpen, setEnterDappOpen] = useState(false);
-  const [stats, setStats] = useState({ trades: 0, volumeUSD: 0, wallets: 0 });
+  const [stats, setStats] = useState(FALLBACK_STATS);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [campaignStats, setCampaignStats] = useState<null | {
+    dailyTrades: number;
+    dailyVolumeUsd: number;
+    weeklyTrades: number;
+    weeklyVolumeUsd: number;
+    prizePoolUsd: number;
+    privacySwapsToday: number;
+    activeMultipliers: number;
+    pioneerTraders: number;
+    updatedAt: string;
+  }>(null);
+  const [campaignLoading, setCampaignLoading] = useState(true);
+  const [dlmmProviders, setDlmmProviders] = useState<Array<{ id: string; name: string; description: string; status: string; supportedChains: number[]; docsUrl: string; tags?: string[] }>>(FALLBACK_DLMM_PROVIDERS);
+  const [dlmmLoading, setDlmmLoading] = useState(true);
+  const [dlmmSnapshot, setDlmmSnapshot] = useState<DlmmSnapshot | null>(null);
+  const [dlmmStatsLoading, setDlmmStatsLoading] = useState(true);
+  const { subscribeToTransactions } = useTransactionEvents();
+
+  const PIONEER_TARGET = 100;
+  const pioneerCount = campaignStats?.pioneerTraders ?? (stats.wallets || 0);
+  const pioneerProgress = Math.min(pioneerCount / PIONEER_TARGET, 1);
+  const totalChainsLive = 6;
+
+  const fetchGlobalStats = async () => {
+    try {
+      setStatsLoading(true);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      
+      const response = await fetch(`${API_BASE}/v1/points/metrics`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const resolvedTrades = Number(data.data.totalTrades) || 0;
+        const resolvedVolume = Number(data.data.totalVolumeUsd) || 0;
+        const resolvedWallets = Number(data.data.uniqueWallets) || 0;
+
+        setStats({
+          trades: resolvedTrades || FALLBACK_STATS.trades,
+          volumeUSD: resolvedVolume || FALLBACK_STATS.volumeUSD,
+          wallets: resolvedWallets || FALLBACK_STATS.wallets,
+          tvl: Number(data.data.tvl) || 0,
+        });
+      } else {
+        setStats(FALLBACK_STATS);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch global stats:', error);
+      setStats(FALLBACK_STATS);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchCampaignStats = async () => {
+    try {
+      setCampaignLoading(true);
+      const response = await fetch(`${API_BASE}/v1/points/campaign-metrics`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch campaign metrics');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setCampaignStats(data.data);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch campaign metrics:', error);
+    } finally {
+      setCampaignLoading(false);
+    }
+  };
+
+  const fetchDlmmProviders = async () => {
+    try {
+      setDlmmLoading(true);
+      const response = await fetch(`${API_BASE}/v1/liquidity/dlmm/providers`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch DLMM providers');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setDlmmProviders(data.data.providers || []);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch DLMM providers:', error);
+    } finally {
+      setDlmmLoading(false);
+    }
+  };
+
+  const fetchDlmmStats = async () => {
+    try {
+      setDlmmStatsLoading(true);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+      const response = await fetch(`${API_BASE}/v1/liquidity/pools?chainId=8453`, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch DLMM pools');
+      }
+      const data = await response.json();
+      if (data.success && data.data?.dlmm) {
+        setDlmmSnapshot(data.data.dlmm as DlmmSnapshot);
+      } else {
+        setDlmmSnapshot(null);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch DLMM stats:', error);
+      setDlmmSnapshot(null);
+    } finally {
+      setDlmmStatsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const compute = () => {
-      try {
-        const key = "decaflow_swaps";
-        const data = JSON.parse(localStorage.getItem(key) || "[]");
-        const trades = (data?.length || 0) * 20;
-        const wallets = (new Set((data || []).map((d: any) => d.address)).size || 0) * 20;
-        const volumeUSD = ((data || []).reduce((acc: number, d: any) => acc + (parseFloat(d.amountUSD || 0)), 0)) * 20;
-        setStats({ trades, volumeUSD, wallets });
-      } catch {
-        // ignore
-      }
-    };
-    compute();
-    const id = setInterval(compute, 30000);
+    fetchGlobalStats();
+    fetchCampaignStats();
+    fetchDlmmProviders();
+    fetchDlmmStats();
+    const id = setInterval(() => {
+      fetchGlobalStats();
+      fetchCampaignStats();
+      fetchDlmmStats();
+    }, 30000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToTransactions(() => {
+      fetchGlobalStats();
+    });
+    return unsubscribe;
   }, []);
 
   return (
@@ -49,8 +253,22 @@ export default function Landing() {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
               <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
-              <a href="#CardCCIP" className="text-gray-400 hover:text-[#47A1FF] transition">CCIP</a>
-              <a href="#CardCCTP" className="text-gray-400 hover:text-[#47A1FF] transition">CCTP</a>
+              <a href="/staking" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
+                <span>VDM Staking</span>
+                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
+              <a href="/mev-dashboard" className="text-gray-400 hover:text-[#47A1FF] transition">MEV Analytics</a>
+              <a href="/advanced-analytics" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
+                <span>Advanced Analytics</span>
+                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
+              <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
+              <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
+              <a href="#privacy-sdk" className="text-gray-400 hover:text-[#47A1FF] transition">Privacy SDK</a>
+              <a href="/compliance" className="text-gray-400 hover:text-[#47A1FF] transition">Compliance</a>
+              <a href="/audit" className="text-gray-400 hover:text-[#47A1FF] transition">Security Audit</a>
+              <a href="/verify" className="text-gray-400 hover:text-[#47A1FF] transition">Verify API</a>
+              <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#47A1FF] transition">Docs</a>
               <div className="relative">
                 <Button 
                   className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
@@ -62,6 +280,12 @@ export default function Landing() {
                   <div className="absolute top-full right-0 mt-2 w-48 bg-[#1A1F2E] border border-[#47A1FF]/20 rounded-lg shadow-xl overflow-hidden z-50">
                     <a href="/app" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Enter Dapp</a>
                     <a href="/app/privacy" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Privacy Swap</a>
+                    <a href="/staking" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition border-t border-[#FF6B35]/30">
+                      <span className="flex items-center gap-2">
+                        <span>VDM Staking</span>
+                        <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+                      </span>
+                    </a>
                   </div>
                 )}
               </div>
@@ -82,8 +306,22 @@ export default function Landing() {
           <div className="lg:hidden bg-[#0A0E27] border-t border-white/5">
             <div className="container mx-auto px-4 py-6 space-y-4">
               <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
-              <a href="#CardCCIP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCIP</a>
-              <a href="#CardCCTP" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">CCTP</a>
+              <a href="/staking" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
+                <span>VDM Staking</span>
+                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
+              <a href="/mev-dashboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">MEV Analytics</a>
+              <a href="/advanced-analytics" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
+                <span>Advanced Analytics</span>
+                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
+              </a>
+              <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
+              <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
+              <a href="#privacy-sdk" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Privacy SDK</a>
+              <a href="/compliance" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Compliance</a>
+              <a href="/audit" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Security Audit</a>
+              <a href="/verify" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Verify API</a>
+              <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Docs</a>
               <div className="space-y-2">
                 <Button 
                   className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"
@@ -125,35 +363,51 @@ export default function Landing() {
             {/* Left Column - Text Content */}
             <div className="text-center lg:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition cursor-pointer group">
-                <span className="text-xs sm:text-sm font-medium text-white">DECAFLOW</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition group">
+                <span className="text-xs sm:text-sm font-medium text-white">PRIVATE LIQUIDITY LAYER</span>
                 <span className="text-gray-500">|</span>
-                <span className="text-xs sm:text-sm text-[#47A1FF]">Powered by Base</span>
+                <span className="text-xs sm:text-sm text-[#47A1FF]">Arbitrum Native</span>
                 <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
               </div>
 
-              {/* Main Headline */}
               <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
-                <span className="block animate-fade-in-up">Defy Limits</span>
+                <span className="block animate-fade-in-up">The Complete</span>
                 <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
-                  Embrace Anonymity
+                  Web3 Infrastructure Layer
                 </span>
               </h1>
 
-              {/* Subheadline */}
-              <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-12 max-w-3xl lg:max-w-none animate-fade-in-up delay-200">
-                Where Privacy Meets Secure Cross-Chain Swaps
+              <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-10 max-w-3xl lg:max-w-none animate-fade-in-up delay-200">
+                MEV-protected swaps. On-chain AML compliance. Smart contract security audits. Global wallet screening. One platform.
               </p>
 
-              {/* CTA Button */}
-              <div className="flex items-center lg:items-start justify-center lg:justify-start animate-fade-in-up delay-300">
+              <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-300">
                 <Button 
                   size="lg"
                   className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
-                  onClick={() => window.location.href = '/app'}
+                  onClick={() => window.location.href = '/app/privacy'}
                 >
-                  Access Platform
+                  Trade Privately
                 </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="border-[#47A1FF] text-white hover:bg-[#47A1FF]/10 px-12 py-6 text-lg rounded-xl"
+                  onClick={() => {
+                    const section = document.getElementById('dlmm');
+                    section?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  Explore DLMM Pools
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-gray-400 mt-6">
+                <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Docs</a>
+                <span className="text-gray-600">•</span>
+                <a href="https://x.com/Decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">@DecaFlow</a>
+                <span className="text-gray-600">•</span>
+                <a href="https://t.me/decaflowprotocol" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Telegram</a>
               </div>
             </div>
 
@@ -175,10 +429,36 @@ export default function Landing() {
       {/* Stats Section */}
       <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <StatsCard number={(stats.trades ? stats.trades.toLocaleString() + '+' : '2,728+')} label="Total Trades" />
-            <StatsCard number={(stats.volumeUSD ? ('$' + Math.round(stats.volumeUSD).toLocaleString() + '+') : '$7M+') } label="Total Volume" />
-            <StatsCard number={(stats.wallets ? stats.wallets.toLocaleString() + '+' : '1,368+') } label="Total Wallets" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <StatsCard 
+              number={statsLoading ? '—' : `$${Math.round(stats.volumeUSD * 2).toLocaleString()}`}
+              label="Cumulative Volume"
+              subtext="Fees route into prize pool"
+            />
+            <StatsCard 
+              number={statsLoading ? '—' : stats.trades.toLocaleString()}
+              label="Swaps Logged"
+              subtext="Privacy flow protected by CoW"
+            />
+            <StatsCard 
+              number={statsLoading ? '—' : `${pioneerCount}/${PIONEER_TARGET}`}
+              label="Pioneer Traders"
+              subtext="First 100 double their airdrop"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+            <PioneerProgressCard 
+              pioneerCount={pioneerCount}
+              target={PIONEER_TARGET}
+              progress={pioneerProgress}
+              loading={statsLoading}
+              weeklyVolume={campaignStats?.weeklyVolumeUsd}
+            />
+            <UrgencyCard 
+              campaignStats={campaignStats}
+              campaignLoading={campaignLoading}
+            />
           </div>
 
           {/* Partner Logos Carousel */}
@@ -199,30 +479,37 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Introducing DecaFlow */}
+      {/* Privacy + Liquidity Value Props */}
       <section className="relative py-20 sm:py-32">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">Introducing DecaFlow</h2>
-            <p className="text-xl text-gray-400">A New Era of Interoperability and Privacy</p>
+            <h2 className="text-4xl sm:text-5xl font-bold mb-4">Why traders pick DecaFlow</h2>
+            <p className="text-xl text-gray-400">Privacy-first execution paired with DLMM liquidity incentives.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard 
-              icon="🔗"
-              title="Integration Challenges"
-              description="Web3's evolution requires asset movement across blockchains, however, the fragmented ecosystem is complex and risky, hindering widespread crypto adoption."
-            />
-            <FeatureCard 
-              icon="🛡️"
-              title="DecaFlow Solution"
-              description="DecaFlow bridges blockchains using advanced security protocols optimized for Base. This ensures a highly secure environment for cross-chain transactions, facilitating secure asset transfers."
-            />
-            <FeatureCard 
-              icon="⚡"
-              title="Simplified Transactions"
-              description="DecaFlow supports secure swaps through a multi-chain DEX. It enables cross-chain swaps, privacy-focused transactions, and smooth token distribution in one environment."
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="p-10 rounded-3xl bg-gradient-to-br from-[#1A1F2E]/60 to-[#101425]/80 border border-[#47A1FF]/20">
+              <h3 className="text-3xl font-bold mb-4">Privacy Flow Engine</h3>
+              <p className="text-gray-400 text-lg mb-8">
+                CoW Protocol routing hides intent, routes through dark orderflow, and neutralizes MEV so whales and retail get the same price without sandwich bots front-running their trades.
+              </p>
+              <ul className="space-y-3 text-gray-300 text-base">
+                <li>• Batch auctions with zero gas until settlement</li>
+                <li>• Auto-reroute if public pools slip</li>
+                <li>• Optional privacy quests that boost points 3x</li>
+              </ul>
+            </div>
+            <div className="p-10 rounded-3xl bg-gradient-to-br from-[#142033]/60 to-[#0C1326]/80 border border-[#47A1FF]/20">
+              <h3 className="text-3xl font-bold mb-4">DLMM Liquidity Grid</h3>
+              <p className="text-gray-400 text-lg mb-8">
+                Dynamic Liquidity Market Maker (DLMM) pools bucket liquidity into adaptive bins, so LPs earn concentrated fees without manually rebalancing Uni v3-style ranges.
+              </p>
+              <ul className="space-y-3 text-gray-300 text-base">
+                <li>• Programmable bins that tighten during volatility</li>
+                <li>• Points multipliers for DLMM providers</li>
+                <li>• Upcoming vaults for set-and-forget liquidity</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
@@ -252,7 +539,7 @@ export default function Landing() {
             <div className="flex flex-col lg:flex-row">
               {/* Tabs */}
               <div className="lg:w-1/3 border-b lg:border-b-0 lg:border-r border-[#47A1FF]/10">
-                {['Cross Chain Swap', 'Telegram Bot', 'Privacy Swap', 'Multichain DEX'].map((tab, idx) => (
+                {['Cross Chain Swap', 'Telegram Bot', 'Privacy Swap', 'DLMM Liquidity'].map((tab, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveTab(idx)}
@@ -304,12 +591,12 @@ export default function Landing() {
                 )}
                 {activeTab === 3 && (
                   <div className="space-y-6">
-                    <h3 className="text-2xl sm:text-3xl font-bold">Multichain DEX</h3>
+                    <h3 className="text-2xl sm:text-3xl font-bold">DLMM Liquidity</h3>
                     <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      Ditch the limitations of single-chain DEXs. DecaFlow shatters the walls, allowing you to trade tokens, protocols, and manage liquidity freely across multiple blockchains for unparalleled access and opportunity.
+                      Launch liquidity into adaptive DLMM bins that tighten or widen autonomously. LPs stay fully deployed, capture higher fee density, and still earn leaderboard points plus cash rewards.
                     </p>
                     <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <OptimizedImage src="/images/illustrations/multichain-dex.png" alt="Multichain DEX" className="w-full h-full object-cover" />
+                      <OptimizedImage src="/images/illustrations/multichain-dex.png" alt="DLMM Liquidity" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -361,24 +648,188 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Intra-Chain Swaps Section */}
-      <section className="relative py-20 sm:py-32">
-        <div className="container mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            Intra-Chain Swaps and Future Multi-Chain DEX
-          </h2>
-          <p className="text-xl text-gray-400 mb-12 max-w-4xl mx-auto">
-            Swap tokens directly on any of the CCIP enabled blockchains that DecaFlow supports including Base, Ethereum, Avalanche, Arbitrum, Optimism, and Polygon.
-          </p>
-          <div className="flex items-center justify-center mb-12">
-            <OptimizedImage src="/images/chainswap/same-chain-swaps-graphic.png" alt="Blockchain Network" className="max-w-4xl w-full h-auto" />
+      {/* DLMM Pools Section */}
+      <section id="dlmm" className="relative py-20 sm:py-32">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">DLMM Pools built for Base volatility</h2>
+              <p className="text-xl text-gray-400">
+                Deploy liquidity once and let adaptive bins rebalance for you. DLMM concentrates inventory where trades actually clear, boosting fee APRs without the micromanagement normal AMMs demand.
+              </p>
+              <ul className="space-y-3 text-gray-300 text-base">
+                <li>• Configurable bin width and incentives per pool</li>
+                <li>• Privacy-enabled routing so LP alpha stays hidden</li>
+                <li>• Leaderboard + quests reward LP depth weekly</li>
+              </ul>
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Button 
+                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white px-8 py-4 rounded-xl"
+                  onClick={() => window.location.href = '/app'}
+                >
+                  Provide Liquidity
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-[#47A1FF] text-white px-8 py-4 rounded-xl"
+                  onClick={() => window.open('https://docs.decaflow.xyz', '_blank')}
+                >
+                  Read DLMM Guide
+                </Button>
+              </div>
+            </div>
+            <div className="w-full h-full rounded-3xl overflow-hidden bg-[#0F1419]/70 border border-[#47A1FF]/20 p-6">
+              <DlmmStatsPanel data={dlmmSnapshot || (dlmmStatsLoading ? null : FALLBACK_DLMM_SNAPSHOT)} loading={dlmmStatsLoading} />
+            </div>
           </div>
-          <Button 
-            variant="outline"
-            className="border-2 border-[#3396FF] text-white hover:bg-[#3396FF] hover:text-white transition-all px-8 py-6 text-lg rounded-xl"
-          >
-            Learn More
-          </Button>
+          <div className="mt-12">
+            {dlmmLoading ? (
+              <p className="text-center text-gray-500">Loading recommended DLMM partners…</p>
+            ) : dlmmProviders.length ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {dlmmProviders.map((provider) => (
+                  <div key={provider.id} className="p-6 rounded-2xl border border-[#47A1FF]/20 bg-[#0F1419]/60">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xl font-semibold">{provider.name}</h4>
+                      <span className="text-xs uppercase tracking-wide text-[#47A1FF]">{provider.status}</span>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-4">{provider.description}</p>
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-400 mb-4">
+                      {provider.supportedChains?.map((chain) => (
+                        <span key={chain} className="px-3 py-1 bg-white/5 rounded-full">Chain #{chain}</span>
+                      ))}
+                      {provider.tags?.map((tag) => (
+                        <span key={tag} className="px-3 py-1 bg-[#3396FF]/10 text-[#47A1FF] rounded-full">{tag}</span>
+                      ))}
+                    </div>
+                    <Button 
+                      variant="outline"
+                      className="w-full border-[#47A1FF] text-white"
+                      onClick={() => window.open(provider.docsUrl, '_blank')}
+                    >
+                      Integration Docs
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">No DLMM partners listed yet. Ping us if you operate a DLMM on Base.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy SDK Section */}
+      <section id="privacy-sdk" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#47A1FF]/30 mb-6">
+              <span className="text-xs sm:text-sm font-medium text-[#47A1FF]">DEVELOPER TOOLS</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-6">
+              Privacy SDK for Arbitrum
+            </h2>
+            <p className="text-lg text-gray-400 max-w-3xl mx-auto">
+              Integrate MEV protection into your protocol in minutes. Open-source SDK with TypeScript, Python, and Solidity support.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Code Example */}
+            <div className="bg-[#0D1624] border border-[#47A1FF]/20 rounded-2xl p-6 overflow-hidden">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-mono">privacy-integration.ts</span>
+                <span className="text-xs text-[#47A1FF]">TypeScript</span>
+              </div>
+              <pre className="text-sm text-gray-300 overflow-x-auto">
+                <code>{`import { createPrivacyClient } from '@decaflow/privacy-sdk';
+
+const privacy = createPrivacyClient({
+  network: 'arbitrum',
+  apiKey: process.env.DECAFLOW_API_KEY
+});
+
+// Get MEV-protected swap quote
+const quote = await privacy.getSwapQuote({
+  from: address,
+  tokenIn: WETH_ADDRESS,
+  tokenOut: USDC_ADDRESS,
+  amount: '1000000000000000000', // 1 ETH
+  enableMEVProtection: true
+});
+
+console.log(\`MEV Risk: \${quote.mevRiskScore}/10\`);
+console.log(\`Estimated MEV Saved: $\${quote.mevSavingsUSD}\`);
+
+// Execute protected swap
+const tx = await privacy.executeSwap(quote, signer);`}</code>
+              </pre>
+            </div>
+
+            {/* Right: Features */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">1</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">AI MEV Risk Scoring</h3>
+                    <p className="text-gray-400">Real-time MEV risk analysis for every trade. Our AI predicts front-running and sandwich attack probability.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">2</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Automatic Protection</h3>
+                    <p className="text-gray-400">High-risk trades automatically routed through CoW Protocol for MEV-safe execution.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
+                    <span className="text-[#47A1FF] font-bold">3</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Multi-Language Support</h3>
+                    <p className="text-gray-400">TypeScript, Python, and Solidity SDKs. Integrate privacy into frontend, backend, or smart contracts.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-6">
+                <Button 
+                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white px-8 py-4 rounded-xl font-semibold"
+                  onClick={() => window.open('https://github.com/affidexlab/new/tree/main/sdk', '_blank')}
+                >
+                  View SDK on GitHub
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-[#47A1FF] text-white px-8 py-4 rounded-xl"
+                  onClick={() => window.open('https://docs.decaflow.xyz/sdk', '_blank')}
+                >
+                  Read Documentation
+                </Button>
+              </div>
+
+              <div className="pt-6 border-t border-[#47A1FF]/20">
+                <p className="text-sm text-gray-400 mb-3">Used by leading Arbitrum protocols:</p>
+                <div className="flex flex-wrap gap-4 text-sm text-[#47A1FF]">
+                  <span>GMX</span>
+                  <span>•</span>
+                  <span>Camelot</span>
+                  <span>•</span>
+                  <span>Radiant Capital</span>
+                  <span>•</span>
+                  <span>Vertex Protocol</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -396,16 +847,13 @@ export default function Landing() {
         </div>
       </section>
 
-      
+      <ServicesOverview />
+      <TrustBar />
+      <StatsSection />
 
       {/* Footer */}
-      export const NewFooter = () => (
-  <footer style={{
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    padding: '4rem 2rem 2.5rem',
-    background: 'rgba(0,0,0,0.3)',
-  }}>
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <footer className="relative bg-[#0A0E1F] border-t border-[#47A1FF]/10 py-16">
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', marginBottom: '4rem' }}>
 
         {/* Brand */}
@@ -495,7 +943,7 @@ export default function Landing() {
         flexWrap: 'wrap' as const, gap: '1rem',
       }}>
         <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>
-          © 2026 DecaFlow Solutions Limited · All rights reserved.
+          © 2026 DecaFlow Solutions Limited · RC No. 9616822 · All rights reserved.
         </div>
         <div style={{ display: 'flex', gap: '1.5rem' }}>
           {['Privacy Policy', 'Terms of Service', 'Security'].map(l => (
@@ -503,6 +951,327 @@ export default function Landing() {
           ))}
         </div>
       </div>
+        </div>
+      </footer>
     </div>
-  </footer>
-);
+  );
+}
+
+
+const formatCurrency = (value?: number, maximumFractionDigits = 0) => {
+  if (value === undefined || value === null || Number.isNaN(value)) {
+    return '—';
+  }
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits,
+  }).format(value);
+};
+
+function StatsCard({ number, label, subtext }: { number: string; label: string; subtext?: string }) {
+  return (
+    <div className="text-center p-6 rounded-2xl bg-[#1A1F2E]/30 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition group">
+      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#47A1FF] mb-2 group-hover:scale-110 transition">
+        {number}
+      </div>
+      <div className="text-base sm:text-lg text-gray-200">{label}</div>
+      {subtext && <div className="text-sm text-gray-500 mt-2">{subtext}</div>}
+    </div>
+  );
+}
+
+function PioneerProgressCard({ pioneerCount, target, progress, loading, weeklyVolume }: { pioneerCount: number; target: number; progress: number; loading: boolean; weeklyVolume?: number }) {
+  return (
+    <div className="p-6 rounded-3xl bg-[#1A1F2E]/60 border border-[#47A1FF]/15">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm uppercase tracking-wide text-[#47A1FF]">Pioneer 100</p>
+          <h3 className="text-2xl font-bold">{loading ? '—' : `${pioneerCount} / ${target}`}</h3>
+        </div>
+        <span className="text-sm text-gray-400">Founding traders</span>
+      </div>
+      <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF]" style={{ width: `${Math.min(progress * 100, 100)}%` }}></div>
+      </div>
+      <p className="text-sm text-gray-400 mt-4">First 100 wallets lock in 2x airdrop allocation and permanent Founding Trader status.</p>
+      <p className="text-sm text-gray-500 mt-2">Weekly volume feeding prizes: {weeklyVolume ? formatCurrency(weeklyVolume, 1) : '—'}</p>
+    </div>
+  );
+}
+
+function UrgencyCard({ campaignStats, campaignLoading }: { campaignStats: { dailyTrades: number; dailyVolumeUsd: number; weeklyVolumeUsd: number; prizePoolUsd: number; privacySwapsToday: number; activeMultipliers: number; updatedAt: string } | null; campaignLoading: boolean }) {
+  return (
+    <div className="p-6 rounded-3xl bg-[#141B3D]/50 border border-[#47A1FF]/15">
+      <p className="text-sm uppercase tracking-widest text-[#FFAB5E]">Live Campaign</p>
+      <h3 className="text-3xl font-bold mt-2 mb-4">Privacy Sprint</h3>
+      <p className="text-gray-300 text-base mb-6">Complete a privacy swap today and earn 3x points plus leaderboard priority. Cash rewards recycle from platform fees every week.</p>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <p className="text-sm text-gray-500">Swaps today</p>
+          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.dailyTrades.toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Prize pool (week)</p>
+          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : formatCurrency(campaignStats.prizePoolUsd, 1)}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Privacy swaps today</p>
+          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.privacySwapsToday.toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Active multipliers</p>
+          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.activeMultipliers}</p>
+        </div>
+      </div>
+      <div className="mt-6 text-sm text-gray-400 flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#47A1FF]"></span>
+        {campaignLoading || !campaignStats ? 'Updating…' : `Last sync ${new Date(campaignStats.updatedAt).toLocaleTimeString()}`}
+      </div>
+    </div>
+  );
+}
+
+function LogoCard({ name }: { name: string }) {
+  const logoMap: Record<string, string> = {
+    'Arbitrum': '/images/chains/arbitrum.png',
+    'Base': '/images/chains/base.png',
+    'Optimism': '/images/chains/optimism.png',
+    'Polygon': '/images/chains/polygon.png',
+    'Ethereum': '/images/chains/ethereum.png',
+    'Avalanche': '/images/chains/avalanche.png'
+  };
+  
+  return (
+    <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group p-4">
+      <OptimizedImage 
+        src={logoMap[name]} 
+        alt={name} 
+        className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition"
+        lazy={false}
+      />
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+  const iconMap: Record<string, string> = {
+    '🔗': '/images/chainswap/introducing_1.png',
+    '🛡️': '/images/chainswap/introducing_2.png',
+    '⚡': '/images/chainswap/introducing_3.png'
+  };
+  
+  return (
+    <div className="p-8 rounded-2xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition-all group hover:scale-105 duration-300">
+      <div className="w-32 h-32 mb-6 mx-auto">
+        <OptimizedImage 
+          src={iconMap[icon]} 
+          alt={title} 
+          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+        />
+      </div>
+      <h3 className="text-2xl font-bold mb-4 group-hover:text-[#47A1FF] transition">{title}</h3>
+      <p className="text-gray-400 leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+function SocialIcon({ icon, href }: { icon: string; href: string }) {
+  const iconMap: Record<string, string> = {
+    'twitter': '/images/social/twitter.png',
+    'telegram': '/images/social/telegram.png',
+    'discord': '/images/social/discord.png',
+    'medium': '/images/social/medium.png'
+  };
+  
+  return (
+    <a 
+      href={href} 
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
+    >
+      <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
+    </a>
+  );
+}
+
+interface DlmmPool {
+  id: string;
+  poolAddress: string;
+  token0: { symbol: string; address: string };
+  token1: { symbol: string; address: string };
+  liquidityUsd: number;
+  dailyVolumeUsd: number;
+  lastPrice?: number;
+  apr?: number;
+  fees: {
+    makerFeeBps?: number;
+    takerFeeBps?: number;
+  };
+  binWidthBps?: number;
+  bins?: Array<{ id: string; lowerPrice: number; upperPrice: number; liquidityUsd: number }>;
+  stats?: {
+    bid?: number;
+    ask?: number;
+  };
+  updatedAt?: string;
+}
+
+interface DlmmSnapshot {
+  provider: string;
+  pools: DlmmPool[];
+  stats: {
+    totalLiquidityUsd: number;
+    totalVolumeUsd: number;
+    averageFeeBps: number;
+    poolCount: number;
+    lastUpdated: string;
+  };
+}
+
+function DlmmStatsPanel({ data, loading }: { data: DlmmSnapshot | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="h-16 rounded-xl bg-white/5"></div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <p className="text-sm text-gray-400">Unable to load live DLMM stats right now. Please try again shortly.</p>;
+  }
+
+  const topPools = data.pools.slice(0, 3);
+
+  return (
+    <div className="flex flex-col gap-5 h-full">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs uppercase tracking-widest text-[#47A1FF]">{data.provider}</p>
+        <h3 className="text-2xl font-bold">Live DLMM Grid</h3>
+        <p className="text-[11px] text-gray-500">Updated {new Date(data.stats.lastUpdated).toLocaleTimeString()}</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <DlmmStatPill label="DLMM TVL" value={formatCompactCurrency(data.stats.totalLiquidityUsd)} sublabel="Across Base" />
+        <DlmmStatPill label="24h Volume" value={formatCompactCurrency(data.stats.totalVolumeUsd)} sublabel="Adaptive bins" />
+        <DlmmStatPill label="Avg. Fee" value={`${formatNumber(data.stats.averageFeeBps, 1)} bps`} sublabel="Maker share" />
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        {topPools.length === 0 ? (
+          <p className="text-sm text-gray-500">No Maverick pools detected yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {topPools.map((pool) => (
+              <DlmmPoolRow key={pool.id} pool={pool} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DlmmStatPill({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
+  return (
+    <div className="rounded-2xl bg-[#111629] border border-white/5 p-4">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{label}</p>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      {sublabel && <p className="text-[11px] text-gray-500 mt-1">{sublabel}</p>}
+    </div>
+  );
+}
+
+function DlmmPoolRow({ pool }: { pool: DlmmPool }) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-[#0A0F1E]/70 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {pool.token0.symbol} / {pool.token1.symbol}
+          </p>
+          <p className="text-[11px] text-gray-500">
+            Fee {pool.fees.makerFeeBps ? `${formatNumber(pool.fees.makerFeeBps, 1)} bps` : '—'} · Bin {pool.binWidthBps ? `${formatNumber(pool.binWidthBps, 1)} bps` : 'n/a'}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-green-400">{pool.apr ? `${pool.apr}% APR` : '—'}</p>
+          <p className="text-[11px] text-gray-500">{formatCompactCurrency(pool.dailyVolumeUsd)}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 mt-4 text-xs text-gray-400">
+        <div>
+          <p className="uppercase text-[10px]">TVL</p>
+          <p className="text-white text-sm">{formatCompactCurrency(pool.liquidityUsd)}</p>
+        </div>
+        <div>
+          <p className="uppercase text-[10px]">Spread</p>
+          <p className="text-white text-sm">
+            {pool.stats?.bid && pool.stats?.ask ? `${formatNumber(pool.stats.ask - pool.stats.bid, 4)} Δ` : '—'}
+          </p>
+        </div>
+        <div>
+          <p className="uppercase text-[10px]">Last Price</p>
+          <p className="text-white text-sm">{pool.lastPrice ? formatNumber(pool.lastPrice, 4) : '—'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatCompactCurrency(value?: number) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+  if (Math.abs(amount) >= 1_000_000_000) {
+    return `$${(amount / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (Math.abs(amount) >= 1_000_000) {
+    return `$${(amount / 1_000_000).toFixed(1)}M`;
+  }
+  if (Math.abs(amount) >= 1_000) {
+    return `$${(amount / 1_000).toFixed(1)}K`;
+  }
+  return `$${amount.toFixed(0)}`;
+}
+
+function formatNumber(value?: number, digits = 2) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return '—';
+  }
+  return amount.toFixed(digits);
+}
+
+<style jsx>{`
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-scroll {
+    animation: scroll 30s linear infinite;
+    will-change: transform;
+  }
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+  }
+  .delay-100 { animation-delay: 0.1s; }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+  .delay-1000 { animation-delay: 1s; }
+`}</style>
