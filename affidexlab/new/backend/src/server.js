@@ -16,6 +16,9 @@ import solanaStakingRoutes from './routes/v1/solana-staking.js';
 import investorMetricsRoutes from './routes/v1/investor-metrics.js';
 import mevRoutes from './routes/v1/mev.js';
 import analyticsRoutes from './routes/v1/analytics.js';
+import complianceRoutes from './routes/v1/compliance.js';
+import auditRoutes from './routes/v1/audit.js';
+import verifyRoutes from './routes/v1/verify.js';
 
 dotenv.config();
 
@@ -95,7 +98,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key']
 }));
 
 app.use(express.json());
@@ -172,6 +175,9 @@ app.use('/v1/solana-staking', solanaStakingRoutes);
 app.use('/v1/investor-metrics', investorMetricsRoutes);
 app.use('/v1/mev', mevRoutes); // MEV prediction and risk scoring
 app.use('/v1/analytics', analyticsRoutes); // Advanced analytics and user stats
+app.use('/v1/compliance', complianceRoutes); // Compliance enquiry + demo score
+app.use('/v1/audit', auditRoutes);           // Security audit enquiries
+app.use('/v1/verify', verifyRoutes);         // Verify API signups + demo + key issuance
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
