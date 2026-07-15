@@ -84,7 +84,7 @@ const PLANS = [  {
       'Email support',
       'Webhook alerts',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
   },
   {
     name: 'Business',
@@ -569,7 +569,7 @@ const report = await verify.generateReport({
               Pricing
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginBottom: '3.5rem', fontSize: '1rem' }}>
-              Start free. Scale as you grow.
+              Enterprise-grade wallet screening. Production-ready.
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
               {PLANS.map((plan, i) => (
@@ -626,7 +626,7 @@ const report = await verify.generateReport({
             Enterprise-grade wallet screening. Production-ready in minutes.
           </p>
           <a
-            href="mailto:decaflowsolutions@gmail.com?subject=Verify API Key Request - Free Tier"
+            
             style={{
               display: 'inline-block', background: '#8b5cf6', color: '#fff',
               padding: '1rem 2.5rem', borderRadius: '12px', textDecoration: 'none',
