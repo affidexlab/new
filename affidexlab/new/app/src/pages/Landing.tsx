@@ -525,9 +525,6 @@ const tx = await client.executeSwap({
               </p>
               <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.28)", lineHeight: 1.8 }}>
                 <div>DecaFlow Solutions Limited</div>
-                <div>RC No. 9616822</div>
-                <div>TIN: 2620351636603</div>
-                <div>Incorporated: 16 June 2026, Nigeria</div>
               </div>
             </div>
             {/* Products */}
@@ -540,7 +537,7 @@ const tx = await client.executeSwap({
             {/* Developers */}
             <div>
               <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Developers</div>
-              {[["npm: @decaflow/privacy-sdk", "https://www.npmjs.com/package/@decaflow/privacy-sdk"], ["Documentation", "https://docs.decaflow.xyz"], ["Protocol Integrations", "https://github.com/affidexlab/new"]].map(([l, h]) => (
+              {[["npm: @decaflow/privacy-sdk", "https://www.npmjs.com/package/@decaflow/privacy-sdk"], ["Documentation", "https://docs.decaflow.xyz"]].map(([l, h]) => (
                 <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
               ))}
             </div>
