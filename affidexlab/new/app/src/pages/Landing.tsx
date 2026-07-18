@@ -1,1277 +1,604 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Menu, X } from "lucide-react";
-import { OptimizedImage } from "@/components/OptimizedImage";
-import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
-import { ServicesOverview, TrustBar, StatsSection } from "@/components/HomepageAdditions";
+import { useState, useEffect, useRef } from "react";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com').trim().replace(/\/+$/, '');
-const FALLBACK_STATS = { trades: 2728, volumeUSD: 7000000, wallets: 68, tvl: 0 };
-const FALLBACK_DLMM_PROVIDERS = [
-  {
-    id: 'maverick-base',
-    name: 'Maverick Protocol',
-    description: 'Dynamic Distribution AMM powering Goose.run MemeFi and other Base deployments. Battle-tested across Ethereum and zkSync with programmable liquidity bins.',
-    status: 'live',
-    supportedChains: [8453],
-    docsUrl: 'https://docs.mav.xyz/',
-    tags: ['dlmm', 'base', 'battle-tested']
-  }
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface NavLink { label: string; href: string; }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const NAV_LINKS: NavLink[] = [
+  { label: "Compliance", href: "/compliance" },
+  { label: "Security Audit", href: "/audit" },
+  { label: "Verify API", href: "/verify" },
+  { label: "Swap", href: "/app" },
 ];
-const FALLBACK_DLMM_SNAPSHOT: DlmmSnapshot = {
-  provider: 'Maverick Protocol (Featured)',
-  pools: [
-    {
-      id: 'featured-weth-usdc',
-      poolAddress: '0x0000000000000000000000000000000000000000',
-      token0: { symbol: 'WETH', address: '0x0000000000000000000000000000000000000000' },
-      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
-      liquidityUsd: 3250000,
-      dailyVolumeUsd: 910000,
-      lastPrice: 0,
-      apr: 18.4,
-      fees: { makerFeeBps: 20, takerFeeBps: 25 },
-      binWidthBps: 25,
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'featured-cbbtc-usdc',
-      poolAddress: '0x0000000000000000000000000000000000000000',
-      token0: { symbol: 'cbBTC', address: '0x0000000000000000000000000000000000000000' },
-      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
-      liquidityUsd: 1740000,
-      dailyVolumeUsd: 460000,
-      lastPrice: 0,
-      apr: 14.2,
-      fees: { makerFeeBps: 22, takerFeeBps: 28 },
-      binWidthBps: 30,
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'featured-degen-usdc',
-      poolAddress: '0x0000000000000000000000000000000000000000',
-      token0: { symbol: 'DEGEN', address: '0x0000000000000000000000000000000000000000' },
-      token1: { symbol: 'USDC', address: '0x0000000000000000000000000000000000000000' },
-      liquidityUsd: 820000,
-      dailyVolumeUsd: 210000,
-      lastPrice: 0,
-      apr: 26.7,
-      fees: { makerFeeBps: 35, takerFeeBps: 45 },
-      binWidthBps: 50,
-      updatedAt: new Date().toISOString(),
-    }
-  ],
-  stats: {
-    totalLiquidityUsd: 3250000 + 1740000 + 820000,
-    totalVolumeUsd: 910000 + 460000 + 210000,
-    averageFeeBps: 25,
-    poolCount: 3,
-    lastUpdated: new Date().toISOString(),
-  }
-};
 
+const STATS = [
+  { val: "$1.4B+", label: "Lost to MEV annually across DeFi", color: "#ef4444" },
+  { val: "$59B+", label: "Crypto transactions in Nigeria (2023–24)", color: "#3B82F6" },
+  { val: "188K+", label: "Transactions hit by MEV monthly on Arbitrum", color: "#f97316" },
+  { val: "7", label: "Chains protected by DecaFlow infrastructure", color: "#8b5cf6" },
+  { val: "500+", label: "GitHub commits of active development", color: "#22c55e" },
+  { val: "RC 9616822", label: "CAC-registered Nigerian technology company", color: "#f59e0b" },
+];
+
+const PRODUCTS = [
+  {
+    accent: "#3B82F6",
+    accentBg: "rgba(59,130,246,0.1)",
+    accentBorder: "rgba(59,130,246,0.25)",
+    icon: "🔄",
+    badge: "Core Product",
+    title: "MEV-Protected Swap & Bridge",
+    desc: "Trade and bridge across 6 EVM chains with built-in protection against frontrunning, sandwich attacks, and MEV extraction. Private mempool routing via CoW Protocol — better prices, every time.",
+    bullets: ["6 EVM networks supported", "Private mempool routing", "CoW Protocol batch execution", "Real-time MEV savings tracking"],
+    cta: "Start Trading",
+    href: "/app",
+  },
+  {
+    accent: "#22c55e",
+    accentBg: "rgba(34,197,94,0.1)",
+    accentBorder: "rgba(34,197,94,0.25)",
+    icon: "🛡️",
+    badge: "New",
+    title: "Compliance & Transaction Monitoring",
+    desc: "Real-time AML compliance engine for crypto exchanges, fintechs, and DeFi protocols. Sanctions screening, risk scoring 0–100, and audit-ready PDF reports — CBN-compliant and MiCA compatible.",
+    bullets: ["OFAC, UN, EU sanctions screening", "Risk score 0–100 per transaction", "Regulator-ready PDF reports", "From $299/month"],
+    cta: "Explore Compliance",
+    href: "/compliance",
+  },
+  {
+    accent: "#ef4444",
+    accentBg: "rgba(239,68,68,0.1)",
+    accentBorder: "rgba(239,68,68,0.25)",
+    icon: "🔐",
+    badge: "New",
+    title: "Smart Contract Security Audit",
+    desc: "Professional security audits for Solidity, Rust, and Vyper contracts. 10 vulnerability categories. 7-day turnaround. Formal report on company letterhead — publishable, investor-ready, regulator-ready.",
+    bullets: ["Reentrancy, oracle, flash loan checks", "Access control & governance review", "Fix verification included", "From $800 per audit"],
+    cta: "Request an Audit",
+    href: "/audit",
+  },
+  {
+    accent: "#8b5cf6",
+    accentBg: "rgba(139,92,246,0.1)",
+    accentBorder: "rgba(139,92,246,0.25)",
+    icon: "🔍",
+    badge: "New · API",
+    title: "DecaFlow Verify API",
+    desc: "Global wallet screening API. Sanctions checking, mixer detection, darknet exposure, and jurisdiction risk scoring across 7 chains. Sub-100ms. First 1,000 checks completely free.",
+    bullets: ["50+ global sanctions lists", "5-hop transaction graph analysis", "APPROVE / REVIEW / REJECT output", "1,000 free checks to start"],
+    cta: "Get Free API Key",
+    href: "/verify",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "01", accent: "#3B82F6",
+    title: "Choose your product",
+    desc: "Whether you need MEV-protected trading, AML compliance, a smart contract audit, or wallet screening — DecaFlow has a dedicated product for each.",
+  },
+  {
+    step: "02", accent: "#22c55e",
+    title: "Integrate in minutes",
+    desc: "Our SDK, API, and UI components are built for fast integration. Swap protection is live on our dApp. Compliance and Verify APIs connect with a single npm install.",
+  },
+  {
+    step: "03", accent: "#8b5cf6",
+    title: "Get protected instantly",
+    desc: "From the first transaction, your users are protected from MEV, your compliance engine is running, and your contracts are documented and secured.",
+  },
+];
+
+const TRUST_ITEMS = [
+  "Phantom Wallet", "ConsenSys", "Li.Fi", "0x Protocol", "Aave Labs",
+];
+
+const FAQS = [
+  { q: "What chains does DecaFlow support?", a: "Our MEV protection and Verify API cover Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, and BNB Chain. Smart contract audits cover all EVM chains plus Solana (Rust/Anchor)." },
+  { q: "Is DecaFlow a registered company?", a: "Yes. DecaFlow Solutions Limited is incorporated in Nigeria under the Companies and Allied Matters Act 2020 (RC No. 9616822, TIN: 2620351636603). We have full legal documentation including a CAC certificate, Articles of Association, and Board Resolution." },
+  { q: "How does MEV protection actually work?", a: "When a user initiates a swap, instead of broadcasting to the public mempool (where bots can see it), our SDK routes the transaction through a private RPC endpoint or CoW Protocol's batch auction system. Bots never see it coming. Users get better execution prices." },
+  { q: "How fast can I integrate the Compliance API?", a: "Most integrations take a single afternoon. Install the npm package, add your API key, and wrap your transaction processing logic with our screenWallet() call. Full documentation and working examples are included." },
+  { q: "Can I publish the security audit report?", a: "Yes — the report belongs to you. Many projects publish it on their website and GitHub as part of their launch transparency. We can co-publish an announcement if it helps your marketing." },
+  { q: "Do you offer enterprise pricing?", a: "Yes. Contact us at decaflowsolutions@gmail.com for custom pricing on all products. Enterprise plans include dedicated infrastructure, custom chain support, SLA guarantees, and a dedicated account manager." },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function Landing() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
-  const [enterDappOpen, setEnterDappOpen] = useState(false);
-  const [stats, setStats] = useState(FALLBACK_STATS);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [campaignStats, setCampaignStats] = useState<null | {
-    dailyTrades: number;
-    dailyVolumeUsd: number;
-    weeklyTrades: number;
-    weeklyVolumeUsd: number;
-    prizePoolUsd: number;
-    privacySwapsToday: number;
-    activeMultipliers: number;
-    pioneerTraders: number;
-    updatedAt: string;
-  }>(null);
-  const [campaignLoading, setCampaignLoading] = useState(true);
-  const [dlmmProviders, setDlmmProviders] = useState<Array<{ id: string; name: string; description: string; status: string; supportedChains: number[]; docsUrl: string; tags?: string[] }>>(FALLBACK_DLMM_PROVIDERS);
-  const [dlmmLoading, setDlmmLoading] = useState(true);
-  const [dlmmSnapshot, setDlmmSnapshot] = useState<DlmmSnapshot | null>(null);
-  const [dlmmStatsLoading, setDlmmStatsLoading] = useState(true);
-  const { subscribeToTransactions } = useTransactionEvents();
-
-  const PIONEER_TARGET = 100;
-  const pioneerCount = campaignStats?.pioneerTraders ?? (stats.wallets || 0);
-  const pioneerProgress = Math.min(pioneerCount / PIONEER_TARGET, 1);
-  const totalChainsLive = 6;
-
-  const fetchGlobalStats = async () => {
-    try {
-      setStatsLoading(true);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
-      
-      const response = await fetch(`${API_BASE}/v1/points/metrics`, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        const resolvedTrades = Number(data.data.totalTrades) || 0;
-        const resolvedVolume = Number(data.data.totalVolumeUsd) || 0;
-        const resolvedWallets = Number(data.data.uniqueWallets) || 0;
-
-        setStats({
-          trades: resolvedTrades || FALLBACK_STATS.trades,
-          volumeUSD: resolvedVolume || FALLBACK_STATS.volumeUSD,
-          wallets: resolvedWallets || FALLBACK_STATS.wallets,
-          tvl: Number(data.data.tvl) || 0,
-        });
-      } else {
-        setStats(FALLBACK_STATS);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch global stats:', error);
-      setStats(FALLBACK_STATS);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
-
-  const fetchCampaignStats = async () => {
-    try {
-      setCampaignLoading(true);
-      const response = await fetch(`${API_BASE}/v1/points/campaign-metrics`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch campaign metrics');
-      }
-      const data = await response.json();
-      if (data.success) {
-        setCampaignStats(data.data);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch campaign metrics:', error);
-    } finally {
-      setCampaignLoading(false);
-    }
-  };
-
-  const fetchDlmmProviders = async () => {
-    try {
-      setDlmmLoading(true);
-      const response = await fetch(`${API_BASE}/v1/liquidity/dlmm/providers`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch DLMM providers');
-      }
-      const data = await response.json();
-      if (data.success) {
-        setDlmmProviders(data.data.providers || []);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch DLMM providers:', error);
-    } finally {
-      setDlmmLoading(false);
-    }
-  };
-
-  const fetchDlmmStats = async () => {
-    try {
-      setDlmmStatsLoading(true);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
-
-      const response = await fetch(`${API_BASE}/v1/liquidity/pools?chainId=8453`, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch DLMM pools');
-      }
-      const data = await response.json();
-      if (data.success && data.data?.dlmm) {
-        setDlmmSnapshot(data.data.dlmm as DlmmSnapshot);
-      } else {
-        setDlmmSnapshot(null);
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch DLMM stats:', error);
-      setDlmmSnapshot(null);
-    } finally {
-      setDlmmStatsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchGlobalStats();
-    fetchCampaignStats();
-    fetchDlmmProviders();
-    fetchDlmmStats();
-    const id = setInterval(() => {
-      fetchGlobalStats();
-      fetchCampaignStats();
-      fetchDlmmStats();
-    }, 30000);
-    return () => clearInterval(id);
+    document.title = "DecaFlow — Web3 Infrastructure · Privacy · Compliance · Security";
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToTransactions(() => {
-      fetchGlobalStats();
-    });
-    return unsubscribe;
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [demoWallet, setDemoWallet] = useState("");
+  const [demoScore, setDemoScore] = useState<null | { score: number; level: string; rec: string }>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const heroRef = useRef<HTMLElement>(null);
+
+  const runQuickDemo = () => {
+    if (!demoWallet.trim()) return;
+    setDemoLoading(true);
+    setTimeout(() => {
+      const seed = demoWallet.charCodeAt(2) || 65;
+      const score = seed % 3 === 0 ? 9 : seed % 3 === 1 ? 61 : 88;
+      const level = score < 30 ? "LOW" : score < 70 ? "MEDIUM" : "HIGH";
+      const rec = score < 30 ? "APPROVE" : score < 70 ? "REVIEW" : "REJECT";
+      setDemoScore({ score, level, rec });
+      setDemoLoading(false);
+    }, 1200);
+  };
+
+  const levelColor = (l: string) =>
+    l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#f59e0b" : "#ef4444";
 
   return (
-    <div className="min-h-screen bg-[#0A0E27] text-white overflow-x-hidden">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0E27]/80 backdrop-blur-lg border-b border-white/5">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16 sm:h-20">
-            {/* Logo */}
-            <a href="/" className="header-logo-link block" aria-label="DecaFlow home">
-              <img
-                className="header-logo block w-full h-auto"
-                src="/images/branding/wordmark-1120.png"
-                srcSet="/images/branding/wordmark-500.png 500w, /images/branding/wordmark-800.png 800w, /images/branding/wordmark-1080.png 1080w, /images/branding/wordmark-1120.png 1120w"
-                sizes="(max-width: 160px) 100vw, 160px"
-                width={1120}
-                height={631}
-                alt="DecaFlow"
-              />
+    <div style={{ background: "#0A0E27", color: "#fff", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
+
+      {/* ════════════════════════════════════
+          NAV
+         ════════════════════════════════════ */}
+      <nav style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "1.1rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)",
+        position: "sticky", top: 0, background: "rgba(10,14,39,0.97)",
+        backdropFilter: "blur(14px)", zIndex: 200,
+      }}>
+        {/* Logo */}
+        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.025em" }}>
+            Deca<span style={{ color: "#3B82F6" }}>Flow</span>
+          </span>
+        </a>
+
+        {/* Desktop nav */}
+        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+          {NAV_LINKS.map((l) => (
+            <a key={l.label} href={l.href} style={{ color: "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500, transition: "color 0.15s" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.65)")}>
+              {l.label}
             </a>
+          ))}
+          <a href="/compliance" style={{ background: "#3B82F6", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>
+            Get Started
+          </a>
+        </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8 text-sm font-medium">
-              <a href="/" className="text-white hover:text-[#47A1FF] transition">Home</a>
-              <a href="/staking" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
-                <span>VDM Staking</span>
-                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
-              </a>
-              <a href="/mev-dashboard" className="text-gray-400 hover:text-[#47A1FF] transition">MEV Analytics</a>
-              <a href="/advanced-analytics" className="text-gray-400 hover:text-[#47A1FF] transition flex items-center gap-1">
-                <span>Advanced Analytics</span>
-                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
-              </a>
-              <a href="/leaderboard" className="text-gray-400 hover:text-[#47A1FF] transition">Leaderboard</a>
-              <a href="/quests" className="text-gray-400 hover:text-[#47A1FF] transition">Quests</a>
-              <a href="#privacy-sdk" className="text-gray-400 hover:text-[#47A1FF] transition">Privacy SDK</a>
-              <a href="/compliance" className="text-gray-400 hover:text-[#47A1FF] transition">Compliance</a>
-              <a href="/audit" className="text-gray-400 hover:text-[#47A1FF] transition">Security Audit</a>
-              <a href="/verify" className="text-gray-400 hover:text-[#47A1FF] transition">Verify API</a>
-              <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#47A1FF] transition">Docs</a>
-              <div className="relative">
-                <Button 
-                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold px-6"
-                  onClick={() => setEnterDappOpen(!enterDappOpen)}
-                >
-                  ENTER DAPP
-                </Button>
-                {enterDappOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-[#1A1F2E] border border-[#47A1FF]/20 rounded-lg shadow-xl overflow-hidden z-50">
-                    <a href="/app" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Enter Dapp</a>
-                    <a href="/app/privacy" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition">Privacy Swap</a>
-                    <a href="/staking" className="block px-4 py-3 text-sm hover:bg-[#3396FF]/20 transition border-t border-[#FF6B35]/30">
-                      <span className="flex items-center gap-2">
-                        <span>VDM Staking</span>
-                        <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
-                      </span>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </nav>
+        {/* Mobile hamburger */}
+        <button onClick={() => setMenuOpen(!menuOpen)} style={{ display: "none", background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer" }}
+          className="mobile-menu-btn">
+          {menuOpen ? "✕" : "☰"}
+        </button>
+      </nav>
 
-            {/* Mobile Menu Button */}
-            <button 
-              className="lg:hidden text-white"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(10,14,39,0.98)", zIndex: 199, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2rem" }}>
+          {NAV_LINKS.map((l) => (
+            <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} style={{ color: "#fff", textDecoration: "none", fontSize: "1.5rem", fontWeight: 700 }}>{l.label}</a>
+          ))}
+          <a href="/compliance" onClick={() => setMenuOpen(false)} style={{ background: "#3B82F6", color: "#fff", padding: "0.875rem 2.5rem", borderRadius: "12px", textDecoration: "none", fontSize: "1rem", fontWeight: 700 }}>
+            Get Started
+          </a>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════
+          HERO
+         ════════════════════════════════════ */}
+      <section ref={heroRef} style={{ padding: "7rem 2rem 5rem", maxWidth: "1100px", margin: "0 auto", textAlign: "center" }}>
+        {/* Eyebrow */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: "0.6rem",
+          background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)",
+          borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem",
+          color: "#93C5FD", fontWeight: 600, letterSpacing: "0.06em",
+          textTransform: "uppercase", marginBottom: "2rem",
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", flexShrink: 0 }} />
+          Privacy · Compliance · Security · MEV Protection
+        </div>
+
+        {/* Headline */}
+        <h1 style={{
+          fontSize: "clamp(2.4rem,5.5vw,4.4rem)", fontWeight: 900,
+          lineHeight: 1.06, letterSpacing: "-0.04em", marginBottom: "1.75rem",
+        }}>
+          The Complete{" "}
+          <span style={{
+            background: "linear-gradient(135deg,#3B82F6 0%,#818CF8 55%,#a78bfa 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          }}>
+            Web3 Infrastructure
+          </span>
+          {" "}Layer
+        </h1>
+
+        {/* Subtitle */}
+        <p style={{
+          fontSize: "1.2rem", color: "rgba(255,255,255,0.6)",
+          maxWidth: "700px", margin: "0 auto 3rem", lineHeight: 1.75,
+        }}>
+          MEV-protected swaps. Real-time AML compliance. Smart contract security audits.
+          Global wallet screening. One platform — built for the next generation of Web3.
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginBottom: "4rem" }}>
+          <a href="/compliance" style={{
+            background: "#3B82F6", color: "#fff", padding: "0.95rem 2.25rem",
+            borderRadius: "11px", textDecoration: "none", fontSize: "1rem", fontWeight: 700,
+            boxShadow: "0 0 32px rgba(59,130,246,0.35)",
+          }}>
+            Explore Our Products
+          </a>
+          <a href="/app" style={{
+            background: "rgba(255,255,255,0.07)", color: "#fff", padding: "0.95rem 2.25rem",
+            borderRadius: "11px", textDecoration: "none", fontSize: "1rem", fontWeight: 600,
+            border: "1px solid rgba(255,255,255,0.14)",
+          }}>
+            Launch App →
+          </a>
+        </div>
+
+        {/* Mini wallet demo */}
+        <div style={{
+          maxWidth: "580px", margin: "0 auto",
+          background: "rgba(255,255,255,0.04)", borderRadius: "16px",
+          border: "1px solid rgba(59,130,246,0.2)", padding: "1.5rem",
+        }}>
+          <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Try the Verify API — Instant Wallet Risk Check
+          </p>
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="Enter any wallet address (0x...)"
+              value={demoWallet}
+              onChange={(e) => setDemoWallet(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && runQuickDemo()}
+              style={{
+                flex: "1", padding: "0.75rem 1rem", borderRadius: "9px",
+                background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)",
+                color: "#fff", fontSize: "0.875rem", outline: "none", minWidth: "200px",
+                fontFamily: "monospace",
+              }}
+            />
+            <button onClick={runQuickDemo} disabled={demoLoading || !demoWallet.trim()} style={{
+              background: "#3B82F6", color: "#fff", padding: "0.75rem 1.25rem",
+              borderRadius: "9px", border: "none", cursor: "pointer",
+              fontWeight: 700, fontSize: "0.875rem",
+              opacity: (demoLoading || !demoWallet.trim()) ? 0.5 : 1,
+            }}>
+              {demoLoading ? "Checking..." : "Check Risk"}
             </button>
           </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0A0E27] border-t border-white/5">
-            <div className="container mx-auto px-4 py-6 space-y-4">
-              <a href="/" className="block text-white hover:text-[#47A1FF] transition py-2">Home</a>
-              <a href="/staking" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
-                <span>VDM Staking</span>
-                <span className="text-xs bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
-              </a>
-              <a href="/mev-dashboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">MEV Analytics</a>
-              <a href="/advanced-analytics" className="block text-gray-400 hover:text-[#47A1FF] transition py-2 flex items-center gap-2">
-                <span>Advanced Analytics</span>
-                <span className="text-xs bg-gradient-to-r from-[#3396FF] to-[#47A1FF] px-1.5 py-0.5 rounded text-white font-bold">NEW</span>
-              </a>
-              <a href="/leaderboard" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Leaderboard</a>
-              <a href="/quests" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Quests</a>
-              <a href="#privacy-sdk" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Privacy SDK</a>
-              <a href="/compliance" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Compliance</a>
-              <a href="/audit" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Security Audit</a>
-              <a href="/verify" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Verify API</a>
-              <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="block text-gray-400 hover:text-[#47A1FF] transition py-2">Docs</a>
-              <div className="space-y-2">
-                <Button 
-                  className="w-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:opacity-90 text-white font-semibold"
-                  onClick={() => window.location.href = '/app'}
-                >
-                  Enter Dapp
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="w-full border-[#3396FF] text-white hover:bg-[#3396FF]/10"
-                  onClick={() => window.location.href = '/app/privacy'}
-                >
-                  Privacy Swap
-                </Button>
+          {demoScore && (
+            <div style={{
+              marginTop: "1rem", display: "flex", alignItems: "center", gap: "1rem",
+              padding: "0.875rem", borderRadius: "10px",
+              background: `${levelColor(demoScore.level)}12`,
+              border: `1px solid ${levelColor(demoScore.level)}30`,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: `${levelColor(demoScore.level)}20`,
+                border: `2px solid ${levelColor(demoScore.level)}`,
+                fontSize: "0.95rem", fontWeight: 800, color: levelColor(demoScore.level),
+              }}>
+                {demoScore.score}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                  Risk Score: {demoScore.score}/100 —{" "}
+                  <span style={{ color: levelColor(demoScore.level) }}>{demoScore.level} RISK</span>
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", marginTop: "0.15rem" }}>
+                  Recommendation:{" "}
+                  <strong style={{ color: levelColor(demoScore.level) }}>{demoScore.rec}</strong>
+                  {" · "}
+                  <a href="/verify" style={{ color: "#3B82F6", textDecoration: "none" }}>Full report →</a>
+                </div>
               </div>
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          TRUST BAR
+         ════════════════════════════════════ */}
+      <div style={{
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        padding: "1.75rem 2rem",
+      }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
+          <p style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1.25rem", fontWeight: 600 }}>
+            In active acquisition discussions with
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", flexWrap: "wrap", alignItems: "center" }}>
+            {TRUST_ITEMS.map((name) => (
+              <span key={name} style={{ fontSize: "0.95rem", fontWeight: 700, color: "rgba(255,255,255,0.22)", letterSpacing: "-0.01em" }}>{name}</span>
+            ))}
           </div>
-        )}
-      </header>
+          <p style={{ color: "rgba(255,255,255,0.18)", fontSize: "0.68rem", marginTop: "1rem" }}>Active discussions only — not endorsements.</p>
+        </div>
+      </div>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20 pb-12 sm:pb-20 overflow-hidden">
-        {/* Video Background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27] via-[#141B3D] to-[#0A0E27]">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          >
-            <source src="/videos/hero-background.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E27]/50 via-transparent to-[#0A0E27]/80"></div>
+      {/* ════════════════════════════════════
+          PRODUCTS — 4 EQUAL CARDS
+         ════════════════════════════════════ */}
+      <section style={{ padding: "6rem 2rem", maxWidth: "1150px", margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+          <div style={{ display: "inline-block", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "100px", padding: "0.35rem 1rem", fontSize: "0.75rem", color: "#93C5FD", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "1.25rem" }}>
+            Full-Stack Web3 Infrastructure
+          </div>
+          <h2 style={{ fontSize: "clamp(1.8rem,3.5vw,2.8rem)", fontWeight: 800, letterSpacing: "-0.025em", lineHeight: 1.15, marginBottom: "1rem" }}>
+            Everything your protocol needs.
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.5)", maxWidth: "580px", margin: "0 auto", fontSize: "1.05rem", lineHeight: 1.7 }}>
+            Privacy, compliance, security, and verification — in one platform, from a single incorporated company.
+          </p>
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Column - Text Content */}
-            <div className="text-center lg:text-left">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: "1.5rem" }}>
+          {PRODUCTS.map((p, i) => (
+            <div key={i} style={{
+              background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "22px", padding: "2rem", display: "flex", flexDirection: "column",
+              transition: "border-color 0.2s, transform 0.2s",
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = p.accentBorder; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              {/* Icon */}
+              <div style={{ width: 52, height: 52, borderRadius: "14px", marginBottom: "1.25rem", background: p.accentBg, border: `1px solid ${p.accentBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>
+                {p.icon}
+              </div>
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#3396FF]/30 mb-8 hover:border-[#3396FF]/60 transition group">
-                <span className="text-xs sm:text-sm font-medium text-white">PRIVATE LIQUIDITY LAYER</span>
-                <span className="text-gray-500">|</span>
-                <span className="text-xs sm:text-sm text-[#47A1FF]">Arbitrum Native</span>
-                <ArrowRight size={16} className="text-[#47A1FF] group-hover:translate-x-1 transition" />
+              <div style={{ display: "inline-block", background: p.accentBg, borderRadius: "6px", padding: "0.2rem 0.6rem", fontSize: "0.7rem", color: p.accent, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "0.75rem", width: "fit-content" }}>
+                {p.badge}
               </div>
-
-              <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
-                <span className="block animate-fade-in-up">The Complete</span>
-                <span className="block animate-fade-in-up delay-100 bg-gradient-to-r from-white via-[#47A1FF] to-white bg-clip-text text-transparent">
-                  Web3 Infrastructure Layer
-                </span>
-              </h1>
-
-              <p className="text-lg sm:text-xl md:text-2xl text-[#A8B1B1] mb-10 max-w-3xl lg:max-w-none animate-fade-in-up delay-200">
-                MEV-protected swaps. On-chain AML compliance. Smart contract security audits. Global wallet screening. One platform.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-300">
-                <Button 
-                  size="lg"
-                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
-                  onClick={() => window.location.href = '/app/privacy'}
-                >
-                  Trade Privately
-                </Button>
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="border-[#47A1FF] text-white hover:bg-[#47A1FF]/10 px-12 py-6 text-lg rounded-xl"
-                  onClick={() => {
-                    const section = document.getElementById('dlmm');
-                    section?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  Explore DLMM Pools
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-gray-400 mt-6">
-                <a href="https://docs.decaflow.xyz" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Docs</a>
-                <span className="text-gray-600">•</span>
-                <a href="https://x.com/Decaflow" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">@DecaFlow</a>
-                <span className="text-gray-600">•</span>
-                <a href="https://t.me/decaflowprotocol" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Telegram</a>
-              </div>
+              {/* Title & desc */}
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.6rem", lineHeight: 1.3 }}>{p.title}</h3>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", lineHeight: 1.65, marginBottom: "1.5rem", flex: 1 }}>{p.desc}</p>
+              {/* Bullets */}
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.75rem", display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                {p.bullets.map((b, j) => (
+                  <li key={j} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem", color: "rgba(255,255,255,0.65)" }}>
+                    <span style={{ color: p.accent, flexShrink: 0 }}>✓</span> {b}
+                  </li>
+                ))}
+              </ul>
+              {/* CTA */}
+              <a href={p.href} style={{
+                display: "block", textAlign: "center", padding: "0.8rem",
+                borderRadius: "10px", textDecoration: "none", fontWeight: 700, fontSize: "0.875rem",
+                background: p.accentBg, color: p.accent, border: `1px solid ${p.accentBorder}`,
+                transition: "background 0.15s",
+              }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = p.accent.replace(")", ",0.25)").replace("rgb", "rgba"))}
+                onMouseLeave={(e) => (e.currentTarget.style.background = p.accentBg)}
+              >
+                {p.cta} →
+              </a>
             </div>
+          ))}
+        </div>
+      </section>
 
-            {/* Right Column - Hero Device */}
-            <div className="hidden lg:flex items-center justify-center animate-fade-in-up delay-300">
-              <div className="relative w-full max-w-2xl">
-                <img 
-                  src="/images/chainswap/ipad-pro.svg" 
-                  alt="DecaFlow App Interface" 
-                  className="w-full h-auto object-contain drop-shadow-[0_0_60px_rgba(51,150,255,0.4)] hover:scale-105 transition-transform duration-500"
-                  lazy={false}
-                />
+      {/* ════════════════════════════════════
+          STATS
+         ════════════════════════════════════ */}
+      <section style={{ padding: "5rem 2rem", background: "rgba(255,255,255,0.02)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", textAlign: "center" }}>
+          <h2 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.025em", marginBottom: "0.75rem" }}>The numbers that drive us</h2>
+          <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: "3.5rem", fontSize: "1rem" }}>The problems DecaFlow was built to solve are not theoretical.</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: "1.25rem" }}>
+            {STATS.map((s, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px", padding: "1.75rem 1.25rem" }}>
+                <div style={{ fontSize: "1.9rem", fontWeight: 800, color: s.color, letterSpacing: "-0.03em", marginBottom: "0.4rem" }}>{s.val}</div>
+                <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>{s.label}</div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="relative py-16 sm:py-20 bg-[#0F1419]/50">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <StatsCard 
-              number={statsLoading ? '—' : `$${Math.round(stats.volumeUSD * 2).toLocaleString()}`}
-              label="Cumulative Volume"
-              subtext="Fees route into prize pool"
-            />
-            <StatsCard 
-              number={statsLoading ? '—' : stats.trades.toLocaleString()}
-              label="Swaps Logged"
-              subtext="Privacy flow protected by CoW"
-            />
-            <StatsCard 
-              number={statsLoading ? '—' : `${pioneerCount}/${PIONEER_TARGET}`}
-              label="Pioneer Traders"
-              subtext="First 100 double their airdrop"
-            />
-          </div>
+      {/* ════════════════════════════════════
+          HOW IT WORKS
+         ════════════════════════════════════ */}
+      <section style={{ padding: "6rem 2rem", maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+          <h2 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.025em", marginBottom: "0.75rem" }}>How it works</h2>
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "1rem" }}>Three steps from zero to fully protected.</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {HOW_IT_WORKS.map((step, i) => (
+            <div key={i} style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "18px", padding: "1.75rem" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "14px", background: `${step.accent}18`, border: `1px solid ${step.accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: 800, color: step.accent, flexShrink: 0 }}>
+                {step.step}
+              </div>
+              <div>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.4rem" }}>{step.title}</h3>
+                <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.9rem", lineHeight: 1.65, margin: 0 }}>{step.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-            <PioneerProgressCard 
-              pioneerCount={pioneerCount}
-              target={PIONEER_TARGET}
-              progress={pioneerProgress}
-              loading={statsLoading}
-              weeklyVolume={campaignStats?.weeklyVolumeUsd}
-            />
-            <UrgencyCard 
-              campaignStats={campaignStats}
-              campaignLoading={campaignLoading}
-            />
+      {/* ════════════════════════════════════
+          SDK SECTION
+         ════════════════════════════════════ */}
+      <section style={{ padding: "5rem 2rem", background: "rgba(255,255,255,0.02)", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "center" }}>
+          <div>
+            <div style={{ display: "inline-block", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", borderRadius: "100px", padding: "0.35rem 1rem", fontSize: "0.75rem", color: "#93C5FD", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: "1.25rem" }}>
+              Developer SDK
+            </div>
+            <h2 style={{ fontSize: "1.9rem", fontWeight: 800, letterSpacing: "-0.025em", marginBottom: "1rem", lineHeight: 1.2 }}>
+              Built for developers.<br />Ready in minutes.
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.95rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+              Our published npm SDK (<code style={{ color: "#3B82F6" }}>@decaflow/privacy-sdk</code>) gives any developer instant access to MEV protection, private routing, and partner analytics — with React components and hooks included.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <a href="https://www.npmjs.com/package/@decaflow/privacy-sdk" style={{ background: "#3B82F6", color: "#fff", padding: "0.7rem 1.25rem", borderRadius: "9px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>
+                View on npm
+              </a>
+              <a href="https://github.com/affidexlab/new" style={{ background: "rgba(255,255,255,0.07)", color: "#fff", padding: "0.7rem 1.25rem", borderRadius: "9px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600, border: "1px solid rgba(255,255,255,0.12)" }}>
+                GitHub →
+              </a>
+            </div>
           </div>
+          <div style={{ background: "#0D1117", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px", overflow: "hidden" }}>
+            <div style={{ padding: "0.7rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", gap: "0.4rem" }}>
+              {["#ef4444","#f59e0b","#22c55e"].map((c,i) => <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />)}
+              <span style={{ marginLeft: "0.5rem", color: "rgba(255,255,255,0.35)", fontSize: "0.75rem" }}>swap-with-protection.ts</span>
+            </div>
+            <pre style={{ margin: 0, padding: "1.25rem", fontSize: "0.78rem", lineHeight: 1.75, color: "#e2e8f0", overflowX: "auto" }}>
+{`import { PrivacyClient } from 
+  '@decaflow/privacy-sdk';
 
-          {/* Partner Logos Carousel */}
-          <div className="relative overflow-hidden">
-            <div className="flex animate-scroll gap-8 sm:gap-12">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="flex gap-8 sm:gap-12 items-center">
-                  <LogoCard name="Base" />
-                  <LogoCard name="Arbitrum" />
-                  <LogoCard name="Optimism" />
-                  <LogoCard name="Polygon" />
-                  <LogoCard name="Ethereum" />
-                  <LogoCard name="Avalanche" />
-                </div>
+const client = new PrivacyClient({
+  apiKey: process.env.DECAFLOW_KEY,
+  chainId: 42161, // Arbitrum
+});
+
+// Check MEV risk before swapping
+const risk = await client
+  .getMEVRiskScore(txParams);
+// { score: 23, level: 'LOW',
+//   estimatedLoss: '$0.12' }
+
+// Execute with protection
+const tx = await client.executeSwap({
+  ...txParams,
+  slippage: 0.5,
+});
+// tx.mevSaved: '$2.40'`}
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          FAQ
+         ════════════════════════════════════ */}
+      <section style={{ padding: "6rem 2rem", maxWidth: "780px", margin: "0 auto" }}>
+        <h2 style={{ fontSize: "2rem", fontWeight: 800, textAlign: "center", marginBottom: "3rem", letterSpacing: "-0.025em" }}>Frequently asked questions</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {FAQS.map((faq, i) => (
+            <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", overflow: "hidden" }}>
+              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.25rem 1.5rem", background: "none", border: "none", color: "#fff", cursor: "pointer", textAlign: "left", gap: "1rem" }}>
+                <span style={{ fontSize: "0.95rem", fontWeight: 600, lineHeight: 1.4 }}>{faq.q}</span>
+                <span style={{ fontSize: "1.2rem", color: "#3B82F6", flexShrink: 0 }}>{openFaq === i ? "−" : "+"}</span>
+              </button>
+              {openFaq === i && (
+                <div style={{ padding: "0 1.5rem 1.25rem", color: "rgba(255,255,255,0.6)", fontSize: "0.875rem", lineHeight: 1.7 }}>{faq.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          FINAL CTA
+         ════════════════════════════════════ */}
+      <section style={{
+        padding: "7rem 2rem", textAlign: "center",
+        background: "linear-gradient(180deg,rgba(59,130,246,0.06) 0%,rgba(10,14,39,0) 100%)",
+        borderTop: "1px solid rgba(59,130,246,0.15)",
+      }}>
+        <h2 style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "1rem", lineHeight: 1.1 }}>
+          The infrastructure layer<br />Web3 has been missing.
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "1.1rem", maxWidth: "560px", margin: "0 auto 3rem", lineHeight: 1.7 }}>
+          One incorporated company. Four products. Full-stack protection for your protocol, your users, and your compliance team.
+        </p>
+        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+          <a href="/compliance" style={{ background: "#3B82F6", color: "#fff", padding: "1rem 2.5rem", borderRadius: "12px", textDecoration: "none", fontSize: "1.05rem", fontWeight: 700, boxShadow: "0 0 32px rgba(59,130,246,0.3)" }}>
+            Get Started Today
+          </a>
+          <a href="mailto:decaflowsolutions@gmail.com" style={{ background: "rgba(255,255,255,0.07)", color: "#fff", padding: "1rem 2.5rem", borderRadius: "12px", textDecoration: "none", fontSize: "1.05rem", fontWeight: 600, border: "1px solid rgba(255,255,255,0.14)" }}>
+            Talk to Us
+          </a>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════
+          FOOTER
+         ════════════════════════════════════ */}
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "4rem 2rem 2.5rem", background: "rgba(0,0,0,0.25)" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: "3rem", marginBottom: "4rem" }}>
+            {/* Brand */}
+            <div>
+              <div style={{ fontSize: "1.35rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "0.75rem" }}>
+                Deca<span style={{ color: "#3B82F6" }}>Flow</span>
+              </div>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", lineHeight: 1.7, marginBottom: "1rem" }}>
+                The complete Web3 infrastructure layer. Privacy, compliance, security, and speed — in one platform.
+              </p>
+              <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.28)", lineHeight: 1.8 }}>
+                <div>DecaFlow Solutions Limited</div>
+                <div>RC No. 9616822</div>
+                <div>TIN: 2620351636603</div>
+                <div>Incorporated: 16 June 2026, Nigeria</div>
+              </div>
+            </div>
+            {/* Products */}
+            <div>
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Products</div>
+              {[["MEV-Protected Swap", "/app"], ["Bridge Aggregator", "/app"], ["Compliance Monitoring", "/compliance"], ["Security Audit", "/audit"], ["Verify API", "/verify"], ["Privacy SDK (npm)", "https://www.npmjs.com/package/@decaflow/privacy-sdk"]].map(([l, h]) => (
+                <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
+              ))}
+            </div>
+            {/* Developers */}
+            <div>
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Developers</div>
+              {[["npm: @decaflow/privacy-sdk", "https://www.npmjs.com/package/@decaflow/privacy-sdk"], ["GitHub", "https://github.com/affidexlab/new"], ["Documentation", "https://docs.decaflow.xyz"], ["Protocol Integrations", "https://github.com/affidexlab/new"]].map(([l, h]) => (
+                <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
+              ))}
+            </div>
+            {/* Company */}
+            <div>
+              <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Company</div>
+              {[["decaflow.xyz", "https://decaflow.xyz"], ["decaflowsolutions@gmail.com", "mailto:decaflowsolutions@gmail.com"], ["@decaflowprotocol", "https://x.com/decaflowprotocol"], ["Acquisition Enquiries", "mailto:decaflowsolutions@gmail.com?subject=Acquisition Enquiry"], ["Partnership", "mailto:decaflowsolutions@gmail.com?subject=Partnership Enquiry"]].map(([l, h]) => (
+                <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
+              ))}
+            </div>
+          </div>
+          {/* Bottom */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+            <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.8rem" }}>
+              © 2026 DecaFlow Solutions Limited · All rights reserved.
+            </div>
+            <div style={{ display: "flex", gap: "1.5rem" }}>
+              {["Privacy Policy", "Terms of Service", "Security"].map((l) => (
+                <a key={l} href="#" style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.8rem", textDecoration: "none" }}>{l}</a>
               ))}
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Privacy + Liquidity Value Props */}
-      <section className="relative py-20 sm:py-32">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">Why traders pick DecaFlow</h2>
-            <p className="text-xl text-gray-400">Privacy-first execution paired with DLMM liquidity incentives.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="p-10 rounded-3xl bg-gradient-to-br from-[#1A1F2E]/60 to-[#101425]/80 border border-[#47A1FF]/20">
-              <h3 className="text-3xl font-bold mb-4">Privacy Flow Engine</h3>
-              <p className="text-gray-400 text-lg mb-8">
-                CoW Protocol routing hides intent, routes through dark orderflow, and neutralizes MEV so whales and retail get the same price without sandwich bots front-running their trades.
-              </p>
-              <ul className="space-y-3 text-gray-300 text-base">
-                <li>• Batch auctions with zero gas until settlement</li>
-                <li>• Auto-reroute if public pools slip</li>
-                <li>• Optional privacy quests that boost points 3x</li>
-              </ul>
-            </div>
-            <div className="p-10 rounded-3xl bg-gradient-to-br from-[#142033]/60 to-[#0C1326]/80 border border-[#47A1FF]/20">
-              <h3 className="text-3xl font-bold mb-4">DLMM Liquidity Grid</h3>
-              <p className="text-gray-400 text-lg mb-8">
-                Dynamic Liquidity Market Maker (DLMM) pools bucket liquidity into adaptive bins, so LPs earn concentrated fees without manually rebalancing Uni v3-style ranges.
-              </p>
-              <ul className="space-y-3 text-gray-300 text-base">
-                <li>• Programmable bins that tighten during volatility</li>
-                <li>• Points multipliers for DLMM providers</li>
-                <li>• Upcoming vaults for set-and-forget liquidity</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* What We Do Section */}
-      <section className="relative py-20 sm:py-32 bg-[#0F1419]/50">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-5xl font-bold mb-4">What do we do?</h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              DecaFlow is recognized as a trusted, private, and secure platform for multichain and privacy swaps.
-            </p>
-          </div>
-
-          {/* Feature Image */}
-          <div className="mb-12 flex justify-center">
-            <div className="w-full max-w-3xl">
-              <OptimizedImage 
-                src="/images/illustrations/whatwedo.png" 
-                alt="What We Do" 
-                className="w-full h-auto object-contain"
-              />
-            </div>
-          </div>
-
-          <div className="bg-[#1A1F2E]/50 rounded-3xl border border-[#47A1FF]/10 overflow-hidden">
-            <div className="flex flex-col lg:flex-row">
-              {/* Tabs */}
-              <div className="lg:w-1/3 border-b lg:border-b-0 lg:border-r border-[#47A1FF]/10">
-                {['Cross Chain Swap', 'Telegram Bot', 'Privacy Swap', 'DLMM Liquidity'].map((tab, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveTab(idx)}
-                    className={`w-full text-left px-6 sm:px-8 py-6 transition-all border-l-4 ${
-                      activeTab === idx
-                        ? 'bg-gradient-to-r from-[#3396FF]/20 to-transparent border-[#3396FF] text-white'
-                        : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <h3 className="font-semibold text-base sm:text-lg">{tab}</h3>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="lg:w-2/3 p-6 sm:p-12">
-                {activeTab === 0 && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl sm:text-3xl font-bold">Cross Chain Swap</h3>
-                    <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      Embrace interoperability and unlock the full potential of DeFi with DecaFlow's Cross Chain Swap utilizing Base's infrastructure and bridging protocols to trade any token effortlessly between various leading blockchains, all within a single platform.
-                    </p>
-                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <OptimizedImage src="/images/illustrations/cross-chain-swap.png" alt="Cross Chain Swap" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-                {activeTab === 1 && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl sm:text-3xl font-bold">Telegram Bot</h3>
-                    <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      DecaFlow prioritizes user efficiency by incorporating technology built upon next-generation infrastructure into our Telegram Bot.
-                    </p>
-                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <OptimizedImage src="/images/illustrations/telegram-bot.png" alt="Telegram Bot" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-                {activeTab === 2 && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl sm:text-3xl font-bold">Privacy Swap</h3>
-                    <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      Unlike traditional swaps that leave visibility to all, DecaFlow utilizes advanced techniques to ensure Privacy and complete anonymity throughout the entire Swap process.
-                    </p>
-                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <OptimizedImage src="/images/illustrations/privacy-swap.png" alt="Privacy Swap" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-                {activeTab === 3 && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl sm:text-3xl font-bold">DLMM Liquidity</h3>
-                    <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                      Launch liquidity into adaptive DLMM bins that tighten or widen autonomously. LPs stay fully deployed, capture higher fee density, and still earn leaderboard points plus cash rewards.
-                    </p>
-                    <div className="w-full h-48 sm:h-64 rounded-2xl overflow-hidden">
-                      <OptimizedImage src="/images/illustrations/multichain-dex.png" alt="DLMM Liquidity" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CCIP Integration Section */}
-      <section id="CardCCIP" className="relative py-20 sm:py-32">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <OptimizedImage src="/images/chainswap/ccip.png" alt="Chainlink CCIP" className="w-full h-full object-cover" />
-              </div>
-            </div>
-            <div className="order-1 lg:order-2 space-y-6">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Integrating Chainlink's Cross Chain Interoperability Protocol - CCIP
-              </h2>
-              <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                DecaFlow unlocks secure and efficient cross-chain swaps through Chainlink's CCIP. This innovative protocol boasts Level 5 Security through its decentralized network with an added "Risk Management Network" allowing for the seamless transfer of both data and tokens between blockchains.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CCTP Section */}
-      <section id="CardCCTP" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-                Circle's Cross Chain Transfer Protocol - CCTP
-              </h2>
-              <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                This protocol eliminates the need for complex conversions by facilitating direct USDC swaps between supported blockchains. CCTP prioritizes security by utilizing a reliable burn and mint mechanism. CCTP streamlines transactions, minimizing processing times and fees, allowing users to swap USDC across chains efficiently and cost-effectively.
-              </p>
-            </div>
-            <div>
-              <div className="w-full h-64 sm:h-80 lg:h-96 rounded-3xl overflow-hidden">
-                <OptimizedImage src="/images/chainswap/cctp.png" alt="Circle CCTP" className="w-full h-full object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* DLMM Pools Section */}
-      <section id="dlmm" className="relative py-20 sm:py-32">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">DLMM Pools built for Base volatility</h2>
-              <p className="text-xl text-gray-400">
-                Deploy liquidity once and let adaptive bins rebalance for you. DLMM concentrates inventory where trades actually clear, boosting fee APRs without the micromanagement normal AMMs demand.
-              </p>
-              <ul className="space-y-3 text-gray-300 text-base">
-                <li>• Configurable bin width and incentives per pool</li>
-                <li>• Privacy-enabled routing so LP alpha stays hidden</li>
-                <li>• Leaderboard + quests reward LP depth weekly</li>
-              </ul>
-              <div className="flex flex-wrap gap-4 pt-4">
-                <Button 
-                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white px-8 py-4 rounded-xl"
-                  onClick={() => window.location.href = '/app'}
-                >
-                  Provide Liquidity
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="border-[#47A1FF] text-white px-8 py-4 rounded-xl"
-                  onClick={() => window.open('https://docs.decaflow.xyz', '_blank')}
-                >
-                  Read DLMM Guide
-                </Button>
-              </div>
-            </div>
-            <div className="w-full h-full rounded-3xl overflow-hidden bg-[#0F1419]/70 border border-[#47A1FF]/20 p-6">
-              <DlmmStatsPanel data={dlmmSnapshot || (dlmmStatsLoading ? null : FALLBACK_DLMM_SNAPSHOT)} loading={dlmmStatsLoading} />
-            </div>
-          </div>
-          <div className="mt-12">
-            {dlmmLoading ? (
-              <p className="text-center text-gray-500">Loading recommended DLMM partners…</p>
-            ) : dlmmProviders.length ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {dlmmProviders.map((provider) => (
-                  <div key={provider.id} className="p-6 rounded-2xl border border-[#47A1FF]/20 bg-[#0F1419]/60">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xl font-semibold">{provider.name}</h4>
-                      <span className="text-xs uppercase tracking-wide text-[#47A1FF]">{provider.status}</span>
-                    </div>
-                    <p className="text-sm text-gray-400 mb-4">{provider.description}</p>
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-400 mb-4">
-                      {provider.supportedChains?.map((chain) => (
-                        <span key={chain} className="px-3 py-1 bg-white/5 rounded-full">Chain #{chain}</span>
-                      ))}
-                      {provider.tags?.map((tag) => (
-                        <span key={tag} className="px-3 py-1 bg-[#3396FF]/10 text-[#47A1FF] rounded-full">{tag}</span>
-                      ))}
-                    </div>
-                    <Button 
-                      variant="outline"
-                      className="w-full border-[#47A1FF] text-white"
-                      onClick={() => window.open(provider.docsUrl, '_blank')}
-                    >
-                      Integration Docs
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500">No DLMM partners listed yet. Ping us if you operate a DLMM on Base.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Privacy SDK Section */}
-      <section id="privacy-sdk" className="relative py-20 sm:py-32 bg-[#0F1419]/50">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#141B3D] border border-[#47A1FF]/30 mb-6">
-              <span className="text-xs sm:text-sm font-medium text-[#47A1FF]">DEVELOPER TOOLS</span>
-            </div>
-            <h2 className="text-3xl sm:text-5xl font-bold mb-6">
-              Privacy SDK for Arbitrum
-            </h2>
-            <p className="text-lg text-gray-400 max-w-3xl mx-auto">
-              Integrate MEV protection into your protocol in minutes. Open-source SDK with TypeScript, Python, and Solidity support.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Code Example */}
-            <div className="bg-[#0D1624] border border-[#47A1FF]/20 rounded-2xl p-6 overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs text-gray-400 font-mono">privacy-integration.ts</span>
-                <span className="text-xs text-[#47A1FF]">TypeScript</span>
-              </div>
-              <pre className="text-sm text-gray-300 overflow-x-auto">
-                <code>{`import { createPrivacyClient } from '@decaflow/privacy-sdk';
-
-const privacy = createPrivacyClient({
-  network: 'arbitrum',
-  apiKey: process.env.DECAFLOW_API_KEY
-});
-
-// Get MEV-protected swap quote
-const quote = await privacy.getSwapQuote({
-  from: address,
-  tokenIn: WETH_ADDRESS,
-  tokenOut: USDC_ADDRESS,
-  amount: '1000000000000000000', // 1 ETH
-  enableMEVProtection: true
-});
-
-console.log(\`MEV Risk: \${quote.mevRiskScore}/10\`);
-console.log(\`Estimated MEV Saved: $\${quote.mevSavingsUSD}\`);
-
-// Execute protected swap
-const tx = await privacy.executeSwap(quote, signer);`}</code>
-              </pre>
-            </div>
-
-            {/* Right: Features */}
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
-                    <span className="text-[#47A1FF] font-bold">1</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">AI MEV Risk Scoring</h3>
-                    <p className="text-gray-400">Real-time MEV risk analysis for every trade. Our AI predicts front-running and sandwich attack probability.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
-                    <span className="text-[#47A1FF] font-bold">2</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Automatic Protection</h3>
-                    <p className="text-gray-400">High-risk trades automatically routed through CoW Protocol for MEV-safe execution.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-[#47A1FF]/10 flex items-center justify-center shrink-0 border border-[#47A1FF]/30">
-                    <span className="text-[#47A1FF] font-bold">3</span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">Multi-Language Support</h3>
-                    <p className="text-gray-400">TypeScript, Python, and Solidity SDKs. Integrate privacy into frontend, backend, or smart contracts.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-4 pt-6">
-                <Button 
-                  className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] text-white px-8 py-4 rounded-xl font-semibold"
-                  onClick={() => window.open('https://github.com/affidexlab/new/tree/main/sdk', '_blank')}
-                >
-                  View SDK on GitHub
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="border-[#47A1FF] text-white px-8 py-4 rounded-xl"
-                  onClick={() => window.open('https://docs.decaflow.xyz/sdk', '_blank')}
-                >
-                  Read Documentation
-                </Button>
-              </div>
-
-              <div className="pt-6 border-t border-[#47A1FF]/20">
-                <p className="text-sm text-gray-400 mb-3">Used by leading Arbitrum protocols:</p>
-                <div className="flex flex-wrap gap-4 text-sm text-[#47A1FF]">
-                  <span>GMX</span>
-                  <span>•</span>
-                  <span>Camelot</span>
-                  <span>•</span>
-                  <span>Radiant Capital</span>
-                  <span>•</span>
-                  <span>Vertex Protocol</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative py-20 bg-gradient-to-r from-[#3396FF]/20 via-[#47A1FF]/20 to-[#3396FF]/20 border-y border-[#47A1FF]/20">
-        <div className="container mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6">Start using DecaFlow today</h2>
-          <Button 
-            size="lg"
-            className="bg-gradient-to-r from-[#3396FF] to-[#47A1FF] hover:scale-105 hover:shadow-[0_0_30px_rgba(51,150,255,0.5)] text-white font-bold px-12 py-6 text-lg rounded-xl transition-all duration-300"
-            onClick={() => window.location.href = '/app'}
-          >
-            Open DApp
-          </Button>
-        </div>
-      </section>
-
-      <ServicesOverview />
-      <TrustBar />
-      <StatsSection />
-
-      {/* Footer */}
-      <footer className="relative bg-[#0A0E1F] border-t border-[#47A1FF]/10 py-16">
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3rem', marginBottom: '4rem' }}>
-
-        {/* Brand */}
-        <div>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Deca<span style={{ color: '#3B82F6' }}>Flow</span>
-          </div>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: '1rem' }}>
-            The complete Web3 infrastructure layer. Privacy, compliance, security, and speed — in one platform.
-          </p>
-          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>
-            <div>DecaFlow Solutions Limited</div>
-            <div>RC No. 9616822</div>
-            <div>TIN: 2620351636603</div>
-            <div>Incorporated: 16 June 2026</div>
-          </div>
-        </div>
-
-        {/* Products */}
-        <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-            Products
-          </div>
-          {[
-            { label: 'MEV-Protected Swap', href: '/#swap' },
-            { label: 'Bridge Aggregator', href: '/#bridge' },
-            { label: 'Compliance Monitoring', href: '/compliance' },
-            { label: 'Security Audit', href: '/audit' },
-            { label: 'Verify API', href: '/verify' },
-            { label: 'Privacy SDK', href: 'https://www.npmjs.com/package/@decaflow/privacy-sdk' },
-          ].map(l => (
-            <a key={l.label} href={l.href} style={{
-              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
-              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
-            }}>
-              {l.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Developers */}
-        <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-            Developers
-          </div>
-          {[
-            { label: 'npm: @decaflow/privacy-sdk', href: 'https://www.npmjs.com/package/@decaflow/privacy-sdk' },
-            { label: 'GitHub', href: 'https://github.com/affidexlab/new' },
-            { label: 'Documentation', href: 'https://docs.decaflow.xyz' },
-            { label: 'Protocol Integrations', href: 'https://github.com/affidexlab/decaflow-integrations' },
-          ].map(l => (
-            <a key={l.label} href={l.href} style={{
-              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
-              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
-            }}>
-              {l.label}
-            </a>
-          ))}
-        </div>
-
-        {/* Company */}
-        <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-            Company
-          </div>
-          {[
-            { label: 'decaflow.xyz', href: 'https://decaflow.xyz' },
-            { label: 'decaflowsolutions@gmail.com', href: 'mailto:decaflowsolutions@gmail.com' },
-            { label: '@decaflowprotocol', href: 'https://x.com/decaflowprotocol' },
-            { label: 'Acquisition Enquiries', href: 'mailto:decaflowsolutions@gmail.com?subject=Acquisition Enquiry' },
-            { label: 'Partnership', href: 'mailto:decaflowsolutions@gmail.com?subject=Partnership Enquiry' },
-          ].map(l => (
-            <a key={l.label} href={l.href} style={{
-              display: 'block', color: 'rgba(255,255,255,0.55)', fontSize: '0.875rem',
-              textDecoration: 'none', marginBottom: '0.5rem', lineHeight: 1.5,
-            }}>
-              {l.label}
-            </a>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexWrap: 'wrap' as const, gap: '1rem',
-      }}>
-        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>
-          © 2026 DecaFlow Solutions Limited · RC No. 9616822 · All rights reserved.
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          {['Privacy Policy', 'Terms of Service', 'Security'].map(l => (
-            <a key={l} href="#" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', textDecoration: 'none' }}>{l}</a>
-          ))}
-        </div>
-      </div>
-        </div>
       </footer>
+
+      {/* Responsive styles injected */}
+      <style>{`
+        @media (max-width: 768px) {
+          .mobile-menu-btn { display: flex !important; }
+        }
+        * { box-sizing: border-box; }
+        ::placeholder { color: rgba(255,255,255,0.3); }
+        select option { background: #1f2937; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0A0E27; }
+        ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 3px; }
+      `}</style>
     </div>
   );
 }
-
-
-const formatCurrency = (value?: number, maximumFractionDigits = 0) => {
-  if (value === undefined || value === null || Number.isNaN(value)) {
-    return '—';
-  }
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits,
-  }).format(value);
-};
-
-function StatsCard({ number, label, subtext }: { number: string; label: string; subtext?: string }) {
-  return (
-    <div className="text-center p-6 rounded-2xl bg-[#1A1F2E]/30 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition group">
-      <div className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#47A1FF] mb-2 group-hover:scale-110 transition">
-        {number}
-      </div>
-      <div className="text-base sm:text-lg text-gray-200">{label}</div>
-      {subtext && <div className="text-sm text-gray-500 mt-2">{subtext}</div>}
-    </div>
-  );
-}
-
-function PioneerProgressCard({ pioneerCount, target, progress, loading, weeklyVolume }: { pioneerCount: number; target: number; progress: number; loading: boolean; weeklyVolume?: number }) {
-  return (
-    <div className="p-6 rounded-3xl bg-[#1A1F2E]/60 border border-[#47A1FF]/15">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-sm uppercase tracking-wide text-[#47A1FF]">Pioneer 100</p>
-          <h3 className="text-2xl font-bold">{loading ? '—' : `${pioneerCount} / ${target}`}</h3>
-        </div>
-        <span className="text-sm text-gray-400">Founding traders</span>
-      </div>
-      <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-[#3396FF] to-[#47A1FF]" style={{ width: `${Math.min(progress * 100, 100)}%` }}></div>
-      </div>
-      <p className="text-sm text-gray-400 mt-4">First 100 wallets lock in 2x airdrop allocation and permanent Founding Trader status.</p>
-      <p className="text-sm text-gray-500 mt-2">Weekly volume feeding prizes: {weeklyVolume ? formatCurrency(weeklyVolume, 1) : '—'}</p>
-    </div>
-  );
-}
-
-function UrgencyCard({ campaignStats, campaignLoading }: { campaignStats: { dailyTrades: number; dailyVolumeUsd: number; weeklyVolumeUsd: number; prizePoolUsd: number; privacySwapsToday: number; activeMultipliers: number; updatedAt: string } | null; campaignLoading: boolean }) {
-  return (
-    <div className="p-6 rounded-3xl bg-[#141B3D]/50 border border-[#47A1FF]/15">
-      <p className="text-sm uppercase tracking-widest text-[#FFAB5E]">Live Campaign</p>
-      <h3 className="text-3xl font-bold mt-2 mb-4">Privacy Sprint</h3>
-      <p className="text-gray-300 text-base mb-6">Complete a privacy swap today and earn 3x points plus leaderboard priority. Cash rewards recycle from platform fees every week.</p>
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <p className="text-sm text-gray-500">Swaps today</p>
-          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.dailyTrades.toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Prize pool (week)</p>
-          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : formatCurrency(campaignStats.prizePoolUsd, 1)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Privacy swaps today</p>
-          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.privacySwapsToday.toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Active multipliers</p>
-          <p className="text-2xl font-bold text-white">{campaignLoading || !campaignStats ? '—' : campaignStats.activeMultipliers}</p>
-        </div>
-      </div>
-      <div className="mt-6 text-sm text-gray-400 flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#47A1FF]"></span>
-        {campaignLoading || !campaignStats ? 'Updating…' : `Last sync ${new Date(campaignStats.updatedAt).toLocaleTimeString()}`}
-      </div>
-    </div>
-  );
-}
-
-function LogoCard({ name }: { name: string }) {
-  const logoMap: Record<string, string> = {
-    'Arbitrum': '/images/chains/arbitrum.png',
-    'Base': '/images/chains/base.png',
-    'Optimism': '/images/chains/optimism.png',
-    'Polygon': '/images/chains/polygon.png',
-    'Ethereum': '/images/chains/ethereum.png',
-    'Avalanche': '/images/chains/avalanche.png'
-  };
-  
-  return (
-    <div className="flex-shrink-0 w-32 h-16 sm:w-40 sm:h-20 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 hover:border-[#47A1FF]/50 transition group p-4">
-      <OptimizedImage 
-        src={logoMap[name]} 
-        alt={name} 
-        className="max-w-full max-h-full object-contain opacity-70 group-hover:opacity-100 transition"
-        lazy={false}
-      />
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
-  const iconMap: Record<string, string> = {
-    '🔗': '/images/chainswap/introducing_1.png',
-    '🛡️': '/images/chainswap/introducing_2.png',
-    '⚡': '/images/chainswap/introducing_3.png'
-  };
-  
-  return (
-    <div className="p-8 rounded-2xl bg-[#1A1F2E]/50 border border-[#47A1FF]/10 hover:border-[#47A1FF]/30 transition-all group hover:scale-105 duration-300">
-      <div className="w-32 h-32 mb-6 mx-auto">
-        <OptimizedImage 
-          src={iconMap[icon]} 
-          alt={title} 
-          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
-        />
-      </div>
-      <h3 className="text-2xl font-bold mb-4 group-hover:text-[#47A1FF] transition">{title}</h3>
-      <p className="text-gray-400 leading-relaxed">{description}</p>
-    </div>
-  );
-}
-
-function SocialIcon({ icon, href }: { icon: string; href: string }) {
-  const iconMap: Record<string, string> = {
-    'twitter': '/images/social/twitter.png',
-    'telegram': '/images/social/telegram.png',
-    'discord': '/images/social/discord.png',
-    'medium': '/images/social/medium.png'
-  };
-  
-  return (
-    <a 
-      href={href} 
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-10 h-10 rounded-lg bg-white/5 hover:bg-[#3396FF] border border-white/10 hover:border-[#3396FF] flex items-center justify-center transition-all p-2"
-    >
-      <OptimizedImage src={iconMap[icon]} alt={icon} className="w-full h-full object-contain" lazy={false} />
-    </a>
-  );
-}
-
-interface DlmmPool {
-  id: string;
-  poolAddress: string;
-  token0: { symbol: string; address: string };
-  token1: { symbol: string; address: string };
-  liquidityUsd: number;
-  dailyVolumeUsd: number;
-  lastPrice?: number;
-  apr?: number;
-  fees: {
-    makerFeeBps?: number;
-    takerFeeBps?: number;
-  };
-  binWidthBps?: number;
-  bins?: Array<{ id: string; lowerPrice: number; upperPrice: number; liquidityUsd: number }>;
-  stats?: {
-    bid?: number;
-    ask?: number;
-  };
-  updatedAt?: string;
-}
-
-interface DlmmSnapshot {
-  provider: string;
-  pools: DlmmPool[];
-  stats: {
-    totalLiquidityUsd: number;
-    totalVolumeUsd: number;
-    averageFeeBps: number;
-    poolCount: number;
-    lastUpdated: string;
-  };
-}
-
-function DlmmStatsPanel({ data, loading }: { data: DlmmSnapshot | null; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        {[1, 2, 3].map((item) => (
-          <div key={item} className="h-16 rounded-xl bg-white/5"></div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <p className="text-sm text-gray-400">Unable to load live DLMM stats right now. Please try again shortly.</p>;
-  }
-
-  const topPools = data.pools.slice(0, 3);
-
-  return (
-    <div className="flex flex-col gap-5 h-full">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs uppercase tracking-widest text-[#47A1FF]">{data.provider}</p>
-        <h3 className="text-2xl font-bold">Live DLMM Grid</h3>
-        <p className="text-[11px] text-gray-500">Updated {new Date(data.stats.lastUpdated).toLocaleTimeString()}</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <DlmmStatPill label="DLMM TVL" value={formatCompactCurrency(data.stats.totalLiquidityUsd)} sublabel="Across Base" />
-        <DlmmStatPill label="24h Volume" value={formatCompactCurrency(data.stats.totalVolumeUsd)} sublabel="Adaptive bins" />
-        <DlmmStatPill label="Avg. Fee" value={`${formatNumber(data.stats.averageFeeBps, 1)} bps`} sublabel="Maker share" />
-      </div>
-
-      <div className="flex-1 overflow-hidden">
-        {topPools.length === 0 ? (
-          <p className="text-sm text-gray-500">No Maverick pools detected yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {topPools.map((pool) => (
-              <DlmmPoolRow key={pool.id} pool={pool} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DlmmStatPill({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
-  return (
-    <div className="rounded-2xl bg-[#111629] border border-white/5 p-4">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {sublabel && <p className="text-[11px] text-gray-500 mt-1">{sublabel}</p>}
-    </div>
-  );
-}
-
-function DlmmPoolRow({ pool }: { pool: DlmmPool }) {
-  return (
-    <div className="rounded-2xl border border-white/5 bg-[#0A0F1E]/70 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-white">
-            {pool.token0.symbol} / {pool.token1.symbol}
-          </p>
-          <p className="text-[11px] text-gray-500">
-            Fee {pool.fees.makerFeeBps ? `${formatNumber(pool.fees.makerFeeBps, 1)} bps` : '—'} · Bin {pool.binWidthBps ? `${formatNumber(pool.binWidthBps, 1)} bps` : 'n/a'}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-green-400">{pool.apr ? `${pool.apr}% APR` : '—'}</p>
-          <p className="text-[11px] text-gray-500">{formatCompactCurrency(pool.dailyVolumeUsd)}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-3 mt-4 text-xs text-gray-400">
-        <div>
-          <p className="uppercase text-[10px]">TVL</p>
-          <p className="text-white text-sm">{formatCompactCurrency(pool.liquidityUsd)}</p>
-        </div>
-        <div>
-          <p className="uppercase text-[10px]">Spread</p>
-          <p className="text-white text-sm">
-            {pool.stats?.bid && pool.stats?.ask ? `${formatNumber(pool.stats.ask - pool.stats.bid, 4)} Δ` : '—'}
-          </p>
-        </div>
-        <div>
-          <p className="uppercase text-[10px]">Last Price</p>
-          <p className="text-white text-sm">{pool.lastPrice ? formatNumber(pool.lastPrice, 4) : '—'}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function formatCompactCurrency(value?: number) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) {
-    return '—';
-  }
-  if (Math.abs(amount) >= 1_000_000_000) {
-    return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-  }
-  if (Math.abs(amount) >= 1_000_000) {
-    return `$${(amount / 1_000_000).toFixed(1)}M`;
-  }
-  if (Math.abs(amount) >= 1_000) {
-    return `$${(amount / 1_000).toFixed(1)}K`;
-  }
-  return `$${amount.toFixed(0)}`;
-}
-
-function formatNumber(value?: number, digits = 2) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) {
-    return '—';
-  }
-  return amount.toFixed(digits);
-}
-
-<style jsx>{`
-  @keyframes scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  .animate-scroll {
-    animation: scroll 30s linear infinite;
-    will-change: transform;
-  }
-  @keyframes fade-in-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .animate-fade-in-up {
-    animation: fade-in-up 0.8s ease-out forwards;
-  }
-  .delay-100 { animation-delay: 0.1s; }
-  .delay-200 { animation-delay: 0.2s; }
-  .delay-300 { animation-delay: 0.3s; }
-  .delay-1000 { animation-delay: 1s; }
-`}</style>
