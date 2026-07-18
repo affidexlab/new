@@ -294,7 +294,7 @@ export default function Audit() {
           borderTop: '1px solid rgba(255,255,255,0.08)', padding: '2rem',
           textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem',
         }}>
-          © 2026 DecaFlow Solutions Limited 
+          © 2026 DecaFlow Solutions Limited · RC No. 9616822 · decaflowsolutions@gmail.com
         </footer>
       </div>
     </>
