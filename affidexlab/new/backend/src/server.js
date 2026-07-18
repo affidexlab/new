@@ -17,6 +17,7 @@ import investorMetricsRoutes from './routes/v1/investor-metrics.js';
 import mevRoutes from './routes/v1/mev.js';
 import analyticsRoutes from './routes/v1/analytics.js';
 import complianceRoutes from './routes/v1/compliance.js';
+import contactRoutes from './routes/v1/contact.js';
 import auditRoutes from './routes/v1/audit.js';
 import verifyRoutes from './routes/v1/verify.js';
 
@@ -175,6 +176,7 @@ app.use('/v1/solana-staking', solanaStakingRoutes);
 app.use('/v1/investor-metrics', investorMetricsRoutes);
 app.use('/v1/mev', mevRoutes); // MEV prediction and risk scoring
 app.use('/v1/analytics', analyticsRoutes); // Advanced analytics and user stats
+app.use('/v1/contact', contactRoutes);
 app.use('/v1/compliance', complianceRoutes); // Compliance enquiry + demo score
 app.use('/v1/audit', auditRoutes);           // Security audit enquiries
 app.use('/v1/verify', verifyRoutes);         // Verify API signups + demo + key issuance
