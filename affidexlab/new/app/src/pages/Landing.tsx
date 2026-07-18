@@ -8,7 +8,6 @@ const NAV_LINKS: NavLink[] = [
   { label: "Compliance", href: "/compliance" },
   { label: "Security Audit", href: "/audit" },
   { label: "Verify API", href: "/verify" },
-  { label: "Swap", href: "/app" },
 ];
 
 const STATS = [
@@ -17,22 +16,9 @@ const STATS = [
   { val: "188K+", label: "Transactions hit by MEV monthly on Arbitrum", color: "#f97316" },
   { val: "7", label: "Chains protected by DecaFlow infrastructure", color: "#8b5cf6" },
   { val: "500+", label: "GitHub commits of active development", color: "#22c55e" },
-  { val: "RC 9616822", label: "CAC-registered Nigerian technology company", color: "#f59e0b" },
 ];
 
 const PRODUCTS = [
-  {
-    accent: "#3B82F6",
-    accentBg: "rgba(59,130,246,0.1)",
-    accentBorder: "rgba(59,130,246,0.25)",
-    icon: "🔄",
-    badge: "Core Product",
-    title: "MEV-Protected Swap & Bridge",
-    desc: "Trade and bridge across 6 EVM chains with built-in protection against frontrunning, sandwich attacks, and MEV extraction. Private mempool routing via CoW Protocol — better prices, every time.",
-    bullets: ["6 EVM networks supported", "Private mempool routing", "CoW Protocol batch execution", "Real-time MEV savings tracking"],
-    cta: "Start Trading",
-    href: "/app",
-  },
   {
     accent: "#22c55e",
     accentBg: "rgba(34,197,94,0.1)",
@@ -80,7 +66,7 @@ const HOW_IT_WORKS = [
   {
     step: "02", accent: "#22c55e",
     title: "Integrate in minutes",
-    desc: "Our SDK, API, and UI components are built for fast integration. Swap protection is live on our dApp. Compliance and Verify APIs connect with a single npm install.",
+    desc: "Our SDK, API, and UI components are built for fast integration. Compliance and Verify APIs connect with a single npm install.",
   },
   {
     step: "03", accent: "#8b5cf6",
@@ -220,7 +206,7 @@ export default function Landing() {
           fontSize: "1.2rem", color: "rgba(255,255,255,0.6)",
           maxWidth: "700px", margin: "0 auto 3rem", lineHeight: 1.75,
         }}>
-          MEV-protected swaps. Real-time AML compliance. Smart contract security audits.
+          Real-time AML compliance. Smart contract security audits.
           Global wallet screening. One platform — built for the next generation of Web3.
         </p>
 
@@ -232,13 +218,6 @@ export default function Landing() {
             boxShadow: "0 0 32px rgba(59,130,246,0.35)",
           }}>
             Explore Our Products
-          </a>
-          <a href="/app" style={{
-            background: "rgba(255,255,255,0.07)", color: "#fff", padding: "0.95rem 2.25rem",
-            borderRadius: "11px", textDecoration: "none", fontSize: "1rem", fontWeight: 600,
-            border: "1px solid rgba(255,255,255,0.14)",
-          }}>
-            Launch App →
           </a>
         </div>
 
@@ -554,21 +533,21 @@ const tx = await client.executeSwap({
             {/* Products */}
             <div>
               <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Products</div>
-              {[["MEV-Protected Swap", "/app"], ["Bridge Aggregator", "/app"], ["Compliance Monitoring", "/compliance"], ["Security Audit", "/audit"], ["Verify API", "/verify"], ["Privacy SDK (npm)", "https://www.npmjs.com/package/@decaflow/privacy-sdk"]].map(([l, h]) => (
+              {[["Compliance Monitoring", "/compliance"], ["Security Audit", "/audit"], ["Verify API", "/verify"], ["Privacy SDK (npm)", "https://www.npmjs.com/package/@decaflow/privacy-sdk"]].map(([l, h]) => (
                 <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
               ))}
             </div>
             {/* Developers */}
             <div>
               <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Developers</div>
-              {[["npm: @decaflow/privacy-sdk", "https://www.npmjs.com/package/@decaflow/privacy-sdk"], ["GitHub", "https://github.com/affidexlab/new"], ["Documentation", "https://docs.decaflow.xyz"], ["Protocol Integrations", "https://github.com/affidexlab/new"]].map(([l, h]) => (
+              {[["npm: @decaflow/privacy-sdk", "https://www.npmjs.com/package/@decaflow/privacy-sdk"], ["Documentation", "https://docs.decaflow.xyz"], ["Protocol Integrations", "https://github.com/affidexlab/new"]].map(([l, h]) => (
                 <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
               ))}
             </div>
             {/* Company */}
             <div>
               <div style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "1rem" }}>Company</div>
-              {[["decaflow.xyz", "https://decaflow.xyz"], ["decaflowsolutions@gmail.com", "mailto:decaflowsolutions@gmail.com"], ["@decaflowprotocol", "https://x.com/decaflowprotocol"], ["Acquisition Enquiries", "mailto:decaflowsolutions@gmail.com?subject=Acquisition Enquiry"], ["Partnership", "mailto:decaflowsolutions@gmail.com?subject=Partnership Enquiry"]].map(([l, h]) => (
+              {[["decaflow.xyz", "https://decaflow.xyz"], ["Contact Us", "/contact"], ["@decaflowprotocol", "https://x.com/decaflowprotocol"], ["Partnership", "mailto:partnership@decaflow.xyz"]].map(([l, h]) => (
                 <a key={l} href={h} style={{ display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.875rem", textDecoration: "none", marginBottom: "0.5rem" }}>{l}</a>
               ))}
             </div>
