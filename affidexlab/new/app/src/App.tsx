@@ -13,10 +13,10 @@ import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import SDKLanding from "./pages/SDKLanding";
 import DashboardLanding from "./pages/DashboardLanding";
 import Pricing from "./pages/Pricing";
-import Compliance from "./pages/Compliance";
+import Compliance from "./pages/compliance";
 import Contact from "./pages/contact";
-import Audit from "./pages/Audit";
-import Verify from "./pages/Verify";
+import Audit from "./pages/audit";
+import Verify from "./pages/verify";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
