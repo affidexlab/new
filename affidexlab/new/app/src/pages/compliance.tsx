@@ -32,6 +32,7 @@ const levelColor = (l: string) => l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#f
 export default function Compliance() {
   useEffect(() => { document.title = "Compliance & Transaction Monitoring | DecaFlow"; }, []);
 
+  const [menuOpen, setMenuOpen] = useState(false);
   const [demoWallet, setDemoWallet] = useState("");
   const [demoResult, setDemoResult] = useState<any>(null);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -66,56 +67,98 @@ export default function Compliance() {
     setFormStep("success"); setFormLoading(false);
   };
 
-  const S: React.CSSProperties = { background:"#0A0E27", color:"#fff", minHeight:"100vh", fontFamily:"Inter,system-ui,sans-serif" };
+  const NAV_LINKS = [
+    { label: "Compliance", href: "/compliance", active: true },
+    { label: "Security Audit", href: "/audit", active: false },
+    { label: "Verify API", href: "/verify", active: false },
+  ];
 
   return (
-    <div style={S}>
+    <div style={{ background:"#0A0E27", color:"#fff", minHeight:"100vh", fontFamily:"Inter,system-ui,sans-serif" }}>
+      <style>{`
+        * { box-sizing: border-box; }
+        ::placeholder { color: rgba(255,255,255,0.3); }
+        .mobile-btn { display: none !important; }
+        .desktop-nav { display: flex !important; }
+        @media (max-width: 768px) {
+          .mobile-btn { display: flex !important; }
+          .desktop-nav { display: none !important; }
+          .hero-section { padding: 4rem 1.25rem 3rem !important; }
+          .stats-bar > div { flex: 1 1 140px !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
+          .form-grid { grid-template-columns: 1fr !important; }
+          .use-case-grid { grid-template-columns: 1fr !important; }
+          .plan-grid { grid-template-columns: 1fr !important; }
+          .feature-grid { grid-template-columns: 1fr !important; }
+          .modal-inner { border-radius: 16px !important; max-height: 95vh !important; }
+        }
+      `}</style>
+
       {/* Nav */}
-      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1.25rem 2rem",borderBottom:"1px solid rgba(255,255,255,0.08)",position:"sticky",top:0,background:"rgba(10,14,39,0.97)",backdropFilter:"blur(12px)",zIndex:100}}>
-        <a href="/" style={{textDecoration:"none"}}><span style={{fontSize:"1.35rem",fontWeight:800,color:"#fff"}}>Deca<span style={{color:"#3B82F6"}}>Flow</span></span></a>
-        <div style={{display:"flex",gap:"1.5rem",alignItems:"center",flexWrap:"wrap"}}>
-          {[["Compliance","/compliance",true],["Security Audit","/audit",false],["Verify API","/verify",false],["Swap","/app",false]].map(([l,h,a])=>(
-            <a key={l as string} href={h as string} style={{color:a?"#3B82F6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:a?600:400}}>{l as string}</a>
+      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1rem 1.5rem",borderBottom:"1px solid rgba(255,255,255,0.08)",position:"sticky",top:0,background:"rgba(10,14,39,0.97)",backdropFilter:"blur(12px)",zIndex:100}}>
+        <a href="/" style={{textDecoration:"none",display:"flex",alignItems:"center",gap:"0.5rem"}}>
+          <img src="/logo.png" alt="DecaFlow" style={{width:36,height:36,objectFit:"contain"}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}} />
+          <span style={{fontSize:"1.25rem",fontWeight:800,color:"#fff",letterSpacing:"-0.025em"}}>Deca<span style={{color:"#3B82F6"}}>Flow</span></span>
+        </a>
+
+        {/* Desktop nav */}
+        <div className="desktop-nav" style={{gap:"1.5rem",alignItems:"center"}}>
+          {NAV_LINKS.map(({label,href,active})=>(
+            <a key={label} href={href} style={{color:active?"#3B82F6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:active?600:400}}>{label}</a>
           ))}
           <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.5rem 1.25rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.875rem",fontWeight:600}}>Get Started</button>
         </div>
+
+        {/* Mobile hamburger */}
+        <button className="mobile-btn" onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:"#fff",fontSize:"1.5rem",cursor:"pointer",padding:"0.25rem"}}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
       </nav>
 
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div style={{position:"fixed",inset:0,background:"rgba(10,14,39,0.98)",zIndex:99,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"2rem"}}>
+          {NAV_LINKS.map(({label,href})=>(
+            <a key={label} href={href} onClick={()=>setMenuOpen(false)} style={{color:"#fff",textDecoration:"none",fontSize:"1.5rem",fontWeight:700}}>{label}</a>
+          ))}
+          <button onClick={()=>{setMenuOpen(false);openForm("Business");}} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get Started</button>
+        </div>
+      )}
+
       {/* Hero */}
-      <section style={{padding:"6rem 2rem 4rem",maxWidth:"1100px",margin:"0 auto",textAlign:"center"}}>
+      <section className="hero-section" style={{padding:"6rem 2rem 4rem",maxWidth:"1100px",margin:"0 auto",textAlign:"center"}}>
         <div style={{display:"inline-block",background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"100px",padding:"0.4rem 1rem",fontSize:"0.78rem",color:"#93C5FD",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:"1.5rem"}}>Compliance Infrastructure</div>
-        <h1 style={{fontSize:"clamp(2rem,5vw,3.6rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>
+        <h1 style={{fontSize:"clamp(1.8rem,5vw,3.6rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>
           On-Chain AML Compliance{" "}<span style={{background:"linear-gradient(135deg,#3B82F6,#818CF8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Built for Africa's Crypto Economy</span>
         </h1>
-        <p style={{fontSize:"1.1rem",color:"rgba(255,255,255,0.65)",maxWidth:"660px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Real-time transaction monitoring, sanctions screening, and AML risk scoring for crypto exchanges, fintechs, and DeFi protocols. CBN-compliant, SEC-Nigeria ready, MiCA compatible.</p>
+        <p style={{fontSize:"1.05rem",color:"rgba(255,255,255,0.65)",maxWidth:"660px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Real-time transaction monitoring, sanctions screening, and AML risk scoring for crypto exchanges, fintechs, and DeFi protocols. CBN-compliant, SEC-Nigeria ready, MiCA compatible.</p>
         <div style={{display:"flex",gap:"1rem",justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Request a Demo</button>
           <a href="#pricing" style={{background:"rgba(255,255,255,0.06)",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",textDecoration:"none",fontSize:"1rem",fontWeight:600,border:"1px solid rgba(255,255,255,0.12)"}}>View Pricing</a>
         </div>
-        <div style={{display:"flex",marginTop:"4rem",flexWrap:"wrap",background:"rgba(255,255,255,0.04)",borderRadius:"16px",border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
+        <div className="stats-bar" style={{display:"flex",marginTop:"4rem",flexWrap:"wrap",background:"rgba(255,255,255,0.04)",borderRadius:"16px",border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
           {[["$59B+","Crypto transactions in Nigeria (2023–24)"],["6+","Chains monitored in real time"],["<100ms","API response time"],["99.9%","Uptime SLA"]].map(([v,l],i)=>(
-            <div key={i} style={{flex:"1 1 180px",padding:"1.75rem 1.25rem",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,0.08)":"none"}}>
-              <div style={{fontSize:"1.8rem",fontWeight:800,color:"#3B82F6"}}>{v}</div>
-              <div style={{fontSize:"0.78rem",color:"rgba(255,255,255,0.5)",marginTop:"0.3rem"}}>{l}</div>
+            <div key={i} style={{flex:"1 1 140px",padding:"1.5rem 1rem",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,0.08)":"none"}}>
+              <div style={{fontSize:"1.6rem",fontWeight:800,color:"#3B82F6"}}>{v}</div>
+              <div style={{fontSize:"0.75rem",color:"rgba(255,255,255,0.5)",marginTop:"0.3rem"}}>{l}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* Demo */}
-      <section style={{padding:"3rem 2rem",maxWidth:"700px",margin:"0 auto"}}>
-        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:"20px",padding:"2.5rem"}}>
-          <h2 style={{fontSize:"1.4rem",fontWeight:700,marginBottom:"0.4rem"}}>Try the Risk Scorer</h2>
+      <section style={{padding:"2rem 1.25rem",maxWidth:"700px",margin:"0 auto"}}>
+        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:"20px",padding:"2rem 1.5rem"}}>
+          <h2 style={{fontSize:"1.3rem",fontWeight:700,marginBottom:"0.4rem"}}>Try the Risk Scorer</h2>
           <p style={{color:"rgba(255,255,255,0.5)",fontSize:"0.875rem",marginBottom:"1.5rem"}}>Enter any wallet address to see a live compliance score.</p>
           <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
             <input type="text" placeholder="0x... wallet address" value={demoWallet} onChange={e=>setDemoWallet(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runDemo()}
-              style={{flex:"1",padding:"0.875rem 1rem",borderRadius:"10px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.9rem",outline:"none",minWidth:"200px",fontFamily:"monospace"}} />
-            <button onClick={runDemo} disabled={demoLoading} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 1.5rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700,opacity:demoLoading?0.6:1}}>{demoLoading?"Scanning...":"Check Risk"}</button>
+              style={{flex:"1",padding:"0.875rem 1rem",borderRadius:"10px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.9rem",outline:"none",minWidth:"0",width:"100%",fontFamily:"monospace"}} />
+            <button onClick={runDemo} disabled={demoLoading} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 1.5rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700,opacity:demoLoading?0.6:1,whiteSpace:"nowrap"}}>{demoLoading?"Scanning...":"Check Risk"}</button>
           </div>
           {demoResult&&(
             <div style={{marginTop:"1.5rem",padding:"1.25rem",borderRadius:"12px",background:"rgba(255,255,255,0.04)",border:`1px solid ${levelColor(demoResult.riskLevel)}40`}}>
               <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"0.75rem"}}>
-                <div style={{width:56,height:56,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:`${levelColor(demoResult.riskLevel)}20`,border:`2px solid ${levelColor(demoResult.riskLevel)}`,fontSize:"1.1rem",fontWeight:800,color:levelColor(demoResult.riskLevel),flexShrink:0}}>{demoResult.riskScore}</div>
+                <div style={{width:52,height:52,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:`${levelColor(demoResult.riskLevel)}20`,border:`2px solid ${levelColor(demoResult.riskLevel)}`,fontSize:"1rem",fontWeight:800,color:levelColor(demoResult.riskLevel),flexShrink:0}}>{demoResult.riskScore}</div>
                 <div>
                   <div style={{fontWeight:700}}>Risk Score: {demoResult.riskScore}/100</div>
                   <div style={{color:levelColor(demoResult.riskLevel),fontWeight:700,fontSize:"0.85rem"}}>{demoResult.riskLevel} RISK — {demoResult.recommendation}</div>
@@ -133,12 +176,12 @@ export default function Compliance() {
       </section>
 
       {/* Features */}
-      <section style={{padding:"5rem 2rem",maxWidth:"1100px",margin:"0 auto"}}>
-        <h2 style={{fontSize:"2rem",fontWeight:800,textAlign:"center",marginBottom:"0.75rem"}}>Everything you need to stay compliant</h2>
+      <section style={{padding:"5rem 1.25rem",maxWidth:"1100px",margin:"0 auto"}}>
+        <h2 style={{fontSize:"clamp(1.5rem,4vw,2rem)",fontWeight:800,textAlign:"center",marginBottom:"0.75rem"}}>Everything you need to stay compliant</h2>
         <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"3rem"}}>One platform. Full regulatory coverage.</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:"1.25rem"}}>
+        <div className="feature-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"1.25rem"}}>
           {FEATURES.map((f,i)=>(
-            <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"1.75rem"}}>
+            <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"1.5rem"}}>
               <div style={{fontSize:"1.75rem",marginBottom:"0.75rem"}}>{f.icon}</div>
               <h3 style={{fontSize:"1rem",fontWeight:700,marginBottom:"0.5rem"}}>{f.title}</h3>
               <p style={{color:"rgba(255,255,255,0.55)",fontSize:"0.875rem",lineHeight:1.65,margin:0}}>{f.desc}</p>
@@ -148,12 +191,12 @@ export default function Compliance() {
       </section>
 
       {/* Use Cases */}
-      <section style={{padding:"5rem 2rem",background:"rgba(255,255,255,0.02)",borderTop:"1px solid rgba(255,255,255,0.06)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+      <section style={{padding:"5rem 1.25rem",background:"rgba(255,255,255,0.02)",borderTop:"1px solid rgba(255,255,255,0.06)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{maxWidth:"1100px",margin:"0 auto"}}>
-          <h2 style={{fontSize:"2rem",fontWeight:800,textAlign:"center",marginBottom:"3rem"}}>Who uses DecaFlow Compliance</h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(440px,1fr))",gap:"1.5rem"}}>
+          <h2 style={{fontSize:"clamp(1.5rem,4vw,2rem)",fontWeight:800,textAlign:"center",marginBottom:"3rem"}}>Who uses DecaFlow Compliance</h2>
+          <div className="use-case-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:"1.5rem"}}>
             {USE_CASES.map((u,i)=>(
-              <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"2rem"}}>
+              <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"1.5rem"}}>
                 <div style={{fontSize:"1.5rem",marginBottom:"0.5rem"}}>{u.icon}</div>
                 <div style={{display:"inline-block",background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:"6px",padding:"0.2rem 0.6rem",fontSize:"0.72rem",color:"#93C5FD",fontWeight:700,marginBottom:"1rem",textTransform:"uppercase"}}>{u.sector}</div>
                 <div style={{marginBottom:"0.75rem"}}>
@@ -171,10 +214,10 @@ export default function Compliance() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" style={{padding:"5rem 2rem",maxWidth:"1100px",margin:"0 auto"}}>
-        <h2 style={{fontSize:"2rem",fontWeight:800,textAlign:"center",marginBottom:"0.75rem"}}>Transparent pricing</h2>
+      <section id="pricing" style={{padding:"5rem 1.25rem",maxWidth:"1100px",margin:"0 auto"}}>
+        <h2 style={{fontSize:"clamp(1.5rem,4vw,2rem)",fontWeight:800,textAlign:"center",marginBottom:"0.75rem"}}>Transparent pricing</h2>
         <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"3rem"}}>Compliance that doesn't cost like Chainalysis.</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"1.5rem"}}>
+        <div className="plan-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:"1.5rem"}}>
           {PLANS.map((t,i)=>(
             <div key={i} style={{background:t.highlight?"rgba(59,130,246,0.08)":"rgba(255,255,255,0.03)",border:t.highlight?"1px solid rgba(59,130,246,0.4)":"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"2rem",position:"relative"}}>
               {t.highlight&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#3B82F6",color:"#fff",padding:"0.25rem 1rem",borderRadius:"100px",fontSize:"0.75rem",fontWeight:700,whiteSpace:"nowrap"}}>Most Popular</div>}
@@ -195,84 +238,84 @@ export default function Compliance() {
       </section>
 
       {/* CTA */}
-      <section style={{padding:"6rem 2rem",textAlign:"center"}}>
-        <h2 style={{fontSize:"2.2rem",fontWeight:800,marginBottom:"1rem"}}>Compliance isn't optional anymore.</h2>
+      <section style={{padding:"6rem 1.25rem",textAlign:"center"}}>
+        <h2 style={{fontSize:"clamp(1.6rem,4vw,2.2rem)",fontWeight:800,marginBottom:"1rem"}}>Compliance isn't optional anymore.</h2>
         <p style={{color:"rgba(255,255,255,0.55)",fontSize:"1rem",maxWidth:"540px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Nigerian SEC, CBN, and global FATF standards are converging. Get ahead of the requirement — not behind it.</p>
         <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"1rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1.05rem",fontWeight:700}}>Talk to Us Today</button>
       </section>
 
       {/* Footer */}
-      <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
-        © 2026 DecaFlow Solutions Limited · RC No. 9616822 · <a href="mailto:decaflowsolutions@gmail.com" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>decaflowsolutions@gmail.com</a>
+      <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem 1.25rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
+        © 2026 DecaFlow Solutions Limited · RC No. 9616822 · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
       </footer>
 
       {/* Form Modal */}
       {formOpen&&(
-        <div onClick={e=>e.target===e.currentTarget&&closeForm()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
-          <div style={{background:"#111827",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"20px",width:"100%",maxWidth:"600px",maxHeight:"90vh",overflowY:"auto"}}>
-            <div style={{padding:"1.75rem 2rem 1rem",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div onClick={e=>e.target===e.currentTarget&&closeForm()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem",overflowY:"auto"}}>
+          <div className="modal-inner" style={{background:"#111827",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"20px",width:"100%",maxWidth:"600px",maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{padding:"1.5rem 1.5rem 1rem",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div>
-                <h2 style={{fontSize:"1.35rem",fontWeight:800,marginBottom:"0.25rem"}}>{formStep==="success"?"Request Received! 🎉":`Get Started — ${selectedPlan} Plan`}</h2>
-                {formStep!=="success"&&<p style={{color:"rgba(255,255,255,0.5)",fontSize:"0.875rem",margin:0}}>A DecaFlow compliance specialist will contact you within 24 hours.</p>}
+                <h2 style={{fontSize:"1.2rem",fontWeight:800,marginBottom:"0.25rem"}}>{formStep==="success"?"Request Received! 🎉":`Get Started — ${selectedPlan} Plan`}</h2>
+                {formStep!=="success"&&<p style={{color:"rgba(255,255,255,0.5)",fontSize:"0.8rem",margin:0}}>A DecaFlow compliance specialist will contact you within 24 hours.</p>}
               </div>
               <button onClick={closeForm} style={{background:"rgba(255,255,255,0.07)",border:"none",color:"#fff",width:32,height:32,borderRadius:"50%",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
             </div>
             {formStep==="success"?(
-              <div style={{padding:"3rem 2rem",textAlign:"center"}}>
+              <div style={{padding:"3rem 1.5rem",textAlign:"center"}}>
                 <div style={{fontSize:"4rem",marginBottom:"1rem"}}>✅</div>
                 <h3 style={{fontSize:"1.25rem",fontWeight:700,marginBottom:"0.75rem"}}>We've got your request!</h3>
                 <p style={{color:"rgba(255,255,255,0.6)",lineHeight:1.7,marginBottom:"2rem"}}>A member of our compliance team will reach out to <strong>{formData.email}</strong> within 24 hours with your API credentials and integration guide.</p>
                 <button onClick={closeForm} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700}}>Close</button>
               </div>
             ):(
-              <form onSubmit={handleSubmit} style={{padding:"1.75rem 2rem 2rem"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:"1rem"}}>
+              <form onSubmit={handleSubmit} style={{padding:"1.5rem"}}>
+                <div className="form-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.875rem",marginBottom:"0.875rem"}}>
                   {[["Company Name *","companyName","e.g. Quidax Ltd","text"],["Your Name *","contactName","Full name","text"],["Work Email *","email","you@company.com","email"],["Telegram / WhatsApp","telegram","@handle or +234...","text"]].map(([label,field,ph,type])=>(
                     <div key={field as string}>
-                      <label style={{display:"block",fontSize:"0.8rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.4rem",fontWeight:600}}>{label as string}</label>
+                      <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.35rem",fontWeight:600}}>{label as string}</label>
                       <input required={label.includes("*")} type={type as string} placeholder={ph as string} value={(formData as any)[field as string]}
                         onChange={e=>setFormData(p=>({...p,[field as string]:e.target.value}))}
-                        style={{width:"100%",padding:"0.75rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",boxSizing:"border-box"}} />
+                        style={{width:"100%",padding:"0.7rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",boxSizing:"border-box" as const}} />
                     </div>
                   ))}
                 </div>
-                <div style={{marginBottom:"1rem"}}>
-                  <label style={{display:"block",fontSize:"0.8rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.4rem",fontWeight:600}}>Business Type *</label>
+                <div style={{marginBottom:"0.875rem"}}>
+                  <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.35rem",fontWeight:600}}>Business Type *</label>
                   <select required value={formData.businessType} onChange={e=>setFormData(p=>({...p,businessType:e.target.value}))}
-                    style={{width:"100%",padding:"0.75rem 0.875rem",borderRadius:"8px",background:"#1f2937",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",cursor:"pointer"}}>
+                    style={{width:"100%",padding:"0.7rem 0.875rem",borderRadius:"8px",background:"#1f2937",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",cursor:"pointer"}}>
                     <option value="" disabled>Select your business type</option>
                     {["Crypto Exchange / VASP","Fintech / Neobank","Payment Processor","DeFi Protocol","OTC Desk / Broker","Law Firm / Compliance Team","Other"].map(o=><option key={o} value={o} style={{background:"#1f2937"}}>{o}</option>)}
                   </select>
                 </div>
-                <div style={{marginBottom:"1rem"}}>
-                  <label style={{display:"block",fontSize:"0.8rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.6rem",fontWeight:600}}>Chains you need covered</label>
+                <div style={{marginBottom:"0.875rem"}}>
+                  <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.5rem",fontWeight:600}}>Chains you need covered</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
                     {["Ethereum","Arbitrum","Base","Optimism","Polygon","Avalanche","BNB Chain"].map(c=>(
                       <button key={c} type="button" onClick={()=>toggleChain(c)}
-                        style={{padding:"0.4rem 0.875rem",borderRadius:"100px",fontSize:"0.8rem",fontWeight:600,cursor:"pointer",border:formData.chains.includes(c)?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:formData.chains.includes(c)?"rgba(59,130,246,0.2)":"transparent",color:formData.chains.includes(c)?"#93C5FD":"rgba(255,255,255,0.6)"}}>
+                        style={{padding:"0.35rem 0.75rem",borderRadius:"100px",fontSize:"0.78rem",fontWeight:600,cursor:"pointer",border:formData.chains.includes(c)?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:formData.chains.includes(c)?"rgba(59,130,246,0.2)":"transparent",color:formData.chains.includes(c)?"#93C5FD":"rgba(255,255,255,0.6)"}}>
                         {c}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div style={{marginBottom:"1rem"}}>
-                  <label style={{display:"block",fontSize:"0.8rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.4rem",fontWeight:600}}>Estimated Monthly Transaction Volume</label>
+                <div style={{marginBottom:"0.875rem"}}>
+                  <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.35rem",fontWeight:600}}>Estimated Monthly Transaction Volume</label>
                   <select value={formData.monthlyTxVolume} onChange={e=>setFormData(p=>({...p,monthlyTxVolume:e.target.value}))}
-                    style={{width:"100%",padding:"0.75rem 0.875rem",borderRadius:"8px",background:"#1f2937",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",cursor:"pointer"}}>
+                    style={{width:"100%",padding:"0.7rem 0.875rem",borderRadius:"8px",background:"#1f2937",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",cursor:"pointer"}}>
                     <option value="">Select volume range</option>
                     {["Under 1,000/month","1,000–10,000/month","10,000–100,000/month","100,000–500,000/month","500,000+/month"].map(o=><option key={o} value={o} style={{background:"#1f2937"}}>{o}</option>)}
                   </select>
                 </div>
-                <div style={{marginBottom:"1.5rem"}}>
-                  <label style={{display:"block",fontSize:"0.8rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.4rem",fontWeight:600}}>Additional Information</label>
+                <div style={{marginBottom:"1.25rem"}}>
+                  <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.35rem",fontWeight:600}}>Additional Information</label>
                   <textarea value={formData.message} onChange={e=>setFormData(p=>({...p,message:e.target.value}))} rows={3}
                     placeholder="Tell us about your compliance needs or any specific regulatory requirements..."
-                    style={{width:"100%",padding:"0.75rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",resize:"vertical",boxSizing:"border-box",fontFamily:"inherit"}} />
+                    style={{width:"100%",padding:"0.7rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",resize:"vertical",boxSizing:"border-box" as const,fontFamily:"inherit"}} />
                 </div>
                 <button type="submit" disabled={formLoading} style={{width:"100%",padding:"1rem",borderRadius:"10px",background:"#3B82F6",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:"1rem",opacity:formLoading?0.6:1}}>
                   {formLoading?"Submitting...":`Submit Request — ${selectedPlan} Plan`}
                 </button>
-                <p style={{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.75rem",marginTop:"0.75rem"}}>🔒 Your information is confidential and will only be used to process your request.</p>
+                <p style={{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.72rem",marginTop:"0.75rem"}}>🔒 Your information is confidential and will only be used to process your request.</p>
               </form>
             )}
           </div>
