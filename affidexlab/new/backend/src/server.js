@@ -20,6 +20,7 @@ import complianceRoutes from './routes/v1/compliance.js';
 import contactRoutes from './routes/v1/contact.js';
 import auditRoutes from './routes/v1/audit.js';
 import verifyRoutes from './routes/v1/verify.js';
+import shieldRoutes from './routes/v1/shield.js';
 
 dotenv.config();
 
@@ -180,6 +181,7 @@ app.use('/v1/contact', contactRoutes);
 app.use('/v1/compliance', complianceRoutes); // Compliance enquiry + demo score
 app.use('/v1/audit', auditRoutes);           // Security audit enquiries
 app.use('/v1/verify', verifyRoutes);         // Verify API signups + demo + key issuance
+app.use('/v1/shield', shieldRoutes);         // Shield early-access waitlist
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
