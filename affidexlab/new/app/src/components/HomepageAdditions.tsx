@@ -281,28 +281,7 @@ export const ServicesOverview = () => (
 
 
 // ─── 4. SOCIAL PROOF / TRUST BAR ─────────────────────────────────────────────
-export const TrustBar = () => (
-  <section style={{ padding: '4rem 2rem', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-    <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '2.5rem', fontWeight: 600 }}>
-        Trusted infrastructure · Verified company · Active acquisition discussions with
-      </p>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' as const, alignItems: 'center' }}>
-        {['Phantom Wallet', 'ConsenSys', 'Li.Fi', '0x Protocol', 'Aave Labs'].map(name => (
-          <span key={name} style={{
-            fontSize: '1rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)',
-            letterSpacing: '-0.01em',
-          }}>
-            {name}
-          </span>
-        ))}
-      </div>
-      <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.72rem', marginTop: '1.5rem' }}>
-        Active acquisition discussions. Not endorsements.
-      </p>
-    </div>
-  </section>
-);
+// Removed: unverified "active acquisition discussions" claim naming specific companies.
 
 
 // ─── 5. STATS SECTION ────────────────────────────────────────────────────────
@@ -320,7 +299,7 @@ export const StatsSection = () => (
           { val: '$1.4B+', label: 'Lost to MEV annually across all DeFi', color: '#ef4444' },
           { val: '$6.24M', label: 'MEV extracted on Arbitrum in 30 days', color: '#f97316' },
           { val: '188K+', label: 'Transactions affected by MEV monthly', color: '#f59e0b' },
-          { val: '$59B+', label: 'Crypto transactions in Nigeria (2023–24)', color: '#3B82F6' },
+          { val: '$154B+', label: 'Illicit crypto volume detected globally (2025)', color: '#3B82F6' },
           { val: '6', label: 'EVM networks protected by DecaFlow', color: '#8b5cf6' },
           { val: '500+', label: 'GitHub commits of active development', color: '#22c55e' },
         ].map((s, i) => (
