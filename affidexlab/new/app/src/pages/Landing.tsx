@@ -26,7 +26,7 @@ const PRODUCTS = [
     icon: "🛡️",
     badge: "New",
     title: "Compliance & Transaction Monitoring",
-    desc: "Real-time AML compliance engine for crypto exchanges, fintechs, and DeFi protocols. Sanctions screening, risk scoring 0–100, and audit-ready PDF reports — CBN-compliant and MiCA compatible.",
+    desc: "Real-time AML compliance engine for crypto exchanges, fintechs, and DeFi protocols. Sanctions screening, risk scoring 0–100, and audit-ready PDF reports — built to global standards, including MiCA.",
     bullets: ["OFAC, UN, EU sanctions screening", "Risk score 0–100 per transaction", "Regulator-ready PDF reports", "From $299/month"],
     cta: "Explore Compliance",
     href: "/compliance",
@@ -81,7 +81,7 @@ const TRUST_ITEMS = [
 
 const FAQS = [
   { q: "What chains does DecaFlow support?", a: "Our MEV protection and Verify API cover Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, and BNB Chain. Smart contract audits cover all EVM chains plus Solana (Rust/Anchor)." },
-  { q: "Is DecaFlow a registered company?", a: "Yes. DecaFlow Solutions Limited is incorporated in Nigeria under the Companies and Allied Matters Act 2020 (RC No. 9616822, TIN: 2620351636603). We have full legal documentation including a CAC certificate, Articles of Association, and Board Resolution." },
+  { q: "Is DecaFlow a registered company?", a: "Yes. DecaFlow Solutions Limited is a duly incorporated legal entity with full corporate documentation — certificate of incorporation, Articles of Association, and Board Resolution — available on request." },
   { q: "How does MEV protection actually work?", a: "When a user initiates a swap, instead of broadcasting to the public mempool (where bots can see it), our SDK routes the transaction through a private RPC endpoint or CoW Protocol's batch auction system. Bots never see it coming. Users get better execution prices." },
   { q: "How fast can I integrate the Compliance API?", a: "Most integrations take a single afternoon. Install the npm package, add your API key, and wrap your transaction processing logic with our screenWallet() call. Full documentation and working examples are included." },
   { q: "Can I publish the security audit report?", a: "Yes — the report belongs to you. Many projects publish it on their website and GitHub as part of their launch transparency. We can co-publish an announcement if it helps your marketing." },
