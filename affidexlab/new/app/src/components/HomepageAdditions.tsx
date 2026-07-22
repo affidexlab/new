@@ -172,7 +172,7 @@ export const ServicesOverview = () => (
           </h3>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', lineHeight: 1.65, flex: 1, marginBottom: '1.5rem' }}>
             Real-time AML compliance engine for crypto exchanges, fintechs, and DeFi protocols.
-            Sanctions screening, risk scoring, and audit-ready reports. CBN and MiCA compatible.
+            Sanctions screening, risk scoring, and audit-ready reports. Built to global compliance standards, including MiCA.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '0.4rem', marginBottom: '1.5rem' }}>
             {['OFAC & UN sanctions screening', 'Risk score 0–100 per transaction', 'Regulator-ready PDF reports'].map(f => (
@@ -358,9 +358,6 @@ export const NewFooter = () => (
           </p>
           <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>
             <div>DecaFlow Solutions Limited</div>
-            <div>RC No. 9616822</div>
-            <div>TIN: 2620351636603</div>
-            <div>Incorporated: 16 June 2026</div>
           </div>
         </div>
 
@@ -435,7 +432,7 @@ export const NewFooter = () => (
         flexWrap: 'wrap' as const, gap: '1rem',
       }}>
         <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem' }}>
-          © 2026 DecaFlow Solutions Limited · RC No. 9616822 · All rights reserved.
+          © 2026 DecaFlow Solutions Limited · All rights reserved.
         </div>
         <div style={{ display: 'flex', gap: '1.5rem' }}>
           {['Privacy Policy', 'Terms of Service', 'Security'].map(l => (
