@@ -7,12 +7,13 @@ interface NavLink { label: string; href: string; }
 const NAV_LINKS: NavLink[] = [
   { label: "Compliance", href: "/compliance" },
   { label: "Security Audit", href: "/audit" },
+  { label: "Shield", href: "/shield" },
   { label: "Verify API", href: "/verify" },
 ];
 
 const STATS = [
   { val: "$1.4B+", label: "Lost to MEV annually across DeFi", color: "#ef4444" },
-  { val: "$59B+", label: "Crypto transactions in Nigeria (2023–24)", color: "#3B82F6" },
+  { val: "$154B+", label: "Illicit crypto volume detected globally (2025)", color: "#3B82F6" },
   { val: "188K+", label: "Transactions hit by MEV monthly on Arbitrum", color: "#f97316" },
   { val: "7", label: "Chains protected by DecaFlow infrastructure", color: "#8b5cf6" },
   { val: "500+", label: "GitHub commits of active development", color: "#22c55e" },
@@ -44,6 +45,18 @@ const PRODUCTS = [
     href: "/audit",
   },
   {
+    accent: "#06b6d4",
+    accentBg: "rgba(6,182,212,0.1)",
+    accentBorder: "rgba(6,182,212,0.25)",
+    icon: "📡",
+    badge: "Early Access",
+    title: "DecaFlow Shield",
+    desc: "Continuous monitoring for deployed contracts — real-time alerts and automated scans that pick up where a one-time audit leaves off.",
+    bullets: ["Continuous on-chain monitoring", "Automated vulnerability scans", "Real-time alerts", "From $500/month"],
+    cta: "Join Early Access",
+    href: "/shield",
+  },
+  {
     accent: "#8b5cf6",
     accentBg: "rgba(139,92,246,0.1)",
     accentBorder: "rgba(139,92,246,0.25)",
@@ -73,10 +86,6 @@ const HOW_IT_WORKS = [
     title: "Get protected instantly",
     desc: "From the first transaction, your users are protected from MEV, your compliance engine is running, and your contracts are documented and secured.",
   },
-];
-
-const TRUST_ITEMS = [
-  "Phantom Wallet", "ConsenSys", "Li.Fi", "0x Protocol", "Aave Labs",
 ];
 
 const FAQS = [
@@ -285,27 +294,6 @@ export default function Landing() {
           )}
         </div>
       </section>
-
-      {/* ════════════════════════════════════
-          TRUST BAR
-         ════════════════════════════════════ */}
-      <div style={{
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        padding: "1.75rem 2rem",
-      }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-          <p style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "1.25rem", fontWeight: 600 }}>
-            In active acquisition discussions with
-          </p>
-          <div style={{ display: "flex", justifyContent: "center", gap: "2.5rem", flexWrap: "wrap", alignItems: "center" }}>
-            {TRUST_ITEMS.map((name) => (
-              <span key={name} style={{ fontSize: "0.95rem", fontWeight: 700, color: "rgba(255,255,255,0.22)", letterSpacing: "-0.01em" }}>{name}</span>
-            ))}
-          </div>
-          <p style={{ color: "rgba(255,255,255,0.18)", fontSize: "0.68rem", marginTop: "1rem" }}>Active discussions only — not endorsements.</p>
-        </div>
-      </div>
 
       {/* ════════════════════════════════════
           PRODUCTS — 4 EQUAL CARDS
