@@ -18,9 +18,10 @@
  *
  * HOW TO ACTUALLY RUN THIS:
  * This is NOT wired into server.js and does not run automatically. It needs:
- *   1. RPC URLs in env vars (RPC_ETHEREUM, RPC_ARBITRUM, ...) — e.g. a free-tier
- *      Alchemy or Infura endpoint.
- *   2. Real contract addresses added to WATCHED_CONTRACTS below.
+ *   1. RPC URLs in env vars — RPC_ARBITRUM, RPC_BASE, RPC_POLYGON, RPC_AVALANCHE —
+ *      e.g. free-tier Alchemy or Infura endpoints for each chain.
+ *   2. WATCHED_CONTRACTS below is already pointed at DecaFlow's own 4 router
+ *      contracts. Add real client contracts here as they onboard.
  *   3. Something to actually invoke it on a schedule. On Render, add a "Cron Job"
  *      service (separate from the web service) pointing at:
  *          node src/services/shieldMonitor.js
@@ -33,14 +34,24 @@ import { ethers } from 'ethers';
 import { sendEnquiryEmail } from '../utils/mailer.js';
 
 const RPC_URLS = {
-  ethereum: process.env.RPC_ETHEREUM,
   arbitrum: process.env.RPC_ARBITRUM,
+  base: process.env.RPC_BASE,
+  polygon: process.env.RPC_POLYGON,
+  avalanche: process.env.RPC_AVALANCHE,
 };
 
-// Phase 0: hardcoded list. Phase 1: pull this from a `shield_contracts` table
-// populated when a client is onboarded via the /v1/shield/waitlist flow.
+// Phase 0: hardcoded list, now pointed at DecaFlow's own live router contracts —
+// good first subject (dogfooding your own product) and a real early-access proof point.
+// Base and Polygon share the same address (0x1E7b...4Cbd), which is consistent with a
+// deterministic/CREATE2 deployment across chains — not treated as an error here, but
+// worth a quick sanity check on your end since it's the one thing I couldn't verify
+// independently (Arbiscan/Basescan/Polygonscan/Snowtrace all blocked automated fetches).
+// Phase 1: pull this from a `shield_contracts` table populated at client onboarding.
 const WATCHED_CONTRACTS = [
-  // { chain: 'arbitrum', address: '0xYourClientContract', label: 'Client X — main contract' },
+  { chain: 'arbitrum', address: '0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3', label: 'DecaFlow Router — Arbitrum' },
+  { chain: 'base', address: '0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd', label: 'DecaFlow Router — Base' },
+  { chain: 'polygon', address: '0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd', label: 'DecaFlow Router — Polygon' },
+  { chain: 'avalanche', address: '0x41475aDeB1172905Dd1085FBe525e1A79487e49C', label: 'DecaFlow Router — Avalanche' },
 ];
 
 // Alert if balance drops this much or more in one check. Tune per contract in Phase 1 —
