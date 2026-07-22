@@ -136,7 +136,7 @@ export default function Compliance() {
           <a href="#pricing" style={{background:"rgba(255,255,255,0.06)",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",textDecoration:"none",fontSize:"1rem",fontWeight:600,border:"1px solid rgba(255,255,255,0.12)"}}>View Pricing</a>
         </div>
         <div className="stats-bar" style={{display:"flex",marginTop:"4rem",flexWrap:"wrap",background:"rgba(255,255,255,0.04)",borderRadius:"16px",border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
-          {[["$59B+","Crypto transactions in Nigeria (2023–24)"],["6+","Chains monitored in real time"],["<100ms","API response time"],["99.9%","Uptime SLA"]].map(([v,l],i)=>(
+          {[["$154B+","Illicit crypto volume detected globally (2025)"],["6+","Chains monitored in real time"],["<100ms","API response time"],["99.9%","Uptime SLA"]].map(([v,l],i)=>(
             <div key={i} style={{flex:"1 1 140px",padding:"1.5rem 1rem",textAlign:"center",borderRight:i<3?"1px solid rgba(255,255,255,0.08)":"none"}}>
               <div style={{fontSize:"1.6rem",fontWeight:800,color:"#3B82F6"}}>{v}</div>
               <div style={{fontSize:"0.75rem",color:"rgba(255,255,255,0.5)",marginTop:"0.3rem"}}>{l}</div>
