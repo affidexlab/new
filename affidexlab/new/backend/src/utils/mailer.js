@@ -49,7 +49,7 @@ const buildHtml = (type, fields, isConfirmation, isApiKey) => {
     </td></tr>
     <tr><td style="padding:24px 32px 32px">
       <div style="font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:16px;line-height:1.6">
-        DecaFlow Solutions Limited · RC No. 9616822 · decaflow.xyz<br>
+        DecaFlow Solutions Limited · decaflow.xyz<br>
         <a href="mailto:decaflowsolutions@gmail.com" style="color:${accent}">decaflowsolutions@gmail.com</a>
       </div>
     </td></tr>
@@ -59,7 +59,7 @@ const buildHtml = (type, fields, isConfirmation, isApiKey) => {
 const buildText = (type, fields) => {
   const lines = [`DecaFlow — ${type}\n${'─'.repeat(40)}`];
   Object.entries(fields).forEach(([k, v]) => lines.push(`${k}: ${v}`));
-  lines.push('\nDecaFlow Solutions Limited · RC No. 9616822 · decaflowsolutions@gmail.com');
+  lines.push('\nDecaFlow Solutions Limited · decaflowsolutions@gmail.com');
   return lines.join('\n');
 };
 
