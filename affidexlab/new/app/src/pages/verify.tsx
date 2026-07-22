@@ -14,8 +14,8 @@ const FEATURES = [
 ];
 
 const USE_CASES = [
-  { icon: "🏦", title: "Crypto Exchanges & VASPs", desc: "Screen every deposit and withdrawal address before processing. Generate monthly AML reports for CBN and SEC-Nigeria." },
-  { icon: "💳", title: "Fintech & Neobanks", desc: "Pre-screen crypto-adjacent transactions to satisfy CBN AML obligations and avoid account freezes." },
+  { icon: "🏦", title: "Crypto Exchanges & VASPs", desc: "Screen every deposit and withdrawal address before processing. Generate monthly, regulator-ready AML reports." },
+  { icon: "💳", title: "Fintech & Neobanks", desc: "Pre-screen crypto-adjacent transactions to satisfy AML obligations and avoid account freezes." },
   { icon: "🏛️", title: "DeFi Protocols", desc: "Implement wallet screening at the frontend — warn users with high-risk wallets before they interact with your protocol." },
   { icon: "⚖️", title: "Law Firms & Compliance Teams", desc: "Run wallet investigations for client due diligence, litigation support, and regulatory submissions." },
   { icon: "🔍", title: "Blockchain Investigators", desc: "Trace fund flows, identify mixer exposure, and generate evidence-grade reports for law enforcement." },
@@ -293,7 +293,7 @@ switch (result.recommendation) {
       </section>
 
       <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem 1.25rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
-        © 2026 DecaFlow Solutions Limited · RC No. 9616822 · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
+        © 2026 DecaFlow Solutions Limited · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
       </footer>
 
       {/* Form Modal */}
