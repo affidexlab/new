@@ -17,6 +17,7 @@ import Compliance from "./pages/compliance";
 import Contact from "./pages/contact";
 import Audit from "./pages/audit";
 import Verify from "./pages/verify";
+import Shield from "./pages/Shield";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
@@ -74,6 +75,9 @@ function getPageFromLocation(): string {
   if (path.startsWith("/verify") || hash === "#verify") {
     return "verify";
   }
+  if (path.startsWith("/shield") || hash === "#shield") {
+    return "shield";
+  }
   return "home";
 }
 
@@ -118,6 +122,7 @@ export default function App() {
       {currentPage === "compliance" && <Compliance />}
       {currentPage === "audit" && <Audit />}
       {currentPage === "verify" && <Verify />}
+      {currentPage === "shield" && <Shield />}
     </TransactionEventsProvider>
   );
 }
