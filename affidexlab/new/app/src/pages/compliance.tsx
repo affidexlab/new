@@ -4,11 +4,11 @@ const API_BASE = "https://decaflow-backend.onrender.com";
 
 const FEATURES = [
   { icon: "🔍", title: "Real-Time Transaction Monitoring", desc: "Every on-chain transaction is scored the moment it hits the mempool. Suspicious patterns flagged before settlement — not after." },
-  { icon: "🛡️", title: "AML & CFT Compliance Engine", desc: "Continuously checks against OFAC, UN, EU, and FATF sanctions lists. Stay compliant with CBN, SEC-Nigeria, and MiCA requirements automatically." },
+  { icon: "🛡️", title: "AML & CFT Compliance Engine", desc: "Continuously checks against OFAC, UN, EU, and FATF sanctions lists. Stay compliant with global regulatory requirements, including MiCA, automatically." },
   { icon: "📊", title: "Risk Scoring Dashboard", desc: "Every wallet receives a 0–100 composite risk score covering sanctions exposure, mixer usage, darknet activity, and behavioural anomalies." },
   { icon: "⚡", title: "Sub-100ms API Response", desc: "Instant risk decisions at transaction speed. Compliance checks run silently in the background with no bottlenecks in your user flow." },
   { icon: "🌍", title: "Multi-Chain Coverage", desc: "Monitors Arbitrum, Ethereum, Base, Optimism, Polygon, Avalanche, and BNB Chain simultaneously. One API, every major chain." },
-  { icon: "📁", title: "Audit-Ready Reports", desc: "Generate regulator-ready compliance reports on demand. Full transaction history, risk scores, and decisions — formatted for CBN, SEC, and FIRS." },
+  { icon: "📁", title: "Audit-Ready Reports", desc: "Generate regulator-ready compliance reports on demand. Full transaction history, risk scores, and decisions — formatted to meet global regulatory standards." },
 ];
 
 const PLANS = [
@@ -21,8 +21,8 @@ const PLANS = [
 ];
 
 const USE_CASES = [
-  { sector: "Crypto Exchanges", icon: "🏦", problem: "CBN and SEC-Nigeria now require VASPs to screen all transactions for AML/CFT compliance.", solution: "DecaFlow Compliance screens every deposit and withdrawal in real time, auto-generates monthly reports, and flags suspicious wallets before funds are processed." },
-  { sector: "Fintech & Neobanks", icon: "💳", problem: "Fintechs processing crypto-adjacent transactions face CBN scrutiny and risk account freezes if AML obligations are missed.", solution: "Integrate our API in one afternoon. Every transaction touching a blockchain address is automatically screened and logged with a full audit trail." },
+  { sector: "Crypto Exchanges", icon: "🏦", problem: "Regulators worldwide now require VASPs to screen all transactions for AML/CFT compliance.", solution: "DecaFlow Compliance screens every deposit and withdrawal in real time, auto-generates monthly reports, and flags suspicious wallets before funds are processed." },
+  { sector: "Fintech & Neobanks", icon: "💳", problem: "Fintechs processing crypto-adjacent transactions face regulatory scrutiny and risk account freezes if AML obligations are missed.", solution: "Integrate our API in one afternoon. Every transaction touching a blockchain address is automatically screened and logged with a full audit trail." },
   { sector: "Payment Processors", icon: "💸", problem: "Processing payments from wallets linked to sanctioned entities creates legal liability and reputational risk.", solution: "Pre-screening via the DecaFlow Compliance API stops high-risk payments before they process." },
   { sector: "DeFi Protocols", icon: "🔗", problem: "Global regulators are increasingly applying AML obligations to DeFi protocols. MiCA in Europe is already in force.", solution: "Embed compliance screening into your protocol's frontend. Show users their wallet risk score before they interact." },
 ];
@@ -130,7 +130,7 @@ export default function Compliance() {
         <h1 style={{fontSize:"clamp(1.8rem,5vw,3.6rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>
           On-Chain AML Compliance{" "}<span style={{background:"linear-gradient(135deg,#3B82F6,#818CF8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Built for Africa's Crypto Economy</span>
         </h1>
-        <p style={{fontSize:"1.05rem",color:"rgba(255,255,255,0.65)",maxWidth:"660px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Real-time transaction monitoring, sanctions screening, and AML risk scoring for crypto exchanges, fintechs, and DeFi protocols. CBN-compliant, SEC-Nigeria ready, MiCA compatible.</p>
+        <p style={{fontSize:"1.05rem",color:"rgba(255,255,255,0.65)",maxWidth:"660px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Real-time transaction monitoring, sanctions screening, and AML risk scoring for crypto exchanges, fintechs, and DeFi protocols. Built to global standards, MiCA compatible.</p>
         <div style={{display:"flex",gap:"1rem",justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Request a Demo</button>
           <a href="#pricing" style={{background:"rgba(255,255,255,0.06)",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",textDecoration:"none",fontSize:"1rem",fontWeight:600,border:"1px solid rgba(255,255,255,0.12)"}}>View Pricing</a>
@@ -240,13 +240,13 @@ export default function Compliance() {
       {/* CTA */}
       <section style={{padding:"6rem 1.25rem",textAlign:"center"}}>
         <h2 style={{fontSize:"clamp(1.6rem,4vw,2.2rem)",fontWeight:800,marginBottom:"1rem"}}>Compliance isn't optional anymore.</h2>
-        <p style={{color:"rgba(255,255,255,0.55)",fontSize:"1rem",maxWidth:"540px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Nigerian SEC, CBN, and global FATF standards are converging. Get ahead of the requirement — not behind it.</p>
+        <p style={{color:"rgba(255,255,255,0.55)",fontSize:"1rem",maxWidth:"540px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Regulatory standards worldwide are converging around real-time AML monitoring. Get ahead of the requirement — not behind it.</p>
         <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"1rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1.05rem",fontWeight:700}}>Talk to Us Today</button>
       </section>
 
       {/* Footer */}
       <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem 1.25rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
-        © 2026 DecaFlow Solutions Limited · RC No. 9616822 · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
+        © 2026 DecaFlow Solutions Limited · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
       </footer>
 
       {/* Form Modal */}
