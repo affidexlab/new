@@ -39,7 +39,7 @@ const PROCESS = [
 ];
 
 const FAQS = [
-  { q: "Are you a formal audit firm like CertiK or Trail of Bits?", a: "We are a registered Nigerian technology company (RC No. 9616822) providing professional smart contract security review services. We built and deployed our own DeFi protocol with smart contracts live on Arbitrum mainnet — we know these attack vectors firsthand. Our reports are formal, written on company letterhead, and designed to be published or shared with investors and regulators." },
+  { q: "Are you a formal audit firm like CertiK or Trail of Bits?", a: "We are a registered technology company providing professional smart contract security review services. We built and deployed our own DeFi protocol with smart contracts live on Arbitrum mainnet — we know these attack vectors firsthand. Our reports are formal, written on company letterhead, and designed to be published or shared with investors and regulators." },
   { q: "What languages do you audit?", a: "Solidity (all major EVM chains — Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BNB Chain), Vyper, and Rust/Anchor (Solana). Most audits are Solidity." },
   { q: "Can we publish the audit report publicly?", a: "Yes. The report is yours. Many projects publish audit reports on their website and GitHub as part of their launch transparency documentation." },
   { q: "Is fix verification included?", a: "Yes — fix verification is included in every package at no extra cost. After you implement the recommended fixes, we re-review all flagged items and issue a final clean report confirming resolution." },
@@ -227,7 +227,7 @@ export default function Audit() {
       </section>
 
       <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem 1.25rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
-        © 2026 DecaFlow Solutions Limited · RC No. 9616822 · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
+        © 2026 DecaFlow Solutions Limited · <a href="mailto:contact@decaflow.xyz" style={{color:"rgba(255,255,255,0.35)",textDecoration:"none"}}>contact@decaflow.xyz</a>
       </footer>
 
       {/* Form Modal */}
