@@ -21,6 +21,7 @@ import contactRoutes from './routes/v1/contact.js';
 import auditRoutes from './routes/v1/audit.js';
 import verifyRoutes from './routes/v1/verify.js';
 import shieldRoutes from './routes/v1/shield.js';
+import shieldWebhook from './routes/v1/shield-webhook.js';
 
 dotenv.config();
 
@@ -102,6 +103,11 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key']
 }));
+
+// Stripe needs the raw, unparsed request body to verify webhook signatures, so this
+// route is mounted here — before the global express.json() below — with its own
+// raw parser scoped to just this one path. Every other route keeps using JSON as normal.
+app.use('/v1/shield/webhook', express.raw({ type: 'application/json' }), shieldWebhook);
 
 app.use(express.json());
 
