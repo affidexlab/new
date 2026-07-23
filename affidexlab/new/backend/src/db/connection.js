@@ -117,6 +117,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/010_shield_coingate.sql');
+    console.log('✅ Shield CoinGate migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Shield CoinGate migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Shield CoinGate migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 
