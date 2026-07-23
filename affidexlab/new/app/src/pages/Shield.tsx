@@ -57,12 +57,17 @@ export default function Shield() {
       if (paymentMethod === "crypto" && !formData.chains[0]) { setFormError("Select a chain above so we know where to expect payment."); return; }
 
       setFormLoading(true);
+      const endpoint = paymentMethod === "crypto" ? "/v1/shield/coingate/create-order" : "/v1/shield/payment-request";
       try {
-        const res = await fetch(`${API_BASE}/v1/shield/payment-request`, {
+        const res = await fetch(`${API_BASE}${endpoint}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...formData, chain: formData.chains[0] || "", paymentMethod }),
         });
         const data = await res.json();
+        if (data.success && paymentMethod === "crypto" && data.url) {
+          window.location.href = data.url; // CoinGate-hosted invoice page
+          return;
+        }
         if (data.success) {
           setPaymentInfo(data);
           setFormStep("payment-info");
@@ -303,13 +308,13 @@ export default function Shield() {
                         <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 500, marginTop: "0.15rem" }}>Coming soon</span>
                       </button>
                     </div>
-                    {paymentMethod === "crypto" && <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.45)", marginTop: "0.6rem", lineHeight: 1.5 }}>We'll show a payment address for the chain you selected above. On-chain payments are confirmed manually, not instantly, for now.</p>}
+                    {paymentMethod === "crypto" && <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.45)", marginTop: "0.6rem", lineHeight: 1.5 }}>You'll be redirected to a secure CoinGate payment page with a unique address. Access activates automatically once payment is confirmed on-chain.</p>}
                     {paymentMethod === "bank" && <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.45)", marginTop: "0.6rem", lineHeight: 1.5 }}>We'll follow up by email with transfer details within one business day.</p>}
                   </div>
                 )}
                 {formError && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: "8px", padding: "0.7rem 0.875rem", fontSize: "0.82rem", marginBottom: "1rem" }}>{formError}</div>}
                 <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#06b6d4", color: "#04202a", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "1rem", opacity: formLoading ? 0.6 : 1 }}>
-                  {formLoading ? "Submitting..." : isPaidPlan ? "Request Payment Instructions" : "Join Early Access"}
+                  {formLoading ? (paymentMethod === "crypto" ? "Redirecting to CoinGate..." : "Submitting...") : isPaidPlan ? "Continue" : "Join Early Access"}
                 </button>
               </form>
             )}
