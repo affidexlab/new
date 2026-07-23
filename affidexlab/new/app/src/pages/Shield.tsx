@@ -30,20 +30,49 @@ const FAQS = [
 export default function Shield() {
   useEffect(() => { document.title = "Shield — Continuous Security Monitoring | DecaFlow"; }, []);
 
+  const checkoutStatus = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("checkout") : null;
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [formStep, setFormStep] = useState<"form" | "success">("form");
   const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({ companyName: "", contactName: "", email: "", chains: [] as string[], contractCount: "", message: "", plan: "" });
+  const [formData, setFormData] = useState({ companyName: "", contactName: "", email: "", chains: [] as string[], contractAddress: "", contractCount: "", message: "", plan: "" });
+  const [formError, setFormError] = useState("");
 
   const openForm = (plan: string) => { setSelectedPlan(plan); setFormData(p => ({ ...p, plan })); setFormStep("form"); setFormOpen(true); document.body.style.overflow = "hidden"; };
   const closeForm = () => { setFormOpen(false); document.body.style.overflow = ""; };
   const toggleChain = (c: string) => setFormData(p => ({ ...p, chains: p.chains.includes(c) ? p.chains.filter(x => x !== c) : [...p.chains, c] }));
 
+  const isPaidPlan = selectedPlan === "Starter" || selectedPlan === "Growth";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setFormLoading(true);
+
+    if (isPaidPlan) {
+      // Starter/Growth: real Stripe Checkout. On success this redirects away from
+      // the page entirely — there's no local "success" step to reach here.
+      try {
+        const res = await fetch(`${API_BASE}/v1/shield/checkout`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...formData, chain: formData.chains[0] || "" }),
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+          window.location.href = data.url;
+          return;
+        }
+        setFormError(data.error || "Could not start checkout. Please try again.");
+      } catch {
+        setFormError("Could not reach checkout. Please try again or email us directly.");
+      }
+      setFormLoading(false);
+      return;
+    }
+
+    // Enterprise: no fixed price to check out with, stays on the waitlist flow.
     try {
       await fetch(`${API_BASE}/v1/shield/waitlist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, source: "shield-page" }) });
     } catch {}
@@ -96,6 +125,16 @@ export default function Shield() {
 
       {/* HERO */}
       <section className="hero-section" style={{ padding: "7rem 2rem 4rem", maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
+        {checkoutStatus === "success" && (
+          <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "#86efac", fontSize: "0.9rem" }}>
+            ✅ Payment received — you're subscribed. A confirmation is on its way to your email.
+          </div>
+        )}
+        {checkoutStatus === "cancelled" && (
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "rgba(255,255,255,0.7)", fontSize: "0.9rem" }}>
+            Checkout was cancelled — no charge was made. Pick a plan below whenever you're ready.
+          </div>
+        )}
         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#67e8f9", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
           Early Access
@@ -155,7 +194,7 @@ export default function Shield() {
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {p.features.map(f => <li key={f} style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", display: "flex", gap: "0.5rem" }}><span style={{ color: "#67e8f9" }}>✓</span>{f}</li>)}
               </ul>
-              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#06b6d4" : "transparent", color: p.highlight ? "#04202a" : "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>Join Waitlist</button>
+              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#06b6d4" : "transparent", color: p.highlight ? "#04202a" : "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>{p.name === "Enterprise" ? "Join Waitlist" : "Subscribe"}</button>
             </div>
           ))}
         </div>
@@ -183,8 +222,8 @@ export default function Shield() {
           <div style={{ background: "#111827", border: "1px solid rgba(6,182,212,0.3)", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <h2 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.25rem" }}>{formStep === "success" ? "You're on the list! 🎉" : `Join Early Access — ${selectedPlan}`}</h2>
-                {formStep !== "success" && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", margin: 0 }}>We're onboarding design partners in small batches.</p>}
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.25rem" }}>{formStep === "success" ? "You're on the list! 🎉" : isPaidPlan ? `Subscribe — ${selectedPlan}` : `Join Early Access — ${selectedPlan}`}</h2>
+                {formStep !== "success" && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", margin: 0 }}>{isPaidPlan ? "You'll be redirected to secure Stripe checkout." : "We're onboarding design partners in small batches."}</p>}
               </div>
               <button onClick={closeForm} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer" }}>✕</button>
             </div>
@@ -198,7 +237,13 @@ export default function Shield() {
             ) : (
               <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
                 <div className="form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.875rem", marginBottom: "0.875rem" }}>
-                  {[["Company Name *", "companyName", "e.g. Acme Protocol", "text"], ["Your Name *", "contactName", "Full name", "text"], ["Work Email *", "email", "you@company.com", "email"], ["Contracts to Monitor", "contractCount", "e.g. 2", "text"]].map(([label, field, ph, type]) => (
+                  {[
+                    ["Company Name *", "companyName", "e.g. Acme Protocol", "text"],
+                    ["Your Name *", "contactName", "Full name", "text"],
+                    ["Work Email *", "email", "you@company.com", "email"],
+                    [isPaidPlan ? "Contract Address *" : "Contract Address", "contractAddress", "0x...", "text"],
+                    ["Other Contracts", "contractCount", "e.g. 2 more", "text"],
+                  ].map(([label, field, ph, type]) => (
                     <div key={field as string}>
                       <label style={{ display: "block", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.35rem", fontWeight: 600 }}>{label as string}</label>
                       <input required={(label as string).includes("*")} type={type as string} placeholder={ph as string} value={(formData as any)[field as string]}
@@ -220,8 +265,9 @@ export default function Shield() {
                   <textarea value={formData.message} onChange={e => setFormData(p => ({ ...p, message: e.target.value }))} rows={3} placeholder="Tell us about your contracts or what you'd want monitored..."
                     style={{ width: "100%", padding: "0.7rem 0.875rem", borderRadius: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" as const, fontFamily: "inherit" }} />
                 </div>
+                {formError && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: "8px", padding: "0.7rem 0.875rem", fontSize: "0.82rem", marginBottom: "1rem" }}>{formError}</div>}
                 <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#06b6d4", color: "#04202a", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "1rem", opacity: formLoading ? 0.6 : 1 }}>
-                  {formLoading ? "Submitting..." : "Join Early Access"}
+                  {formLoading ? (isPaidPlan ? "Redirecting to checkout..." : "Submitting...") : (isPaidPlan ? `Continue to Payment — $${selectedPlan === "Starter" ? "750" : "5,000"}/mo` : "Join Early Access")}
                 </button>
               </form>
             )}
