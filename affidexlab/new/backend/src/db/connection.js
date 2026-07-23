@@ -103,6 +103,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/009_shield_tables.sql');
+    console.log('✅ Shield tables migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Shield tables migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Shield tables migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 
