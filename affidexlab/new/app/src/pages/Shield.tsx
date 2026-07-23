@@ -35,13 +35,15 @@ export default function Shield() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
-  const [formStep, setFormStep] = useState<"form" | "success">("form");
+  const [formStep, setFormStep] = useState<"form" | "success" | "payment-info">("form");
+  const [paymentMethod, setPaymentMethod] = useState<"crypto" | "bank" | "">("");
+  const [paymentInfo, setPaymentInfo] = useState<{ walletAddress?: string; exactAmount?: string; chain?: string }>({});
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({ companyName: "", contactName: "", email: "", chains: [] as string[], contractAddress: "", contractCount: "", message: "", plan: "" });
   const [formError, setFormError] = useState("");
 
   const openForm = (plan: string) => { setSelectedPlan(plan); setFormData(p => ({ ...p, plan })); setFormStep("form"); setFormOpen(true); document.body.style.overflow = "hidden"; };
-  const closeForm = () => { setFormOpen(false); document.body.style.overflow = ""; };
+  const closeForm = () => { setFormOpen(false); setPaymentMethod(""); document.body.style.overflow = ""; };
   const toggleChain = (c: string) => setFormData(p => ({ ...p, chains: p.chains.includes(c) ? p.chains.filter(x => x !== c) : [...p.chains, c] }));
 
   const isPaidPlan = selectedPlan === "Starter" || selectedPlan === "Growth";
@@ -49,30 +51,33 @@ export default function Shield() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-    setFormLoading(true);
 
     if (isPaidPlan) {
-      // Starter/Growth: real Stripe Checkout. On success this redirects away from
-      // the page entirely — there's no local "success" step to reach here.
+      if (!paymentMethod) { setFormError("Choose a payment method first."); return; }
+      if (paymentMethod === "crypto" && !formData.chains[0]) { setFormError("Select a chain above so we know where to expect payment."); return; }
+
+      setFormLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/v1/shield/checkout`, {
+        const res = await fetch(`${API_BASE}/v1/shield/payment-request`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...formData, chain: formData.chains[0] || "" }),
+          body: JSON.stringify({ ...formData, chain: formData.chains[0] || "", paymentMethod }),
         });
         const data = await res.json();
-        if (data.success && data.url) {
-          window.location.href = data.url;
-          return;
+        if (data.success) {
+          setPaymentInfo(data);
+          setFormStep("payment-info");
+        } else {
+          setFormError(data.error || "Could not submit request. Please try again.");
         }
-        setFormError(data.error || "Could not start checkout. Please try again.");
       } catch {
-        setFormError("Could not reach checkout. Please try again or email us directly.");
+        setFormError("Could not reach the server. Please try again or email us directly.");
       }
       setFormLoading(false);
       return;
     }
 
     // Enterprise: no fixed price to check out with, stays on the waitlist flow.
+    setFormLoading(true);
     try {
       await fetch(`${API_BASE}/v1/shield/waitlist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, source: "shield-page" }) });
     } catch {}
@@ -223,11 +228,33 @@ export default function Shield() {
             <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <h2 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.25rem" }}>{formStep === "success" ? "You're on the list! 🎉" : isPaidPlan ? `Subscribe — ${selectedPlan}` : `Join Early Access — ${selectedPlan}`}</h2>
-                {formStep !== "success" && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", margin: 0 }}>{isPaidPlan ? "You'll be redirected to secure Stripe checkout." : "We're onboarding design partners in small batches."}</p>}
+                {formStep === "form" && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", margin: 0 }}>{isPaidPlan ? "Choose how you'd like to pay below." : "We're onboarding design partners in small batches."}</p>}
               </div>
               <button onClick={closeForm} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer" }}>✕</button>
             </div>
-            {formStep === "success" ? (
+            {formStep === "payment-info" ? (
+              <div style={{ padding: "2rem 1.5rem" }}>
+                {paymentMethod === "crypto" ? (
+                  <>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem" }}>Send payment to activate</h3>
+                    <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "1rem", marginBottom: "1rem" }}>
+                      <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.25rem" }}>Amount ({paymentInfo.chain})</div>
+                      <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#67e8f9", marginBottom: "0.75rem" }}>${paymentInfo.exactAmount}</div>
+                      <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.25rem" }}>To address</div>
+                      <div style={{ fontSize: "0.85rem", fontFamily: "monospace", wordBreak: "break-all", color: "#fff" }}>{paymentInfo.walletAddress}</div>
+                    </div>
+                    <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.85rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>Send that <strong>exact</strong> amount — the odd cents help us match your payment. We confirm on-chain manually and activate your account; it's not instant. Confirmation email sent to <strong>{formData.email}</strong>.</p>
+                    <button onClick={closeForm} style={{ background: "#06b6d4", color: "#04202a", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Got it</button>
+                  </>
+                ) : (
+                  <>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.75rem" }}>Request received ✅</h3>
+                    <p style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.7, marginBottom: "1.5rem" }}>Our team will email <strong>{formData.email}</strong> with bank transfer details within one business day. Your account activates once payment clears.</p>
+                    <button onClick={closeForm} style={{ background: "#06b6d4", color: "#04202a", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
+                  </>
+                )}
+              </div>
+            ) : formStep === "success" ? (
               <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
                 <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>✅</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Thanks, {formData.contactName || "there"}.</h3>
@@ -265,9 +292,24 @@ export default function Shield() {
                   <textarea value={formData.message} onChange={e => setFormData(p => ({ ...p, message: e.target.value }))} rows={3} placeholder="Tell us about your contracts or what you'd want monitored..."
                     style={{ width: "100%", padding: "0.7rem 0.875rem", borderRadius: "8px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontSize: "0.875rem", outline: "none", resize: "vertical", boxSizing: "border-box" as const, fontFamily: "inherit" }} />
                 </div>
+                {isPaidPlan && (
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.5rem", fontWeight: 600 }}>Pay with</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem" }}>
+                      <button type="button" onClick={() => setPaymentMethod("crypto")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "crypto" ? "1px solid #06b6d4" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "crypto" ? "rgba(6,182,212,0.15)" : "transparent", color: paymentMethod === "crypto" ? "#67e8f9" : "rgba(255,255,255,0.75)" }}>Crypto</button>
+                      <button type="button" onClick={() => setPaymentMethod("bank")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "bank" ? "1px solid #06b6d4" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "bank" ? "rgba(6,182,212,0.15)" : "transparent", color: paymentMethod === "bank" ? "#67e8f9" : "rgba(255,255,255,0.75)" }}>Bank Transfer</button>
+                      <button type="button" disabled title="Coming soon" style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "not-allowed", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.3)", position: "relative" }}>
+                        Card
+                        <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 500, marginTop: "0.15rem" }}>Coming soon</span>
+                      </button>
+                    </div>
+                    {paymentMethod === "crypto" && <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.45)", marginTop: "0.6rem", lineHeight: 1.5 }}>We'll show a payment address for the chain you selected above. On-chain payments are confirmed manually, not instantly, for now.</p>}
+                    {paymentMethod === "bank" && <p style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.45)", marginTop: "0.6rem", lineHeight: 1.5 }}>We'll follow up by email with transfer details within one business day.</p>}
+                  </div>
+                )}
                 {formError && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: "8px", padding: "0.7rem 0.875rem", fontSize: "0.82rem", marginBottom: "1rem" }}>{formError}</div>}
                 <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#06b6d4", color: "#04202a", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "1rem", opacity: formLoading ? 0.6 : 1 }}>
-                  {formLoading ? (isPaidPlan ? "Redirecting to checkout..." : "Submitting...") : (isPaidPlan ? `Continue to Payment — $${selectedPlan === "Starter" ? "750" : "5,000"}/mo` : "Join Early Access")}
+                  {formLoading ? "Submitting..." : isPaidPlan ? "Request Payment Instructions" : "Join Early Access"}
                 </button>
               </form>
             )}
