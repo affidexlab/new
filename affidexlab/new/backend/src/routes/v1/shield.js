@@ -122,4 +122,69 @@ router.post('/checkout', async (req, res) => {
   }
 });
 
+// POST /v1/shield/payment-request — crypto or bank transfer request (manual/semi-manual
+// confirmation, not instant). Card is handled by /checkout above once Stripe is live.
+router.post('/payment-request', async (req, res) => {
+  try {
+    const { plan, companyName, contactName, email, chain, contractAddress, paymentMethod } = req.body;
+
+    if (!['crypto', 'bank'].includes(paymentMethod)) {
+      return res.status(400).json({ success: false, error: 'Unknown payment method.' });
+    }
+    if (!companyName?.trim()) return res.status(400).json({ success: false, error: 'Company name is required.' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    if (!contractAddress?.trim()) return res.status(400).json({ success: false, error: 'A contract address is required so we know what to start monitoring.' });
+
+    const basePrice = PLAN_PRICES_CENTS[plan] ? PLAN_PRICES_CENTS[plan] / 100 : null;
+    let walletAddress = null;
+    let exactAmount = null;
+
+    if (paymentMethod === 'crypto') {
+      // Deliberately NOT a hardcoded/placeholder address — a real address you control has
+      // to be set per chain via env var (SHIELD_WALLET_ARBITRUM etc). Showing a fake or
+      // example address on a payment page is how people lose real funds, so this fails
+      // closed: no env var set = no address shown, ever.
+      const envKey = `SHIELD_WALLET_${(chain || '').toUpperCase()}`;
+      walletAddress = process.env[envKey] || null;
+      if (!walletAddress) {
+        return res.status(503).json({ success: false, error: `Crypto payment on ${chain || 'this chain'} isn't set up yet. Please use bank transfer, or contact us directly.` });
+      }
+      // Unique cents amount (e.g. $750.37) makes each customer's expected payment
+      // distinguishable on-chain without needing a memo field, which EVM transfers don't have.
+      const cents = Math.floor(Math.random() * 99) + 1;
+      exactAmount = basePrice ? `${basePrice}.${String(cents).padStart(2, '0')}` : null;
+    }
+
+    const status = 'pending_payment';
+    await sendEnquiryEmail({
+      type: 'Shield',
+      to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
+      subject: `[DecaFlow] Shield ${paymentMethod} payment request — ${companyName}`,
+      fields: {
+        'Company': companyName, 'Contact': contactName || '—', 'Email': email, 'Plan': plan || '—',
+        'Payment method': paymentMethod,
+        'Expected amount': exactAmount ? `$${exactAmount} on ${chain}` : (basePrice ? `$${basePrice}/mo` : '—'),
+        'Wallet to watch': walletAddress || '—',
+        'Contract': `${chain || '—'}: ${contractAddress}`,
+        'Status': status,
+      },
+    });
+
+    await sendEnquiryEmail({
+      type: 'Shield Confirmation',
+      to: email,
+      subject: paymentMethod === 'crypto' ? 'DecaFlow Shield — payment instructions' : 'DecaFlow Shield — bank transfer request received',
+      fields: paymentMethod === 'crypto'
+        ? { 'Dear': contactName || 'there', 'Send exactly': `$${exactAmount} equivalent in stablecoin on ${chain}`, 'To': walletAddress, 'Then': 'Reply to this email once sent — we verify on-chain and activate your account manually. This is not instant yet.' }
+        : { 'Dear': contactName || 'there', 'What happens next': "Our team will email you bank transfer details within one business day. Your account activates once payment clears — bank transfers are not instant." },
+      isConfirmation: true,
+    });
+
+    return res.status(200).json({ success: true, walletAddress, exactAmount, chain: chain || null });
+  } catch (err) {
+    console.error('❌ Shield payment-request error:', err);
+    return res.status(500).json({ success: false, error: 'Could not submit request. Please try again or email us directly.' });
+  }
+});
+
 export default router;
