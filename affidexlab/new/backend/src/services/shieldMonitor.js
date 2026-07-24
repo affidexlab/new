@@ -1,37 +1,30 @@
 /**
- * Shield Phase 0 — manual-assisted contract monitoring.
+ * Shield monitoring — contract balance checks + email alerts.
  *
  * WHAT THIS DOES:
- * For each contract in WATCHED_CONTRACTS, checks its native-token balance against
- * the last-seen value and emails an alert (via the existing mailer) if it drops
- * sharply. This is deliberately simple — it is the "Phase 0" tier from the Shield
- * spec, not the full continuous-monitoring product.
+ * Checks each watched contract's native-token balance against the last-seen value
+ * and emails an alert (via the existing mailer) if it drops sharply. Watched
+ * contracts = DecaFlow's own 4 router contracts (dogfooding) + every contract
+ * belonging to an active, paid Shield customer (pulled live from Postgres each run).
  *
  * WHAT THIS DOES NOT DO YET:
- * - No ownership/admin-key change detection (needs each contract's ABI — add per
- *   contract once you're onboarding real clients).
- * - No persistence: lastSeenBalance is in-memory and resets every run. Fine for a
- *   cron job that runs continuously; not fine if you need historical alert data —
- *   add a Postgres table (see suggested schema at the bottom) before relying on this.
+ * - No ownership/admin-key change detection (needs each contract's ABI).
+ * - No persistence of alert history — logged to console/email, not saved to a table.
  * - No real-time / mempool watching — this is a polling check, meant to run on a
  *   schedule (e.g. every 15 minutes), not a live listener.
  *
  * HOW TO ACTUALLY RUN THIS:
  * This is NOT wired into server.js and does not run automatically. It needs:
- *   1. RPC URLs in env vars — RPC_ARBITRUM, RPC_BASE, RPC_POLYGON, RPC_AVALANCHE —
- *      e.g. free-tier Alchemy or Infura endpoints for each chain.
- *   2. WATCHED_CONTRACTS below is already pointed at DecaFlow's own 4 router
- *      contracts. Add real client contracts here as they onboard.
- *   3. Something to actually invoke it on a schedule. On Render, add a "Cron Job"
- *      service (separate from the web service) pointing at:
- *          node src/services/shieldMonitor.js
- *      running every 15 minutes. Locally: `node src/services/shieldMonitor.js`.
- *   4. SMTP_PASS already set (it's required by mailer.js for any email to send —
- *      should already be configured if your enquiry emails are working).
+ *   1. RPC URLs in env vars — RPC_ARBITRUM, RPC_BASE, RPC_POLYGON, RPC_AVALANCHE.
+ *   2. A scheduler — Render Cron Job pointed at `node src/services/shieldMonitor.js`,
+ *      running every 15 minutes.
+ *   3. SMTP_PASS already set (required by mailer.js).
+ * The database connection reuses your existing pool — no separate credentials needed.
  */
 
 import { ethers } from 'ethers';
 import { sendEnquiryEmail } from '../utils/mailer.js';
+import pool from '../db/connection.js';
 
 const RPC_URLS = {
   arbitrum: process.env.RPC_ARBITRUM,
@@ -40,19 +33,33 @@ const RPC_URLS = {
   avalanche: process.env.RPC_AVALANCHE,
 };
 
-// Phase 0: hardcoded list, now pointed at DecaFlow's own live router contracts —
-// good first subject (dogfooding your own product) and a real early-access proof point.
-// Base and Polygon share the same address (0x1E7b...4Cbd), which is consistent with a
-// deterministic/CREATE2 deployment across chains — not treated as an error here, but
-// worth a quick sanity check on your end since it's the one thing I couldn't verify
-// independently (Arbiscan/Basescan/Polygonscan/Snowtrace all blocked automated fetches).
-// Phase 1: pull this from a `shield_contracts` table populated at client onboarding.
-const WATCHED_CONTRACTS = [
+// DecaFlow's own contracts — always monitored, regardless of paying customers.
+// Base and Polygon share the same address (0x1E7b...4Cbd), consistent with a
+// deterministic/CREATE2 deployment across chains — flagged earlier, not treated as an error.
+const DOGFOOD_CONTRACTS = [
   { chain: 'arbitrum', address: '0xdBBDBDcF4B9fc8F85ae549078199ee3fb27cadB3', label: 'DecaFlow Router — Arbitrum' },
   { chain: 'base', address: '0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd', label: 'DecaFlow Router — Base' },
   { chain: 'polygon', address: '0x1E7b01f8D28e757B07887Ff6BF23e46BdE4e4Cbd', label: 'DecaFlow Router — Polygon' },
   { chain: 'avalanche', address: '0x41475aDeB1172905Dd1085FBe525e1A79487e49C', label: 'DecaFlow Router — Avalanche' },
 ];
+
+// Pulls every contract belonging to a customer whose payment has actually cleared —
+// this is the piece that connects a NOWPayments/Stripe activation to real monitoring.
+// Without this, a paid customer's contract sits in the database but nothing watches it.
+async function loadCustomerContracts() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT sc.chain, sc.address, sc.label, cust.company_name
+       FROM shield_contracts sc
+       JOIN shield_customers cust ON cust.id = sc.customer_id
+       WHERE sc.status = 'active' AND cust.status = 'active'`
+    );
+    return rows.map(r => ({ chain: r.chain, address: r.address, label: r.label || `${r.company_name} — contract` }));
+  } catch (err) {
+    console.error('[shieldMonitor] Could not load customer contracts from DB — monitoring dogfood contracts only this run:', err.message);
+    return [];
+  }
+}
 
 // Alert if balance drops this much or more in one check. Tune per contract in Phase 1 —
 // a treasury contract and an AMM pool have very different "normal" volatility.
@@ -103,11 +110,12 @@ async function alertShield({ severity, label, chain, address, message }) {
 }
 
 export async function runShieldCheck() {
-  if (WATCHED_CONTRACTS.length === 0) {
-    console.log('[shieldMonitor] WATCHED_CONTRACTS is empty — nothing to check yet. Add contracts before scheduling this.');
-    return;
-  }
-  for (const contract of WATCHED_CONTRACTS) {
+  const customerContracts = await loadCustomerContracts();
+  const watchedContracts = [...DOGFOOD_CONTRACTS, ...customerContracts];
+
+  console.log(`[shieldMonitor] Checking ${watchedContracts.length} contracts (${DOGFOOD_CONTRACTS.length} dogfood + ${customerContracts.length} paying customers)`);
+
+  for (const contract of watchedContracts) {
     try {
       const rpcUrl = RPC_URLS[contract.chain];
       if (!rpcUrl) {
@@ -126,21 +134,3 @@ export async function runShieldCheck() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   runShieldCheck().then(() => process.exit(0));
 }
-
-/* Suggested Phase 1 schema, once you're ready to persist contracts + alert history:
-CREATE TABLE shield_contracts (
-  id SERIAL PRIMARY KEY,
-  company_name TEXT NOT NULL,
-  chain TEXT NOT NULL,
-  address TEXT NOT NULL,
-  label TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE TABLE shield_alerts (
-  id SERIAL PRIMARY KEY,
-  contract_id INTEGER REFERENCES shield_contracts(id),
-  severity TEXT NOT NULL,
-  message TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-*/
