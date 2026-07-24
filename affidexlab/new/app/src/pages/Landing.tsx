@@ -8,6 +8,7 @@ const NAV_LINKS: NavLink[] = [
   { label: "Compliance", href: "/compliance" },
   { label: "Security Audit", href: "/audit" },
   { label: "Shield", href: "/shield" },
+  { label: "Institutional", href: "/institutional" },
   { label: "Verify API", href: "/verify" },
 ];
 
@@ -55,6 +56,18 @@ const PRODUCTS = [
     bullets: ["Continuous on-chain monitoring", "Automated vulnerability scans", "Real-time alerts", "From $500/month"],
     cta: "Join Early Access",
     href: "/shield",
+  },
+  {
+    accent: "#f59e0b",
+    accentBg: "rgba(245,158,11,0.1)",
+    accentBorder: "rgba(245,158,11,0.25)",
+    icon: "🪪",
+    badge: "Early Development",
+    title: "DecaFlow Institutional",
+    desc: "On-chain identity and compliance infrastructure for tokenized real-world assets, built on the ERC-3643 standard.",
+    bullets: ["Identity registry (ERC-3643)", "Programmable transfer rules", "Regulator-ready reporting", "From $2,500/month"],
+    cta: "Talk to Us",
+    href: "/institutional",
   },
   {
     accent: "#8b5cf6",
