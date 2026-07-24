@@ -55,7 +55,7 @@ async function loadCustomerContracts() {
     );
     return rows.map(r => ({ chain: r.chain, address: r.address, label: r.label || `${r.company_name} — contract` }));
   } catch (err) {
-    console.error('[shieldMonitor] Could not load customer contracts from DB — monitoring dogfood contracts only this run:', err.message);
+    console.error('[shieldMonitor] Could not load customer contracts from DB — monitoring dogfood contracts only this run:', err.code || '', err.message || String(err));
     return [];
   }
 }
@@ -142,7 +142,7 @@ export async function runShieldCheck() {
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       await checkContract(provider, contract);
     } catch (err) {
-      console.error(`[shieldMonitor] Check failed for ${contract.address}:`, err.message);
+      console.error(`[shieldMonitor] Check failed for ${contract.address}:`, err.code || '', err.message || String(err));
     }
   }
 }
