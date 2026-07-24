@@ -22,6 +22,7 @@ import auditRoutes from './routes/v1/audit.js';
 import verifyRoutes from './routes/v1/verify.js';
 import shieldRoutes from './routes/v1/shield.js';
 import shieldWebhook from './routes/v1/shield-webhook.js';
+import institutionalRoutes from './routes/v1/institutional.js';
 
 dotenv.config();
 
@@ -188,6 +189,7 @@ app.use('/v1/compliance', complianceRoutes); // Compliance enquiry + demo score
 app.use('/v1/audit', auditRoutes);           // Security audit enquiries
 app.use('/v1/verify', verifyRoutes);         // Verify API signups + demo + key issuance
 app.use('/v1/shield', shieldRoutes);         // Shield early-access waitlist
+app.use('/v1/institutional', institutionalRoutes);  // Institutional/RWA waitlist + payments
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
