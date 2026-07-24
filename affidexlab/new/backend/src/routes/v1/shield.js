@@ -190,16 +190,16 @@ router.post('/payment-request', async (req, res) => {
 });
 
 // ============================================================
-// CoinGate — real crypto payment gateway integration.
-// Flow: create-order (unique invoice) -> customer pays -> CoinGate detects it on-chain
-// and POSTs our callback -> we verify + activate. Auto-forwarding paid crypto to your
-// real wallet is a CoinGate ACCOUNT setting (Payout settings in their dashboard) —
-// not something in this code, so no wallet address needs to live here at all.
-// Based on CoinGate API v2: https://developer.coingate.com/reference
+// NOWPayments — real crypto payment gateway integration.
+// Flow: create-invoice (unique invoice_url + QR) -> customer pays -> NOWPayments detects
+// it on-chain and POSTs our callback (signed) -> we verify + activate. Payout to your
+// real wallet is configured once in your NOWPayments dashboard (Payment Settings ->
+// wallet), not in this code — no wallet address needs to live here.
+// Docs: https://documenter.getpostman.com/view/7907941/2s93JusNJt
 // ============================================================
 
-router.post('/coingate/create-order', async (req, res) => {
-  if (!process.env.COINGATE_API_TOKEN) {
+router.post('/nowpayments/create-invoice', async (req, res) => {
+  if (!process.env.NOWPAYMENTS_API_KEY) {
     return res.status(503).json({ success: false, error: 'Crypto payment is not configured yet. Use another payment method for now.' });
   }
   try {
@@ -211,94 +211,111 @@ router.post('/coingate/create-order', async (req, res) => {
     if (!contractAddress?.trim()) return res.status(400).json({ success: false, error: 'A contract address is required so we know what to start monitoring.' });
 
     const priceUsd = PLAN_PRICES_CENTS[plan] / 100;
-    const pendingToken = crypto.randomBytes(24).toString('hex');
 
     const insertResult = await pool.query(
-      `INSERT INTO shield_customers (company_name, contact_name, email, plan, payment_gateway, pending_token, status)
-       VALUES ($1, $2, $3, $4, 'coingate', $5, 'pending_payment') RETURNING id`,
-      [companyName, contactName || null, email, plan, pendingToken]
+      `INSERT INTO shield_customers (company_name, contact_name, email, plan, payment_gateway, status)
+       VALUES ($1, $2, $3, $4, 'nowpayments', 'pending_payment') RETURNING id`,
+      [companyName, contactName || null, email, plan]
     );
     const dbId = insertResult.rows[0].id;
-    const coingateOrderId = `shield-${dbId}`;
+    const orderId = `shield-${dbId}`;
 
     await pool.query(
       `INSERT INTO shield_contracts (customer_id, chain, address, label, status) VALUES ($1, $2, $3, $4, 'pending')`,
       [dbId, chain || 'unknown', contractAddress, `${companyName} — primary contract`]
     );
 
-    // COINGATE_ENV unset/"live" -> production API; "sandbox" -> sandbox API + sandbox token required.
-    const apiBase = process.env.COINGATE_ENV === 'sandbox' ? 'https://api-sandbox.coingate.com' : 'https://api.coingate.com';
+    // NOWPAYMENTS_ENV=sandbox -> sandbox API + sandbox key; unset/"live" -> production.
+    const apiBase = process.env.NOWPAYMENTS_ENV === 'sandbox' ? 'https://api-sandbox.nowpayments.io' : 'https://api.nowpayments.io';
     const frontendUrl = process.env.FRONTEND_URL || 'https://decaflow.xyz';
     const backendUrl = process.env.BACKEND_URL || 'https://decaflow-backend.onrender.com';
 
-    const cgRes = await fetch(`${apiBase}/api/v2/orders`, {
+    const npRes = await fetch(`${apiBase}/v1/invoice`, {
       method: 'POST',
-      headers: { 'Authorization': `Token ${process.env.COINGATE_API_TOKEN}`, 'Content-Type': 'application/json' },
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        order_id: coingateOrderId,
         price_amount: priceUsd,
-        price_currency: 'USD',
-        receive_currency: process.env.COINGATE_RECEIVE_CURRENCY || 'DO_NOT_CONVERT',
-        title: `DecaFlow Shield — ${plan}`,
-        description: `${plan} plan monitoring — ${contractAddress} on ${chain || 'unspecified chain'}`,
-        callback_url: `${backendUrl}/v1/shield/coingate/callback`,
+        price_currency: 'usd',
+        order_id: orderId,
+        order_description: `DecaFlow Shield — ${plan} — ${contractAddress} on ${chain || 'unspecified chain'}`,
+        ipn_callback_url: `${backendUrl}/v1/shield/nowpayments/callback`,
         success_url: `${frontendUrl}/shield?checkout=success`,
         cancel_url: `${frontendUrl}/shield?checkout=cancelled`,
-        token: pendingToken,
       }),
     });
-    const cgData = await cgRes.json();
+    const npData = await npRes.json();
+    const invoiceUrl = npData.invoice_url || npData.url; // defensive: field naming has varied across NOWPayments doc versions
 
-    if (!cgRes.ok || !cgData.payment_url) {
-      console.error('❌ CoinGate order creation failed:', cgRes.status, cgData);
+    if (!npRes.ok || !invoiceUrl) {
+      console.error('❌ NOWPayments invoice creation failed:', npRes.status, npData);
       return res.status(502).json({ success: false, error: 'Could not start crypto checkout. Please try again or use another payment method.' });
     }
 
-    await pool.query(`UPDATE shield_customers SET coingate_order_id = $1 WHERE id = $2`, [String(cgData.id), dbId]);
+    await pool.query(`UPDATE shield_customers SET coingate_order_id = $1 WHERE id = $2`, [String(npData.id || npData.invoice_id || ''), dbId]);
 
-    return res.status(200).json({ success: true, url: cgData.payment_url });
+    return res.status(200).json({ success: true, url: invoiceUrl });
   } catch (err) {
-    console.error('❌ Shield CoinGate create-order error:', err);
+    console.error('❌ Shield NOWPayments create-invoice error:', err);
     return res.status(500).json({ success: false, error: 'Could not start crypto checkout. Please try again.' });
   }
 });
 
-// CoinGate POSTs here when order status changes (pending/confirming/paid/invalid/expired/etc).
-// Verified via the per-order `token` we generated and stored above, not a raw-body signature —
-// regular express.json() parsing (mounted normally in server.js) is fine for this one.
-router.post('/coingate/callback', async (req, res) => {
+// Sorts an object's keys alphabetically (recursively) — required by NOWPayments' exact
+// signature scheme: sort keys, JSON.stringify, HMAC-SHA512 with the IPN secret, compare
+// hex digest to the x-nowpayments-sig header. This is their own documented algorithm.
+function sortObjectKeys(obj) {
+  return Object.keys(obj).sort().reduce((result, key) => {
+    result[key] = (obj[key] && typeof obj[key] === 'object') ? sortObjectKeys(obj[key]) : obj[key];
+    return result;
+  }, {});
+}
+
+// NOWPayments IPN needs the parsed body (to re-sort + re-stringify), not raw bytes, so —
+// unlike the Stripe webhook — this route does NOT need special raw-body middleware and can
+// stay mounted normally, after the app-wide express.json() in server.js.
+router.post('/nowpayments/callback', async (req, res) => {
   try {
-    const { order_id, status, token, pay_currency, pay_amount, id: cgOrderId } = req.body;
-    const match = /^shield-(\d+)$/.exec(order_id || '');
-    if (!match) {
-      console.warn('⚠️  Shield CoinGate callback: unrecognized order_id', order_id);
-      return res.status(200).send('ignored');
+    if (!process.env.NOWPAYMENTS_IPN_SECRET) {
+      console.warn('⚠️  Shield NOWPayments callback hit but NOWPAYMENTS_IPN_SECRET is not set — ignoring.');
+      return res.status(503).send('not configured');
     }
+
+    const sig = req.headers['x-nowpayments-sig'];
+    const expectedSig = crypto
+      .createHmac('sha512', process.env.NOWPAYMENTS_IPN_SECRET)
+      .update(JSON.stringify(sortObjectKeys(req.body)))
+      .digest('hex');
+
+    if (!sig || sig !== expectedSig) {
+      console.error('❌ Shield NOWPayments callback signature mismatch');
+      return res.status(403).send('invalid signature');
+    }
+
+    // Respond fast (NOWPayments expects a response within 3s) — do DB + email work,
+    // but don't let slow email sending risk the response window.
+    res.status(200).send('ok');
+
+    const { order_id, payment_status, pay_currency, pay_amount, payment_id } = req.body;
+    const match = /^shield-(\d+)$/.exec(order_id || '');
+    if (!match) { console.warn('⚠️  Shield NOWPayments callback: unrecognized order_id', order_id); return; }
     const dbId = match[1];
 
     const { rows } = await pool.query(`SELECT * FROM shield_customers WHERE id = $1`, [dbId]);
     const customer = rows[0];
-    if (!customer) {
-      console.warn('⚠️  Shield CoinGate callback: no matching customer for', order_id);
-      return res.status(200).send('ignored');
-    }
-    if (customer.pending_token !== token) {
-      console.error('❌ Shield CoinGate callback token mismatch for order', order_id);
-      return res.status(403).send('token mismatch');
-    }
+    if (!customer) { console.warn('⚠️  Shield NOWPayments callback: no matching customer for', order_id); return; }
 
-    if (status === 'paid' && customer.status !== 'active') {
-      await pool.query(`UPDATE shield_customers SET status = 'active', coingate_order_id = $1, updated_at = NOW() WHERE id = $2`, [String(cgOrderId), dbId]);
+    if (payment_status === 'finished' && customer.status !== 'active') {
+      await pool.query(`UPDATE shield_customers SET status = 'active', coingate_order_id = $1, updated_at = NOW() WHERE id = $2`, [String(payment_id), dbId]);
       await pool.query(`UPDATE shield_contracts SET status = 'active' WHERE customer_id = $1`, [dbId]);
 
-      await sendEnquiryEmail({
+      sendEnquiryEmail({
         type: 'Shield',
         to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
         subject: `[DecaFlow] Shield paid via crypto — ${customer.company_name}`,
-        fields: { Company: customer.company_name, Email: customer.email, Plan: customer.plan, Paid: `${pay_amount} ${pay_currency}`, 'CoinGate order': String(cgOrderId) },
-      });
+        fields: { Company: customer.company_name, Email: customer.email, Plan: customer.plan, Paid: `${pay_amount} ${pay_currency}`, 'NOWPayments ID': String(payment_id) },
+      }).catch(err => console.error('Shield notify email failed:', err));
 
-      await sendEnquiryEmail({
+      sendEnquiryEmail({
         type: 'Shield Confirmation',
         to: customer.email,
         subject: "You're live on DecaFlow Shield",
@@ -308,16 +325,13 @@ router.post('/coingate/callback', async (req, res) => {
           'Questions?': 'Reply to this email or contact decaflowsolutions@gmail.com',
         },
         isConfirmation: true,
-      });
-    } else if (['invalid', 'canceled', 'expired'].includes(status)) {
-      await pool.query(`UPDATE shield_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [status, dbId]);
+      }).catch(err => console.error('Shield confirmation email failed:', err));
+    } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
+      await pool.query(`UPDATE shield_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
     }
-    // pending / confirming: no action yet, CoinGate will call again as it progresses.
-
-    return res.status(200).send('ok');
+    // waiting / confirming / partially_paid / sending: no action yet, more callbacks follow.
   } catch (err) {
-    console.error('❌ Shield CoinGate callback error:', err);
-    return res.status(500).send('error');
+    console.error('❌ Shield NOWPayments callback error:', err);
   }
 });
 
