@@ -1,0 +1,38 @@
+name: Shield Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # every 15 min — GitHub best-effort, can slip a few min under load
+  workflow_dispatch: {}       # lets you click "Run workflow" in the Actions tab to test manually
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: affidexlab/new/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      - name: Run Shield check
+        run: node src/services/shieldMonitor.js
+        env:
+          NODE_ENV: production
+          RPC_ARBITRUM: ${{ secrets.RPC_ARBITRUM }}
+          RPC_BASE: ${{ secrets.RPC_BASE }}
+          RPC_POLYGON: ${{ secrets.RPC_POLYGON }}
+          RPC_AVALANCHE: ${{ secrets.RPC_AVALANCHE }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          SHIELD_ALERT_EMAIL: ${{ secrets.SHIELD_ALERT_EMAIL }}
