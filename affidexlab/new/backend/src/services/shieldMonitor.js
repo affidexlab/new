@@ -9,7 +9,6 @@
  *
  * WHAT THIS DOES NOT DO YET:
  * - No ownership/admin-key change detection (needs each contract's ABI).
- * - No persistence of alert history — logged to console/email, not saved to a table.
  * - No real-time / mempool watching — this is a polling check, meant to run on a
  *   schedule (e.g. every 15 minutes), not a live listener.
  *
@@ -65,14 +64,32 @@ async function loadCustomerContracts() {
 // a treasury contract and an AMM pool have very different "normal" volatility.
 const ALERT_DROP_THRESHOLD_PCT = 20;
 
-const lastSeenBalance = new Map();
+// IMPORTANT: this MUST be persisted in Postgres, not an in-memory Map. This script is
+// invoked fresh on every scheduled run (Render Cron Job or GitHub Actions each start a
+// brand-new process) — an in-memory Map would reset to empty every single time, meaning
+// prevBalance would always be undefined and the alert below would never fire. Caught this
+// before the first real scheduled run; worth knowing it existed at all.
+async function getLastBalance(chain, address) {
+  const { rows } = await pool.query(
+    `SELECT balance_wei FROM shield_last_balance WHERE chain = $1 AND address = $2`,
+    [chain, address]
+  );
+  return rows[0] ? BigInt(rows[0].balance_wei) : undefined;
+}
+
+async function saveLastBalance(chain, address, balance) {
+  await pool.query(
+    `INSERT INTO shield_last_balance (chain, address, balance_wei, checked_at) VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (chain, address) DO UPDATE SET balance_wei = $3, checked_at = NOW()`,
+    [chain, address, balance.toString()]
+  );
+}
 
 async function checkContract(provider, contract) {
   const { chain, address, label } = contract;
-  const key = `${chain}:${address}`;
 
   const balance = await provider.getBalance(address);
-  const prevBalance = lastSeenBalance.get(key);
+  const prevBalance = await getLastBalance(chain, address);
 
   if (prevBalance !== undefined && prevBalance > 0n) {
     const delta = balance - prevBalance;
@@ -89,7 +106,7 @@ async function checkContract(provider, contract) {
     }
   }
 
-  lastSeenBalance.set(key, balance);
+  await saveLastBalance(chain, address, balance);
 }
 
 async function alertShield({ severity, label, chain, address, message }) {
