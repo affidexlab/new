@@ -93,8 +93,9 @@ export default function Shield() {
   const NAV_LINKS = [
     { label: "Compliance", href: "/compliance", active: false },
     { label: "Security Audit", href: "/audit", active: false },
-    { label: "Verify API", href: "/verify", active: false },
     { label: "Shield", href: "/shield", active: true },
+    { label: "Institutional", href: "/institutional", active: false },
+    { label: "Verify API", href: "/verify", active: false },
   ];
 
   return (
