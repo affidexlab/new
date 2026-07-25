@@ -14,29 +14,35 @@ versions already used elsewhere in this repo's `contracts/` folder.
   check that happens off-chain, through a real KYC/accreditation provider you
   integrate separately.
 - **`ComplianceRules.sol`** — the `canTransfer` check from Phase 3, consulted
-  before every transfer. Ships with exactly two example rules (jurisdiction
-  blocklist, a `maxHolders` variable that isn't wired up yet — see the code
-  comment). Real compliance logic for a specific offering is not a generic
-  problem; it's defined by your securities counsel for that offering.
+  before every transfer. Ships with jurisdiction blocklist, enforced holder-count
+  cap, and optional risk-score gating via `RiskOracle`. `setToken` is one-time
+  (reverts if called twice) specifically to stop the holder count from being
+  silently corrupted by re-pointing to a different token mid-flight.
 - **`RWAToken.sol`** — an ERC-20 that routes every mint/transfer/burn through
   `ComplianceRules.canTransfer`, plus `forcedTransfer` (the roadmap's
-  "Global Kill-Switch") and pause/unpause.
+  "Global Kill-Switch") and pause/unpause. Hardened with `ReentrancyGuard`,
+  an explicit self-transfer short-circuit, and a guard against sending tokens
+  to the token contract's own address.
+- **`RiskOracle.sol`** — a trusted-updater oracle for Verify API risk scores.
+  Explicitly NOT Chainlink — see the file's own NatSpec for what a real
+  Chainlink Functions upgrade would require.
+- **`ZKIdentityGate.sol`** — real integration with the Semaphore protocol
+  (semaphore-protocol's audited, published contracts — not custom cryptography
+  written for this project) for anonymous group-membership proofs. Deliberately
+  kept separate from `IdentityRegistry` rather than merged, because "anonymous"
+  and "checkable per-wallet" are in real tension — see the file's NatSpec for
+  the specific design decisions this doesn't make for you.
 
 ## What's deliberately not here yet
 
-- ZK-KYC (Phase 2's own "mid-term goal", not immediate)
 - UUPS upgradeability, Merkle-tree/bitmap gas optimization (Phase 5 concerns)
-- Issuer portal, oracle integration, the SDK (Phases 4–5)
-
-~~Holder-count enforcement~~ — now wired up: `RWAToken` tracks new/emptied holders
-per transfer and `ComplianceRules` reverts once `maxHolders` is hit. Re-verified
-compiling after this change, not just assumed correct.
-
-**On multi-sig:** this isn't a code gap — `Ownable` doesn't need to change for the
-owner to *be* a multi-sig. Deploy with a Gnosis Safe (or similar) address as
-`initialOwner` rather than a single EOA, especially before `forcedTransfer` is
-ever wired to anything real. Worth stating plainly since it's easy to assume
-"multi-sig support" means a code change when it's actually a deployment decision.
+- Issuer portal is built (`/institutional/portal` in the app) but has not been
+  full type-checked the way the contracts have been compile-checked
+- Oracle integration is the trusted-updater version, not real Chainlink
+- ZK-KYC gate exists and uses real cryptography, but isn't wired into the
+  existing wallet-keyed `IdentityRegistry`/`ComplianceRules` flow — that
+  binding is a protocol design decision, not a coding task, see
+  `ZKIdentityGate.sol`'s NatSpec
 
 ## Before this touches a real offering
 
@@ -48,6 +54,8 @@ ever wired to anything real. Worth stating plainly since it's easy to assume
    or misconfigured verifier key from marking anyone "accredited."
 4. A decision on multi-sig tooling (Gnosis Safe or similar) for every
    `onlyOwner` function, before this is deployed anywhere holding real assets.
+5. A real decision on how (or whether) `ZKIdentityGate` binds proofs to
+   specific wallets/transfers before it's connected to anything live.
 
 Treat this as the thing your engineering team scopes real work from, not
 something to point a fund manager at today.
