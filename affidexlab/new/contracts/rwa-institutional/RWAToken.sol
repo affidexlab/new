@@ -36,8 +36,9 @@ contract RWAToken is ERC20, Ownable, Pausable {
         complianceRules = _complianceRules;
     }
 
+    /// @dev No separate compliance check needed here — _mint triggers _update below,
+    /// which already runs the full canTransfer + holder-count logic.
     function mint(address to, uint256 amount) external onlyOwner {
-        if (!complianceRules.canTransfer(address(0), to, amount)) revert TransferNotCompliant();
         _mint(to, amount);
     }
 
@@ -51,10 +52,17 @@ contract RWAToken is ERC20, Ownable, Pausable {
      *         OpenZeppelin v5's ERC20 routes all balance changes through _update.
      */
     function _update(address from, address to, uint256 amount) internal override whenNotPaused {
+        bool toIsNewHolder = to != address(0) && balanceOf(to) == 0 && amount > 0;
+        bool fromWillBeEmptied = from != address(0) && amount > 0 && balanceOf(from) == amount;
+
         // Minting (from == 0) and burning (to == 0) still get checked — canTransfer
         // handles address(0) as "no identity check needed for that side" (see ComplianceRules).
-        if (!complianceRules.canTransfer(from, to, amount)) revert TransferNotCompliant();
+        if (!complianceRules.canTransfer(from, to, amount, toIsNewHolder)) revert TransferNotCompliant();
+
         super._update(from, to, amount);
+
+        if (toIsNewHolder) complianceRules.recordHolderChange(true);
+        if (fromWillBeEmptied) complianceRules.recordHolderChange(false);
     }
 
     /**
