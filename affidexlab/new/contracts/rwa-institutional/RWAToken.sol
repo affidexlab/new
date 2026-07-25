@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./ComplianceRules.sol";
 
 /**
@@ -19,13 +20,14 @@ import "./ComplianceRules.sol";
  *         gas-optimized holder tracking (bitmaps/Merkle trees), and full NatSpec —
  *         none of which are in this reference version.
  */
-contract RWAToken is ERC20, Ownable, Pausable {
+contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     ComplianceRules public complianceRules;
 
     event ForcedTransfer(address indexed from, address indexed to, uint256 amount, string reason);
     event ComplianceRulesUpdated(address indexed newComplianceRules);
 
     error TransferNotCompliant();
+    error CannotSendToTokenContract();
 
     constructor(
         string memory name_,
@@ -50,8 +52,29 @@ contract RWAToken is ERC20, Ownable, Pausable {
     /**
      * @notice Standard transfer/transferFrom go through this hook automatically —
      *         OpenZeppelin v5's ERC20 routes all balance changes through _update.
+     * @dev Hardening pass on holder tracking:
+     *      - nonReentrant: recordHolderChange is an external call made AFTER state
+     *        changes, which is the safer order, but adding the guard explicitly
+     *        removes any doubt for an auditor rather than relying on call-order alone.
+     *      - Self-transfers (from == to) are short-circuited before any holder-count
+     *        logic runs, rather than relying on the balance-math happening to cancel
+     *        out — makes the invariant "self-transfers never change holder count"
+     *        checkable by inspection, not just by reasoning through the arithmetic.
+     *      - Blocks sending tokens to the token contract's own address — a common
+     *        footgun with no legitimate use case here, and it would otherwise count
+     *        as a new "holder" that can never meaningfully transact.
      */
-    function _update(address from, address to, uint256 amount) internal override whenNotPaused {
+    function _update(address from, address to, uint256 amount) internal override whenNotPaused nonReentrant {
+        if (to == address(this)) revert CannotSendToTokenContract();
+
+        if (from == to) {
+            // No identity/compliance bypass — still enforced — just no holder-count
+            // side effects, since a self-transfer can't create or remove a holder.
+            if (from != address(0) && !complianceRules.canTransfer(from, to, amount, false)) revert TransferNotCompliant();
+            super._update(from, to, amount);
+            return;
+        }
+
         bool toIsNewHolder = to != address(0) && balanceOf(to) == 0 && amount > 0;
         bool fromWillBeEmptied = from != address(0) && amount > 0 && balanceOf(from) == amount;
 
