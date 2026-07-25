@@ -159,6 +159,9 @@ export default function Institutional() {
         <button onClick={() => openForm("Scale")} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(245,158,11,0.3)" }}>
           Talk to Us
         </button>
+        <div style={{ marginTop: "1.5rem" }}>
+          <a href="/institutional/portal" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", textDecoration: "underline" }}>Already have a deployed contract? Open the Issuer Portal →</a>
+        </div>
       </section>
 
       <section style={{ padding: "4rem 2rem", maxWidth: "1150px", margin: "0 auto" }}>
