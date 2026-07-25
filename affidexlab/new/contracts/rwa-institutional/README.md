@@ -25,13 +25,18 @@ versions already used elsewhere in this repo's `contracts/` folder.
 ## What's deliberately not here yet
 
 - ZK-KYC (Phase 2's own "mid-term goal", not immediate)
-- Holder-count enforcement (the variable exists, the check doesn't yet)
 - UUPS upgradeability, Merkle-tree/bitmap gas optimization (Phase 5 concerns)
 - Issuer portal, oracle integration, the SDK (Phases 4–5)
-- Multi-sig on the owner role — every contract here uses a single-owner
-  `Ownable` pattern for clarity. **Production must replace this with a real
-  multi-sig**, especially for `forcedTransfer`, which otherwise gives one
-  private key the power to move any holder's tokens.
+
+~~Holder-count enforcement~~ — now wired up: `RWAToken` tracks new/emptied holders
+per transfer and `ComplianceRules` reverts once `maxHolders` is hit. Re-verified
+compiling after this change, not just assumed correct.
+
+**On multi-sig:** this isn't a code gap — `Ownable` doesn't need to change for the
+owner to *be* a multi-sig. Deploy with a Gnosis Safe (or similar) address as
+`initialOwner` rather than a single EOA, especially before `forcedTransfer` is
+ever wired to anything real. Worth stating plainly since it's easy to assume
+"multi-sig support" means a code change when it's actually a deployment decision.
 
 ## Before this touches a real offering
 
