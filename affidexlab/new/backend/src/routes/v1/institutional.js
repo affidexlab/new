@@ -1,10 +1,23 @@
 import express from 'express';
 import crypto from 'crypto';
+import { ethers } from 'ethers';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+const RPC_URLS = {
+  arbitrum: process.env.RPC_ARBITRUM,
+  base: process.env.RPC_BASE,
+  polygon: process.env.RPC_POLYGON,
+  avalanche: process.env.RPC_AVALANCHE,
+};
+
+const IDENTITY_ABI = [
+  'function isVerified(address wallet) view returns (bool)',
+  'function getIdentity(address wallet) view returns (tuple(bool verified, bytes2 countryCode, uint40 verifiedAt, bool accreditedInvestor))',
+];
 
 // Fixed prices in cents for the two self-serve tiers. Enterprise is custom, not sold here.
 const PLAN_PRICES_CENTS = {
@@ -209,3 +222,64 @@ router.post('/nowpayments/callback', async (req, res) => {
 });
 
 export default router;
+
+// ============================================================
+// SDK-facing endpoints — what @decaflow/partner-sdk's checkEligibility()
+// and getIdentityProof() actually call. Reuses the same RPC env vars
+// (RPC_ARBITRUM etc.) already set up for Shield — same infra, new purpose.
+//
+// "assetId" from the roadmap doesn't have a real registry behind it yet
+// (no assets are deployed), so for now callers pass the identity registry
+// contract address + chain directly. A real assetId -> {chain, address}
+// lookup table is a natural next step once real assets exist — flagging
+// explicitly rather than faking a registry that doesn't exist.
+// ============================================================
+
+router.get('/eligibility', async (req, res) => {
+  try {
+    const { wallet, chain, identityRegistry } = req.query;
+    if (!wallet || !ethers.isAddress(wallet)) return res.status(400).json({ success: false, error: 'A valid wallet address is required.' });
+    if (!identityRegistry || !ethers.isAddress(identityRegistry)) return res.status(400).json({ success: false, error: 'identityRegistry contract address is required (no asset registry exists yet — see code comments).' });
+    const rpcUrl = RPC_URLS[chain];
+    if (!rpcUrl) return res.status(400).json({ success: false, error: `No RPC configured for chain "${chain}".` });
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const registry = new ethers.Contract(identityRegistry, IDENTITY_ABI, provider);
+    const verified = await registry.isVerified(wallet);
+
+    return res.status(200).json({ success: true, wallet, eligible: verified });
+  } catch (err) {
+    console.error('❌ Institutional eligibility check error:', err);
+    return res.status(500).json({ success: false, error: 'Could not check eligibility.' });
+  }
+});
+
+router.get('/identity-proof', async (req, res) => {
+  try {
+    const { wallet, chain, identityRegistry } = req.query;
+    if (!wallet || !ethers.isAddress(wallet)) return res.status(400).json({ success: false, error: 'A valid wallet address is required.' });
+    if (!identityRegistry || !ethers.isAddress(identityRegistry)) return res.status(400).json({ success: false, error: 'identityRegistry contract address is required.' });
+    const rpcUrl = RPC_URLS[chain];
+    if (!rpcUrl) return res.status(400).json({ success: false, error: `No RPC configured for chain "${chain}".` });
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const registry = new ethers.Contract(identityRegistry, IDENTITY_ABI, provider);
+    const identity = await registry.getIdentity(wallet);
+
+    // NOTE: this is the plain on-chain identity record, not a zero-knowledge proof.
+    // ZK-KYC is the roadmap's own "mid-term goal" (Phase 2) — not built yet. Calling
+    // this a "proof" in the ZK sense before that exists would misrepresent what it does.
+    return res.status(200).json({
+      success: true,
+      wallet,
+      verified: identity.verified,
+      countryCode: ethers.toUtf8String(identity.countryCode).replace(/\0/g, ''),
+      accreditedInvestor: identity.accreditedInvestor,
+      verifiedAt: Number(identity.verifiedAt),
+      note: 'Plain identity record from IdentityRegistry.sol — not a zero-knowledge proof. ZK-KYC is roadmap Phase 2, not yet implemented.',
+    });
+  } catch (err) {
+    console.error('❌ Institutional identity-proof error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch identity record.' });
+  }
+});
