@@ -22,18 +22,39 @@ contract ComplianceRules is Ownable {
     // Reg S/Reg D distinctions, etc.) is offering-specific and must come from counsel.
     mapping(bytes2 => bool) public jurisdictionBlocked;
 
-    // Example rule: cap total number of distinct holders (common in Reg D offerings
-    // to stay under investor-count thresholds). Token contract is responsible for
-    // calling recordHolderChange on mint/burn/transfer-to-zero-balance.
+    // Cap on total distinct holders (common in Reg D offerings to stay under
+    // investor-count thresholds). Enforced below — see canTransfer/recordHolderChange.
     uint256 public maxHolders;
     uint256 public currentHolders;
 
+    // Only the linked token contract may call recordHolderChange — sequence matters:
+    // set this once via setToken before the token goes live, or currentHolders
+    // never updates and every transfer that would create a new holder reverts once
+    // maxHolders is reached.
+    address public token;
+
     event JurisdictionBlockUpdated(bytes2 countryCode, bool blocked);
     event MaxHoldersUpdated(uint256 maxHolders);
+    event TokenSet(address indexed token);
+
+    error NotToken();
+    error MaxHoldersReached();
+
+    modifier onlyToken() {
+        if (msg.sender != token) revert NotToken();
+        _;
+    }
 
     constructor(address initialOwner, IdentityRegistry _identityRegistry, uint256 _maxHolders) Ownable(initialOwner) {
         identityRegistry = _identityRegistry;
         maxHolders = _maxHolders;
+    }
+
+    /// @notice One-time (well, owner-controlled) link to the token contract this
+    /// compliance module governs — required before holder-count enforcement works.
+    function setToken(address _token) external onlyOwner {
+        token = _token;
+        emit TokenSet(_token);
     }
 
     function setJurisdictionBlocked(bytes2 countryCode, bool blocked) external onlyOwner {
@@ -48,23 +69,35 @@ contract ComplianceRules is Ownable {
 
     /**
      * @notice Called by the token contract before every transfer settles.
-     * @dev Kept intentionally simple — this is the function real compliance logic
-     *      (accreditation checks, per-country investor limits, lockup periods, etc.)
-     *      gets layered into. Treat this as the extension point, not the finished rule set.
+     * @param toIsNewHolder True if `to` currently holds zero balance — i.e. this
+     *        transfer would create a new distinct holder if it goes through.
+     * @dev Kept intentionally simple beyond holder-count enforcement — this is the
+     *      function real compliance logic (accreditation checks, per-country investor
+     *      limits, lockup periods, etc.) gets layered into. Treat this as the
+     *      extension point, not the finished rule set.
      */
-    function canTransfer(address from, address to, uint256 /* amount */) external view returns (bool) {
+    function canTransfer(address from, address to, uint256 /* amount */, bool toIsNewHolder) external view returns (bool) {
         if (from != address(0) && !identityRegistry.isVerified(from)) return false;
         if (to != address(0) && !identityRegistry.isVerified(to)) return false;
 
         if (to != address(0)) {
             IdentityRegistry.Identity memory toIdentity = identityRegistry.getIdentity(to);
             if (jurisdictionBlocked[toIdentity.countryCode]) return false;
+
+            if (toIsNewHolder && maxHolders != 0 && currentHolders >= maxHolders) return false;
         }
 
-        // NOTE: does not enforce maxHolders here — that requires the token to track
-        // holder count and pass it in, which the reference RWAToken.sol does not yet
-        // implement. Flagging explicitly rather than pretending this rule is enforced.
-
         return true;
+    }
+
+    /// @notice Token calls this after a transfer it already validated via canTransfer
+    /// actually settles, so currentHolders reflects reality even if a transfer that
+    /// passed canTransfer later reverts for an unrelated reason (e.g. ERC20 balance check).
+    function recordHolderChange(bool increment) external onlyToken {
+        if (increment) {
+            currentHolders += 1;
+        } else if (currentHolders > 0) {
+            currentHolders -= 1;
+        }
     }
 }
