@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IdentityRegistry.sol";
+import "./RiskOracle.sol";
 
 /**
  * ██  UNAUDITED REFERENCE IMPLEMENTATION — DO NOT USE FOR REAL SECURITIES  ██
@@ -33,9 +34,15 @@ contract ComplianceRules is Ownable {
     // maxHolders is reached.
     address public token;
 
+    // Optional — address(0) means "no risk gating," matching how this contract behaved
+    // before RiskOracle existed. Setting it opts into Verify-API-driven risk filtering.
+    RiskOracle public riskOracle;
+    uint8 public maxRiskScore = 100; // 100 = no effective filtering until lowered
+
     event JurisdictionBlockUpdated(bytes2 countryCode, bool blocked);
     event MaxHoldersUpdated(uint256 maxHolders);
     event TokenSet(address indexed token);
+    event RiskOracleUpdated(address indexed riskOracle, uint8 maxRiskScore);
 
     error NotToken();
     error MaxHoldersReached();
@@ -67,14 +74,24 @@ contract ComplianceRules is Ownable {
         emit MaxHoldersUpdated(_maxHolders);
     }
 
+    /// @notice Opt into (or update) Verify-API-driven risk filtering. Pass
+    /// address(0) to disable — canTransfer skips the risk check entirely then,
+    /// same as before this feature existed.
+    function setRiskOracle(RiskOracle _riskOracle, uint8 _maxRiskScore) external onlyOwner {
+        require(_maxRiskScore <= 100, "score must be 0-100");
+        riskOracle = _riskOracle;
+        maxRiskScore = _maxRiskScore;
+        emit RiskOracleUpdated(address(_riskOracle), _maxRiskScore);
+    }
+
     /**
      * @notice Called by the token contract before every transfer settles.
      * @param toIsNewHolder True if `to` currently holds zero balance — i.e. this
      *        transfer would create a new distinct holder if it goes through.
-     * @dev Kept intentionally simple beyond holder-count enforcement — this is the
-     *      function real compliance logic (accreditation checks, per-country investor
-     *      limits, lockup periods, etc.) gets layered into. Treat this as the
-     *      extension point, not the finished rule set.
+     * @dev Kept intentionally simple beyond holder-count/risk enforcement — this is
+     *      the function real compliance logic (accreditation checks, per-country
+     *      investor limits, lockup periods, etc.) gets layered into. Treat this as
+     *      the extension point, not the finished rule set.
      */
     function canTransfer(address from, address to, uint256 /* amount */, bool toIsNewHolder) external view returns (bool) {
         if (from != address(0) && !identityRegistry.isVerified(from)) return false;
@@ -85,6 +102,16 @@ contract ComplianceRules is Ownable {
             if (jurisdictionBlocked[toIdentity.countryCode]) return false;
 
             if (toIsNewHolder && maxHolders != 0 && currentHolders >= maxHolders) return false;
+
+            if (address(riskOracle) != address(0)) {
+                (uint8 score, bool fresh) = riskOracle.getRiskScore(to);
+                // No score yet (fresh == false) does NOT block — an unscored wallet
+                // isn't the same as a risky one, and defaulting to "block everyone
+                // with no data" would make this oracle a denial-of-service switch
+                // for anyone the updater hasn't gotten to yet. Choosing "allow until
+                // scored" here; a stricter policy is a one-line change if you want it.
+                if (fresh && score > maxRiskScore) return false;
+            }
         }
 
         return true;
