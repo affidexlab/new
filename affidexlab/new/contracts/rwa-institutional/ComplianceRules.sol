@@ -46,6 +46,7 @@ contract ComplianceRules is Ownable {
 
     error NotToken();
     error MaxHoldersReached();
+    error TokenAlreadySet();
 
     modifier onlyToken() {
         if (msg.sender != token) revert NotToken();
@@ -57,9 +58,15 @@ contract ComplianceRules is Ownable {
         maxHolders = _maxHolders;
     }
 
-    /// @notice One-time (well, owner-controlled) link to the token contract this
-    /// compliance module governs — required before holder-count enforcement works.
+    /// @notice One-time link to the token contract this compliance module governs.
+    /// @dev Deliberately callable only once (while currentHolders == 0) rather than
+    /// freely reassignable — re-pointing to a different token mid-flight would leave
+    /// currentHolders reflecting the OLD token's holders while enforcing the cap
+    /// against a token that never produced those holders. If you genuinely need to
+    /// change this, deploy a fresh ComplianceRules rather than repurposing one that's
+    /// already been tracking a live token.
     function setToken(address _token) external onlyOwner {
+        if (token != address(0)) revert TokenAlreadySet();
         token = _token;
         emit TokenSet(_token);
     }
