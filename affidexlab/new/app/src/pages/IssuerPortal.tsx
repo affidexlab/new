@@ -57,7 +57,12 @@ export default function IssuerPortal() {
     query: { enabled: !!token },
   });
 
-  const [name, symbol, totalSupply, tokenOwner, paused, complianceAddr] = tokenReads?.map(r => r.result) ?? [];
+  const name = tokenReads?.[0]?.result as string | undefined;
+  const symbol = tokenReads?.[1]?.result as string | undefined;
+  const totalSupply = tokenReads?.[2]?.result as bigint | undefined;
+  const tokenOwner = tokenReads?.[3]?.result as `0x${string}` | undefined;
+  const paused = tokenReads?.[4]?.result as boolean | undefined;
+  const complianceAddr = tokenReads?.[5]?.result as `0x${string}` | undefined;
   const complianceHealthy = tokenReads?.every(r => r.status === "success") ?? false;
 
   const { data: complianceReads } = useReadContracts({
@@ -68,7 +73,9 @@ export default function IssuerPortal() {
     ] : [],
     query: { enabled: !!complianceAddr },
   });
-  const [maxHolders, currentHolders, identityAddr] = complianceReads?.map(r => r.result) ?? [];
+  const maxHolders = complianceReads?.[0]?.result as bigint | undefined;
+  const currentHolders = complianceReads?.[1]?.result as bigint | undefined;
+  const identityAddr = complianceReads?.[2]?.result as `0x${string}` | undefined;
 
   const { data: isVerifier } = useReadContract({
     address: identityAddr as `0x${string}` | undefined,
@@ -77,7 +84,7 @@ export default function IssuerPortal() {
     args: address ? [address] : undefined,
     query: { enabled: !!identityAddr && !!address },
   });
-  const canWhitelist = isVerifier || (address && tokenOwner && address.toLowerCase() === (tokenOwner as string).toLowerCase());
+  const canWhitelist = isVerifier || (address && tokenOwner && address.toLowerCase() === tokenOwner.toLowerCase());
 
   const { writeContract, data: txHash, isPending: writePending, error: writeError } = useWriteContract();
   const { isLoading: txConfirming, isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash: txHash });
