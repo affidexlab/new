@@ -103,14 +103,27 @@ router.post('/evaluate', async (req, res) => {
     const matched = rules.filter(r => r.condition_field === 'riskScore' && ruleMatches(r, riskScore));
 
     const queued = [];
+    const autoResolved = [];
     for (const rule of matched) {
       if (rule.action === 'flag_for_review') {
-        const { rows } = await pool.query(
-          `INSERT INTO compliance_review_queue (account_email, rule_id, wallet_address, chain, risk_score, risk_level, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
-          [email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null]
-        );
-        queued.push(rows[0]);
+        if (rule.auto_decision) {
+          // Still creates a real, visible queue row — automation here means
+          // "resolved without waiting," never "resolved invisibly." A human
+          // can see and override every auto-resolved item just like any other.
+          const { rows } = await pool.query(
+            `INSERT INTO compliance_review_queue (account_email, rule_id, wallet_address, chain, risk_score, risk_level, status, reviewed_by, reviewed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
+            [email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null, rule.auto_decision, `agent:pattern-match (enabled by ${rule.auto_enabled_by})`]
+          );
+          autoResolved.push(rows[0]);
+        } else {
+          const { rows } = await pool.query(
+            `INSERT INTO compliance_review_queue (account_email, rule_id, wallet_address, chain, risk_score, risk_level, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+            [email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null]
+          );
+          queued.push(rows[0]);
+        }
       }
     }
 
@@ -123,15 +136,115 @@ router.post('/evaluate', async (req, res) => {
           Wallet: walletAddress || '—',
           'Risk score': String(riskScore),
           'Rules triggered': matched.map(r => r.name).join(', '),
-          Action: queued.length > 0 ? `${queued.length} item(s) added to your review queue — nothing happens until you decide.` : 'Notification only, no action needed.',
+          Action: queued.length > 0
+            ? `${queued.length} item(s) added to your review queue — nothing happens until you decide.`
+            : autoResolved.length > 0
+              ? `${autoResolved.length} item(s) auto-resolved per rules you enabled — visible in your queue, reversible anytime.`
+              : 'Notification only, no action needed.',
         },
       }).catch(err => console.error('Agents notify email failed:', err));
     }
 
-    return res.status(200).json({ success: true, rulesTriggered: matched.length, queuedForReview: queued.length });
+    return res.status(200).json({ success: true, rulesTriggered: matched.length, queuedForReview: queued.length, autoResolved: autoResolved.length });
   } catch (err) {
     console.error('❌ Agents evaluate error:', err);
     return res.status(500).json({ success: false, error: 'Could not evaluate rules.' });
+  }
+});
+
+/**
+ * Phase 3 of the roadmap's own plan: "The AI Agent observes these workflows,
+ * learns the compliance officer's patterns, and eventually asks... would you
+ * like me to handle this automatically for you from now on?"
+ *
+ * This endpoint only ever SUGGESTS — it looks at a rule's real decision
+ * history and surfaces a pattern if one is strong enough to be worth asking
+ * about. It cannot enable anything by itself. A human has to call
+ * /rules/:id/enable-auto separately, and can revoke it just as easily.
+ */
+router.get('/suggestions', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
+
+    const { rows } = await pool.query(
+      `SELECT rule_id, status, COUNT(*) as cnt
+       FROM compliance_review_queue
+       WHERE account_email = $1 AND status IN ('approved','rejected') AND rule_id IS NOT NULL
+       GROUP BY rule_id, status`,
+      [email]
+    );
+
+    const byRule = {};
+    for (const row of rows) {
+      byRule[row.rule_id] = byRule[row.rule_id] || { approved: 0, rejected: 0 };
+      byRule[row.rule_id][row.status] = Number(row.cnt);
+    }
+
+    const MIN_DECISIONS = 5;
+    const MIN_CONSISTENCY = 0.9;
+    const suggestions = [];
+
+    for (const [ruleId, counts] of Object.entries(byRule)) {
+      const total = counts.approved + counts.rejected;
+      if (total < MIN_DECISIONS) continue;
+      const dominant = counts.approved >= counts.rejected ? 'approved' : 'rejected';
+      const consistency = Math.max(counts.approved, counts.rejected) / total;
+      if (consistency < MIN_CONSISTENCY) continue;
+
+      const { rows: ruleRows } = await pool.query(`SELECT * FROM compliance_workflow_rules WHERE id = $1`, [ruleId]);
+      const rule = ruleRows[0];
+      if (!rule || rule.auto_decision) continue; // already automated or rule no longer exists
+
+      suggestions.push({
+        ruleId: Number(ruleId),
+        ruleName: rule.name,
+        totalDecisions: total,
+        consistencyPct: Math.round(consistency * 100),
+        suggestedAction: dominant,
+        message: `You've ${dominant} ${Math.max(counts.approved, counts.rejected)}/${total} items matching "${rule.name}". Want future matches handled the same way automatically, without waiting in the queue?`,
+      });
+    }
+
+    return res.status(200).json({ success: true, suggestions });
+  } catch (err) {
+    console.error('❌ Agents suggestions error:', err);
+    return res.status(500).json({ success: false, error: 'Could not compute suggestions.' });
+  }
+});
+
+/// The explicit human opt-in this whole feature hinges on. Nothing gets
+/// automated without a named person calling this endpoint on purpose.
+router.post('/rules/:id/enable-auto', async (req, res) => {
+  try {
+    const { decision, enabledBy } = req.body;
+    if (!['approved', 'rejected'].includes(decision)) return res.status(400).json({ success: false, error: 'decision must be approved or rejected.' });
+    if (!enabledBy?.trim()) return res.status(400).json({ success: false, error: 'enabledBy is required — automation needs an accountable owner too, not just decisions.' });
+
+    const { rows } = await pool.query(
+      `UPDATE compliance_workflow_rules SET auto_decision = $1, auto_enabled_at = NOW(), auto_enabled_by = $2 WHERE id = $3 RETURNING *`,
+      [decision, enabledBy, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Rule not found.' });
+    return res.status(200).json({ success: true, rule: rows[0] });
+  } catch (err) {
+    console.error('❌ Agents enable-auto error:', err);
+    return res.status(500).json({ success: false, error: 'Could not enable automation.' });
+  }
+});
+
+/// Just as easy to turn back off as it was to turn on.
+router.post('/rules/:id/disable-auto', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE compliance_workflow_rules SET auto_decision = NULL, auto_enabled_at = NULL, auto_enabled_by = NULL WHERE id = $1 RETURNING *`,
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Rule not found.' });
+    return res.status(200).json({ success: true, rule: rows[0] });
+  } catch (err) {
+    console.error('❌ Agents disable-auto error:', err);
+    return res.status(500).json({ success: false, error: 'Could not disable automation.' });
   }
 });
 
