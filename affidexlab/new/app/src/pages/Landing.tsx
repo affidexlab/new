@@ -9,6 +9,7 @@ const NAV_LINKS: NavLink[] = [
   { label: "Security Audit", href: "/audit" },
   { label: "Shield", href: "/shield" },
   { label: "Institutional", href: "/institutional" },
+  { label: "Agents", href: "/agents" },
   { label: "Verify API", href: "/verify" },
 ];
 
