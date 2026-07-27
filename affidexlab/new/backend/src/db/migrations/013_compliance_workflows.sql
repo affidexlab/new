@@ -24,5 +24,9 @@ CREATE TABLE IF NOT EXISTS compliance_review_queue (
   created_at         TIMESTAMPTZ  DEFAULT NOW()
 );
 
+ALTER TABLE compliance_workflow_rules ADD COLUMN IF NOT EXISTS auto_decision   VARCHAR(50);
+ALTER TABLE compliance_workflow_rules ADD COLUMN IF NOT EXISTS auto_enabled_at TIMESTAMPTZ;
+ALTER TABLE compliance_workflow_rules ADD COLUMN IF NOT EXISTS auto_enabled_by VARCHAR(255);
+
 CREATE INDEX IF NOT EXISTS idx_workflow_rules_account ON compliance_workflow_rules (account_email);
 CREATE INDEX IF NOT EXISTS idx_review_queue_account   ON compliance_review_queue (account_email, status);
