@@ -21,7 +21,7 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: "Do the agents freeze transactions automatically?", a: "No. Every rule's only possible action is putting something in front of a human — a review queue entry or a notification. Nothing here can move funds, revoke access, or take any consequential action by itself. That's a deliberate design choice, not a missing feature: regulators are reasonably wary of black-box AI making final decisions on frozen funds, and we agree with them until there's a real track record and explicit, per-action opt-in from you." },
+  { q: "Do the agents freeze transactions automatically?", a: "No, and that's still true after Phase 3. What's new: the system can now notice you've made the same review decision consistently and ask if you want that specific pattern auto-resolved instead of queued — but it only ever asks, an explicit named person has to say yes, and even then it only speeds up a queue decision. It still cannot touch a real transaction. That capability lives nowhere in this system." },
   { q: "Is the risk scoring behind this real?", a: "The scoring engine itself (our Verify API) is still a demo in its current public form — deterministic example outputs, not live risk analysis. The rules and review queue you're setting up are real, working infrastructure, ready for when real scoring is behind them. We're not pretending otherwise." },
   { q: "Does this replace the Compliance product?", a: "No — this sits on top of it. Compliance provides the data and the score; this provides the workflow layer that decides what happens with that score, ending in a human decision. Think of Compliance as the foundation and this as the layer above it." },
 ];
@@ -47,6 +47,32 @@ export default function Agents() {
   const [newRule, setNewRule] = useState({ name: "", operator: ">", threshold: "80" });
   const [ruleBuilderError, setRuleBuilderError] = useState("");
   const [ruleBuilderLoading, setRuleBuilderLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [enablingId, setEnablingId] = useState<number | null>(null);
+  const [reviewerName, setReviewerName] = useState("");
+
+  const loadSuggestions = async (email: string) => {
+    if (!email.includes("@")) return;
+    try {
+      const res = await fetch(`${API_BASE}/v1/agents/suggestions?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (data.success) setSuggestions(data.suggestions);
+    } catch { /* silent — demo widget */ }
+  };
+
+  const enableAuto = async (ruleId: number, decision: string) => {
+    if (!reviewerName.trim()) { setRuleBuilderError("Enter your name first — automation needs a named, accountable owner."); return; }
+    setEnablingId(ruleId);
+    try {
+      await fetch(`${API_BASE}/v1/agents/rules/${ruleId}/enable-auto`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, enabledBy: reviewerName }),
+      });
+      loadSuggestions(ruleEmail);
+      loadRules(ruleEmail);
+    } catch { /* silent */ }
+    setEnablingId(null);
+  };
 
   const loadRules = async (email: string) => {
     if (!email.includes("@")) return;
@@ -136,13 +162,13 @@ export default function Agents() {
         {checkoutStatus === "success" && <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "#86efac", fontSize: "0.9rem" }}>✅ Payment received — confirmation on its way to your email.</div>}
         {checkoutStatus === "cancelled" && <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "rgba(255,255,255,0.7)", fontSize: "0.9rem" }}>Checkout was cancelled — no charge was made.</div>}
         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#a5b4fc", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} /> Workflows Live — Autonomy Not Yet
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} /> Phase 3: Pattern Suggestions Live — Never Autonomous
         </div>
         <h1 style={{ fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.5rem" }}>
           Compliance rules that <span style={{ background: "linear-gradient(135deg,#6366f1 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>flag, never freeze</span>
         </h1>
         <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "640px", margin: "0 auto 2.5rem", lineHeight: 1.75 }}>
-          Set rules on risk scores, route matches to a review queue, keep a human accountable for every decision. Full autonomy is the roadmap — not what's shipping today, on purpose.
+          Set rules on risk scores, route matches to a review queue, keep a human accountable for every decision. Now: the system notices your own consistent patterns and asks before automating anything — it never decides that on its own.
         </p>
         <button onClick={() => openForm("Growth")} style={{ background: "#6366f1", color: "#fff", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(99,102,241,0.35)" }}>Get Started</button>
       </section>
@@ -164,7 +190,7 @@ export default function Agents() {
         <h2 style={{ textAlign: "center", fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>Try the rule builder</h2>
         <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginBottom: "2rem" }}>Real requests to the real backend — not a mockup.</p>
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "1.5rem" }}>
-          <input value={ruleEmail} onChange={e => { setRuleEmail(e.target.value); loadRules(e.target.value); }} placeholder="your@email.com — rules are scoped to this"
+          <input value={ruleEmail} onChange={e => { setRuleEmail(e.target.value); loadRules(e.target.value); loadSuggestions(e.target.value); }} placeholder="your@email.com — rules are scoped to this"
             style={{ width: "100%", padding: "0.7rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.85rem", marginBottom: "1rem", boxSizing: "border-box" }} />
 
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
@@ -182,13 +208,32 @@ export default function Agents() {
             <div style={{ marginTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {rules.map(r => (
                 <div key={r.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", fontSize: "0.82rem" }}>
-                  <span>{r.name}</span>
+                  <span>{r.name} {r.auto_decision && <span style={{ color: "#86efac", fontSize: "0.72rem" }}>· auto-{r.auto_decision}</span>}</span>
                   <span style={{ color: "#a5b4fc", fontFamily: "monospace" }}>riskScore {r.operator} {r.threshold} → flag</span>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {suggestions.length > 0 && (
+          <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "16px", padding: "1.5rem", marginTop: "1.25rem" }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.5rem", color: "#a5b4fc" }}>🔎 Pattern detected — Phase 3</h3>
+            <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", marginBottom: "1rem" }}>Based on your own past decisions, not a guess. Nothing changes until you say so.</p>
+            <input value={reviewerName} onChange={e => setReviewerName(e.target.value)} placeholder="Your name (required to enable automation)"
+              style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem", marginBottom: "1rem", boxSizing: "border-box" }} />
+            {suggestions.map(s => (
+              <div key={s.ruleId} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "10px", padding: "1rem", marginBottom: "0.75rem" }}>
+                <p style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>{s.message}</p>
+                <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.75rem" }}>{s.totalDecisions} past decisions, {s.consistencyPct}% consistent.</p>
+                <button onClick={() => enableAuto(s.ruleId, s.suggestedAction)} disabled={enablingId === s.ruleId}
+                  style={{ background: "#6366f1", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: enablingId === s.ruleId ? 0.6 : 1 }}>
+                  {enablingId === s.ruleId ? "Enabling..." : `Yes, auto-${s.suggestedAction} future matches`}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section style={{ padding: "2rem 2rem 5rem", maxWidth: "1100px", margin: "0 auto" }}>
