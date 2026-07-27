@@ -20,6 +20,7 @@ import Verify from "./pages/verify";
 import Shield from "./pages/Shield";
 import Institutional from "./pages/Institutional";
 import IssuerPortal from "./pages/IssuerPortal";
+import Agents from "./pages/Agents";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 
 function getPageFromLocation(): string {
@@ -86,6 +87,9 @@ function getPageFromLocation(): string {
   if (path.startsWith("/institutional") || hash === "#institutional") {
     return "institutional";
   }
+  if (path.startsWith("/agents") || hash === "#agents") {
+    return "agents";
+  }
   return "home";
 }
 
@@ -132,6 +136,7 @@ export default function App() {
       {currentPage === "verify" && <Verify />}
       {currentPage === "shield" && <Shield />}
       {currentPage === "institutional" && <Institutional />}
+      {currentPage === "agents" && <Agents />}
       {currentPage === "issuer-portal" && <IssuerPortal />}
     </TransactionEventsProvider>
   );
