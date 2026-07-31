@@ -18,10 +18,11 @@ import "./RiskOracle.sol";
 contract ComplianceRules is Ownable {
     IdentityRegistry public immutable identityRegistry;
 
-    // Example rule: block transfers to/from specific jurisdictions entirely.
-    // Real logic (partial restrictions, investor caps per country, holding periods,
-    // Reg S/Reg D distinctions, etc.) is offering-specific and must come from counsel.
-    mapping(bytes2 => bool) public jurisdictionBlocked;
+    // Whether this offering requires accreditedInvestor == true to receive tokens
+    // (e.g. a Rule 506(c) offering). Off by default — many offerings don't require
+    // this, and the memo's point stands regardless: this contract enforces whatever
+    // flag IdentityRegistry recorded, it doesn't verify accreditation itself.
+    bool public requireAccreditation;
 
     // Cap on total distinct holders (common in Reg D offerings to stay under
     // investor-count thresholds). Enforced below — see canTransfer/recordHolderChange.
@@ -39,7 +40,6 @@ contract ComplianceRules is Ownable {
     RiskOracle public riskOracle;
     uint8 public maxRiskScore = 100; // 100 = no effective filtering until lowered
 
-    event JurisdictionBlockUpdated(bytes2 countryCode, bool blocked);
     event MaxHoldersUpdated(uint256 maxHolders);
     event TokenSet(address indexed token);
     event RiskOracleUpdated(address indexed riskOracle, uint8 maxRiskScore);
@@ -71,9 +71,8 @@ contract ComplianceRules is Ownable {
         emit TokenSet(_token);
     }
 
-    function setJurisdictionBlocked(bytes2 countryCode, bool blocked) external onlyOwner {
-        jurisdictionBlocked[countryCode] = blocked;
-        emit JurisdictionBlockUpdated(countryCode, blocked);
+    function setRequireAccreditation(bool required) external onlyOwner {
+        requireAccreditation = required;
     }
 
     function setMaxHolders(uint256 _maxHolders) external onlyOwner {
@@ -106,7 +105,8 @@ contract ComplianceRules is Ownable {
 
         if (to != address(0)) {
             IdentityRegistry.Identity memory toIdentity = identityRegistry.getIdentity(to);
-            if (jurisdictionBlocked[toIdentity.countryCode]) return false;
+            if (!toIdentity.jurisdictionEligible) return false;
+            if (requireAccreditation && !toIdentity.accreditedInvestor) return false;
 
             if (toIsNewHolder && maxHolders != 0 && currentHolders >= maxHolders) return false;
 
