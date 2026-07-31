@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { keccak256, toBytes } from "viem";
 
 // Minimal ABIs — just the functions/events this portal actually calls.
 // Matches /contracts/rwa-institutional/*.sol exactly; keep in sync if those change.
@@ -23,21 +24,18 @@ const COMPLIANCE_ABI = [
 const IDENTITY_ABI = [
   { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "isVerifier", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "bool" }] },
-  { type: "function", name: "setIdentity", stateMutability: "nonpayable", inputs: [{ type: "address", name: "wallet" }, { type: "bytes2", name: "countryCode" }, { type: "bool", name: "accreditedInvestor" }], outputs: [] },
+  { type: "function", name: "setIdentity", stateMutability: "nonpayable", inputs: [{ type: "address", name: "wallet" }, { type: "bool", name: "jurisdictionEligible" }, { type: "bool", name: "accreditedInvestor" }, { type: "bytes32", name: "evidenceHash" }], outputs: [] },
 ] as const;
 
 const isAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v.trim());
-const countryToBytes2 = (code: string) => {
-  const c = code.trim().toUpperCase().slice(0, 2).padEnd(2, "\0");
-  return ("0x" + Array.from(c).map(ch => ch.charCodeAt(0).toString(16).padStart(2, "0")).join("")) as `0x${string}`;
-};
 
 export default function IssuerPortal() {
   const { address, isConnected, chainId } = useAccount();
   const [tokenAddress, setTokenAddress] = useState("");
   const [wlAddress, setWlAddress] = useState("");
-  const [wlCountry, setWlCountry] = useState("");
+  const [wlJurisdictionEligible, setWlJurisdictionEligible] = useState(true);
   const [wlAccredited, setWlAccredited] = useState(false);
+  const [wlEvidenceRef, setWlEvidenceRef] = useState("");
   const [events, setEvents] = useState<{ type: string; text: string }[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const publicClient = usePublicClient();
@@ -91,11 +89,18 @@ export default function IssuerPortal() {
 
   const submitWhitelist = () => {
     if (!identityAddr || !isAddress(wlAddress)) return;
+    // evidenceHash commits to a reference to the off-chain KYC/accreditation record —
+    // e.g. a document ID or case reference in your real compliance vault, not the
+    // record itself. Empty reference still hashes to a real, deterministic bytes32
+    // rather than silently sending zero — but an empty reference means there's
+    // nothing real behind this commitment yet, which is a compliance gap to fix
+    // before this matters for a real investor, not a UI bug to fix here.
+    const evidenceHash = keccak256(toBytes(wlEvidenceRef || `no-evidence-ref:${wlAddress}:${Date.now()}`));
     writeContract({
       address: identityAddr as `0x${string}`,
       abi: IDENTITY_ABI,
       functionName: "setIdentity",
-      args: [wlAddress.trim() as `0x${string}`, countryToBytes2(wlCountry || "??"), wlAccredited],
+      args: [wlAddress.trim() as `0x${string}`, wlJurisdictionEligible, wlAccredited, evidenceHash],
     });
   };
 
@@ -176,12 +181,15 @@ export default function IssuerPortal() {
                   <input value={wlAddress} onChange={e => setWlAddress(e.target.value)} placeholder="Investor wallet address (0x...)"
                     style={{ padding: "0.65rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontFamily: "monospace", fontSize: "0.85rem" }} />
                   <div style={{ display: "flex", gap: "0.75rem" }}>
-                    <input value={wlCountry} onChange={e => setWlCountry(e.target.value)} placeholder="Country (e.g. US)" maxLength={2}
-                      style={{ flex: 1, padding: "0.65rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.85rem" }} />
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "rgba(255,255,255,0.7)" }}>
+                      <input type="checkbox" checked={wlJurisdictionEligible} onChange={e => setWlJurisdictionEligible(e.target.checked)} /> Jurisdiction-eligible
+                    </label>
                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "rgba(255,255,255,0.7)" }}>
                       <input type="checkbox" checked={wlAccredited} onChange={e => setWlAccredited(e.target.checked)} /> Accredited
                     </label>
                   </div>
+                  <input value={wlEvidenceRef} onChange={e => setWlEvidenceRef(e.target.value)} placeholder="Evidence reference (e.g. compliance vault doc ID) — hashed, never stored raw"
+                    style={{ padding: "0.65rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.85rem" }} />
                   <button onClick={submitWhitelist} disabled={!isAddress(wlAddress) || writePending || txConfirming}
                     style={{ background: "#f59e0b", color: "#3a2404", padding: "0.75rem", borderRadius: "8px", border: "none", fontWeight: 700, cursor: "pointer", opacity: (!isAddress(wlAddress) || writePending || txConfirming) ? 0.5 : 1 }}>
                     {writePending ? "Confirm in wallet..." : txConfirming ? "Confirming..." : "Whitelist wallet"}
