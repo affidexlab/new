@@ -16,7 +16,7 @@ const RPC_URLS = {
 
 const IDENTITY_ABI = [
   'function isVerified(address wallet) view returns (bool)',
-  'function getIdentity(address wallet) view returns (tuple(bool verified, bytes2 countryCode, uint40 verifiedAt, bool accreditedInvestor))',
+  'function getIdentity(address wallet) view returns (tuple(bool verified, bool jurisdictionEligible, bool accreditedInvestor, bytes32 evidenceHash, uint40 verifiedAt))',
 ];
 
 // Fixed prices in cents for the two self-serve tiers. Enterprise is custom, not sold here.
@@ -269,12 +269,17 @@ router.get('/identity-proof', async (req, res) => {
     // NOTE: this is the plain on-chain identity record, not a zero-knowledge proof.
     // ZK-KYC is the roadmap's own "mid-term goal" (Phase 2) — not built yet. Calling
     // this a "proof" in the ZK sense before that exists would misrepresent what it does.
+    // Also note: as of the identity-registry redesign, no raw jurisdiction/country data
+    // is stored on-chain at all (see IdentityRegistry.sol) — jurisdictionEligible is an
+    // off-chain-computed yes/no conclusion, and evidenceHash is a commitment to the real
+    // record, not the record itself. Neither can be reverse-engineered into a country.
     return res.status(200).json({
       success: true,
       wallet,
       verified: identity.verified,
-      countryCode: ethers.toUtf8String(identity.countryCode).replace(/\0/g, ''),
+      jurisdictionEligible: identity.jurisdictionEligible,
       accreditedInvestor: identity.accreditedInvestor,
+      evidenceHash: identity.evidenceHash,
       verifiedAt: Number(identity.verifiedAt),
       note: 'Plain identity record from IdentityRegistry.sol — not a zero-knowledge proof. ZK-KYC is roadmap Phase 2, not yet implemented.',
     });
