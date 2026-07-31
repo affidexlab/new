@@ -9,15 +9,21 @@ versions already used elsewhere in this repo's `contracts/` folder.
 
 ## What's actually here
 
-- **`IdentityRegistry.sol`** — records KYC status, jurisdiction, and accreditation
-  per wallet. Does not perform verification itself — it records the outcome of a
-  check that happens off-chain, through a real KYC/accreditation provider you
-  integrate separately.
+- **`IdentityRegistry.sol`** — records eligibility and accreditation status per
+  wallet, plus a hash commitment to the off-chain record behind them. Revised
+  after external counsel review: no longer stores a raw country code on-chain
+  (GDPR concern — combinable with a public wallet address to re-identify
+  someone, and immutability makes erasure impossible). Replaced with
+  `jurisdictionEligible`, a single conclusion computed off-chain by whoever
+  actually has the full residency/domicile/incorporation/location picture a
+  real Reg S determination needs — the chain records the answer, not the
+  reasoning or the underlying data.
 - **`ComplianceRules.sol`** — the `canTransfer` check from Phase 3, consulted
-  before every transfer. Ships with jurisdiction blocklist, enforced holder-count
-  cap, and optional risk-score gating via `RiskOracle`. `setToken` is one-time
-  (reverts if called twice) specifically to stop the holder count from being
-  silently corrupted by re-pointing to a different token mid-flight.
+  before every transfer. Checks identity verification, the jurisdiction
+  eligibility flag, enforced holder-count cap, optional risk-score gating, and
+  now an optional accreditation requirement (`requireAccreditation`) — the
+  `accreditedInvestor` field existed from the start but was never actually
+  enforced anywhere until this pass.
 - **`RWAToken.sol`** — an ERC-20 that routes every mint/transfer/burn through
   `ComplianceRules.canTransfer`, plus `forcedTransfer` (the roadmap's
   "Global Kill-Switch") and pause/unpause. Hardened with `ReentrancyGuard`,
