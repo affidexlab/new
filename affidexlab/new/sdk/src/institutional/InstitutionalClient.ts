@@ -23,8 +23,9 @@ export interface EligibilityResult {
 export interface IdentityProof {
   wallet: string;
   verified: boolean;
-  countryCode: string;
+  jurisdictionEligible: boolean;
   accreditedInvestor: boolean;
+  evidenceHash: string;
   verifiedAt: number;
   /** Plain on-chain identity record, NOT a zero-knowledge proof — ZK-KYC is
    *  roadmap Phase 2 and isn't implemented yet. */
