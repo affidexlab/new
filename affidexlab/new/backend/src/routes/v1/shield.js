@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import crypto from 'crypto';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { safeCompare } from '../../utils/security.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -153,7 +154,11 @@ router.post('/payment-request', async (req, res) => {
       }
       // Unique cents amount (e.g. $750.37) makes each customer's expected payment
       // distinguishable on-chain without needing a memo field, which EVM transfers don't have.
-      const cents = Math.floor(Math.random() * 99) + 1;
+      // Guardian audit LOW "Non-Cryptographic Randomness in Payment Amounts": was
+      // Math.random(), not cryptographically secure. crypto.randomInt's upper bound is
+      // EXCLUSIVE (unlike the old formula's inclusive +1), so this is randomInt(1, 100)
+      // to keep the exact same 1-99 inclusive range as before.
+      const cents = crypto.randomInt(1, 100);
       exactAmount = basePrice ? `${basePrice}.${String(cents).padStart(2, '0')}` : null;
     }
 
@@ -286,7 +291,7 @@ router.post('/nowpayments/callback', async (req, res) => {
       .update(JSON.stringify(sortObjectKeys(req.body)))
       .digest('hex');
 
-    if (!sig || sig !== expectedSig) {
+    if (!sig || !safeCompare(sig, expectedSig)) {
       console.error('❌ Shield NOWPayments callback signature mismatch');
       return res.status(403).send('invalid signature');
     }

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { ethers } from 'ethers';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { safeCompare } from '../../utils/security.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -18,6 +19,40 @@ const IDENTITY_ABI = [
   'function isVerified(address wallet) view returns (bool)',
   'function getIdentity(address wallet) view returns (tuple(bool verified, bool jurisdictionEligible, bool accreditedInvestor, bytes32 evidenceHash, uint40 verifiedAt))',
 ];
+
+// Guardian audit HIGH "Arbitrary Contract Address Trust in Identity API": /eligibility
+// and /identity-proof used to blindly instantiate whatever identityRegistry address
+// the caller passed in as a query param, so anyone could deploy a contract whose
+// isVerified() always returns true and get a fraudulent "eligible" response back
+// through this API. Both endpoints now check the address against an allowlist first.
+//
+// APPROVED_IDENTITY_REGISTRIES: comma-separated "chain:address" pairs, e.g.
+//   APPROVED_IDENTITY_REGISTRIES=arbitrum:0xAbC...,base:0xDeF...
+// Deliberately fails closed: unset/empty means NO registry is trusted, which matches
+// where this actually is today — per the comment below, no real IdentityRegistry has
+// been deployed for any live asset yet. Set this once real registries exist.
+function parseApprovedRegistries() {
+  const raw = process.env.APPROVED_IDENTITY_REGISTRIES || '';
+  const byChain = {};
+  for (const entry of raw.split(',').map((s) => s.trim()).filter(Boolean)) {
+    const [chain, address] = entry.split(':').map((s) => (s || '').trim());
+    if (!chain || !address || !ethers.isAddress(address)) {
+      console.warn(`⚠️  Ignoring malformed APPROVED_IDENTITY_REGISTRIES entry: "${entry}"`);
+      continue;
+    }
+    const key = chain.toLowerCase();
+    if (!byChain[key]) byChain[key] = new Set();
+    byChain[key].add(address.toLowerCase());
+  }
+  return byChain;
+}
+
+const APPROVED_REGISTRIES = parseApprovedRegistries();
+
+function isApprovedRegistry(chain, address) {
+  const set = APPROVED_REGISTRIES[(chain || '').toLowerCase()];
+  return !!set && !!address && set.has(address.toLowerCase());
+}
 
 // Fixed prices in cents for the two self-serve tiers. Enterprise is custom, not sold here.
 const PLAN_PRICES_CENTS = {
@@ -177,7 +212,7 @@ router.post('/nowpayments/callback', async (req, res) => {
 
     const sig = req.headers['x-nowpayments-sig'];
     const expectedSig = crypto.createHmac('sha512', process.env.NOWPAYMENTS_IPN_SECRET).update(JSON.stringify(sortObjectKeys(req.body))).digest('hex');
-    if (!sig || sig !== expectedSig) {
+    if (!sig || !safeCompare(sig, expectedSig)) {
       console.error('❌ Institutional NOWPayments callback signature mismatch');
       return res.status(403).send('invalid signature');
     }
@@ -240,6 +275,10 @@ router.get('/eligibility', async (req, res) => {
     const { wallet, chain, identityRegistry } = req.query;
     if (!wallet || !ethers.isAddress(wallet)) return res.status(400).json({ success: false, error: 'A valid wallet address is required.' });
     if (!identityRegistry || !ethers.isAddress(identityRegistry)) return res.status(400).json({ success: false, error: 'identityRegistry contract address is required (no asset registry exists yet — see code comments).' });
+    if (!isApprovedRegistry(chain, identityRegistry)) {
+      console.warn(`⚠️  Rejected /eligibility call for un-allowlisted identityRegistry ${identityRegistry} on chain "${chain}"`);
+      return res.status(403).json({ success: false, error: 'This identityRegistry contract address is not on the approved allowlist. Contact DecaFlow to have your deployment approved.' });
+    }
     const rpcUrl = RPC_URLS[chain];
     if (!rpcUrl) return res.status(400).json({ success: false, error: `No RPC configured for chain "${chain}".` });
 
@@ -259,6 +298,10 @@ router.get('/identity-proof', async (req, res) => {
     const { wallet, chain, identityRegistry } = req.query;
     if (!wallet || !ethers.isAddress(wallet)) return res.status(400).json({ success: false, error: 'A valid wallet address is required.' });
     if (!identityRegistry || !ethers.isAddress(identityRegistry)) return res.status(400).json({ success: false, error: 'identityRegistry contract address is required.' });
+    if (!isApprovedRegistry(chain, identityRegistry)) {
+      console.warn(`⚠️  Rejected /identity-proof call for un-allowlisted identityRegistry ${identityRegistry} on chain "${chain}"`);
+      return res.status(403).json({ success: false, error: 'This identityRegistry contract address is not on the approved allowlist. Contact DecaFlow to have your deployment approved.' });
+    }
     const rpcUrl = RPC_URLS[chain];
     if (!rpcUrl) return res.status(400).json({ success: false, error: `No RPC configured for chain "${chain}".` });
 
