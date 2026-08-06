@@ -47,6 +47,7 @@ contract ComplianceRules is Ownable {
     error NotToken();
     error MaxHoldersReached();
     error TokenAlreadySet();
+    error MaxHoldersExceeded();
 
     modifier onlyToken() {
         if (msg.sender != token) revert NotToken();
@@ -127,9 +128,28 @@ contract ComplianceRules is Ownable {
     /// @notice Token calls this after a transfer it already validated via canTransfer
     /// actually settles, so currentHolders reflects reality even if a transfer that
     /// passed canTransfer later reverts for an unrelated reason (e.g. ERC20 balance check).
+    /// @dev Guardian audit HIGH "Race Condition in Holder Count Tracking": on a
+    ///      standard sequential-EVM chain (this includes every chain this project
+    ///      targets — Arbitrum, Base, Polygon, Avalanche), each transaction fully
+    ///      commits its state changes before the next transaction in a block begins
+    ///      executing, so two separate transactions can't actually both observe the
+    ///      same stale "balanceOf(to) == 0" read the way two threads racing against
+    ///      shared memory could — canTransfer's toIsNewHolder check is genuinely up
+    ///      to date for whichever transaction runs second. The literal cross-
+    ///      transaction race described isn't reachable here, and RWAToken._update
+    ///      already has nonReentrant covering the one case that WOULD matter
+    ///      (same-transaction reentrancy).
+    ///      This function still adds a real hardening, though: it now enforces
+    ///      maxHolders as a hard invariant at the actual point currentHolders
+    ///      changes, instead of relying solely on the earlier, separate check in
+    ///      canTransfer. That's strictly better defense-in-depth — it holds even if
+    ///      a future code path ever calls recordHolderChange without having gone
+    ///      through canTransfer first, which the previous version had no protection
+    ///      against at all.
     function recordHolderChange(bool increment) external onlyToken {
         if (increment) {
             currentHolders += 1;
+            if (maxHolders != 0 && currentHolders > maxHolders) revert MaxHoldersExceeded();
         } else if (currentHolders > 0) {
             currentHolders -= 1;
         }
