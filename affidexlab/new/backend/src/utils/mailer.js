@@ -12,7 +12,12 @@ const getTransporter = () => {
       user: process.env.SMTP_USER || 'decaflowsolutions@gmail.com',
       pass: process.env.SMTP_PASS,
     },
-    tls: { rejectUnauthorized: false },
+    // Found alongside the Guardian audit's MEDIUM "TLS Certificate Verification
+    // Disabled" finding in db/connection.js — same issue (rejectUnauthorized: false),
+    // just not in the audit's file list since it's SMTP, not the DB connection.
+    // Default SMTP_HOST (Gmail) has a publicly-trusted cert, so real verification
+    // Just Works here without needing a custom CA.
+    tls: { rejectUnauthorized: true },
   });
   return _transporter;
 };

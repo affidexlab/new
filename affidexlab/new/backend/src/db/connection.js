@@ -11,9 +11,31 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Guardian audit MEDIUM "TLS Certificate Verification Disabled": rejectUnauthorized:
+// false meant the backend established TLS but never checked the server's cert was
+// actually valid — a MITM on the network path could present any certificate and go
+// unnoticed. Now verifies properly by default, using Node's built-in public CA trust
+// store (covers Supabase's current certs for most projects). If a specific deployment
+// needs a pinned/custom CA (self-hosted Postgres, private CA, etc.), point
+// DATABASE_CA_CERT_PATH at a PEM file rather than disabling verification again.
+function buildSslConfig() {
+  if (process.env.NODE_ENV !== 'production') return false;
+  const caPath = process.env.DATABASE_CA_CERT_PATH;
+  if (caPath) {
+    try {
+      return { rejectUnauthorized: true, ca: readFileSync(caPath, 'utf8') };
+    } catch (err) {
+      // Fail closed and loud rather than silently falling back to an unverified
+      // connection — a misconfigured path should be fixed, not quietly bypassed.
+      throw new Error(`DATABASE_CA_CERT_PATH is set to "${caPath}" but could not be read (${err.message}). Refusing to start with an unverifiable database TLS config.`);
+    }
+  }
+  return { rejectUnauthorized: true };
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: buildSslConfig(),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -22,6 +44,23 @@ const pool = new Pool({
 pool.on('error', (err) => {
   console.error('Unexpected database error:', err);
 });
+
+// Guardian audit MEDIUM "Database Query Parameter Logging": raw params were logged
+// verbatim on any query error, which risked writing sensitive values (API keys,
+// personal data — anything a caller might ever pass as a bound parameter) straight to
+// stdout. Redact by default: strings collapse to their length, which is normally
+// enough to debug a query without leaking the actual value. Numbers/booleans are left
+// as-is since they're rarely sensitive on their own (typically IDs/flags) and are
+// genuinely useful for debugging.
+function redactParams(params) {
+  if (!Array.isArray(params)) return params;
+  return params.map((p) => {
+    if (p === null || p === undefined) return p;
+    if (typeof p === 'string') return `[REDACTED string len=${p.length}]`;
+    if (typeof p === 'number' || typeof p === 'boolean') return p;
+    return '[REDACTED]';
+  });
+}
 
 export const query = async (text, params) => {
   const start = Date.now();
@@ -33,7 +72,7 @@ export const query = async (text, params) => {
     }
     return res;
   } catch (error) {
-    console.error('Database query error:', { text, params, error: error.message });
+    console.error('Database query error:', { text, params: redactParams(params), error: error.message });
     throw error;
   }
 };
