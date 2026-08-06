@@ -49,12 +49,25 @@ contract ZKIdentityGate is Ownable {
 
     mapping(address => bool) public isKYCAdmin;
 
+    /// @notice True once `wallet` has submitted at least one valid, self-bound proof
+    /// of group membership. Added for the Guardian audit's HIGH "lacks Proof-to-
+    /// Wallet Binding" finding so other contracts have something queryable — see
+    /// verifyCompliance's NatSpec for what "self-bound" means and why it matters.
+    mapping(address => bool) public hasVerifiedCompliance;
+
+    /// @notice The nullifier from `wallet`'s most recent successful verification —
+    /// exposed alongside hasVerifiedCompliance in case a caller wants to distinguish
+    /// "verified once, a while ago" from "verified again just now" without re-parsing
+    /// event logs.
+    mapping(address => uint256) public lastVerifiedNullifier;
+
     event MemberAdded(uint256 identityCommitment);
     event MemberRemoved(uint256 identityCommitment);
     event ComplianceProofVerified(uint256 indexed nullifier, uint256 message);
     event KYCAdminUpdated(address indexed admin, bool allowed);
 
     error NotKYCAdmin();
+    error ProofNotBoundToCaller();
 
     modifier onlyKYCAdmin() {
         if (!isKYCAdmin[msg.sender] && msg.sender != owner()) revert NotKYCAdmin();
@@ -98,12 +111,35 @@ contract ZKIdentityGate is Ownable {
      *         nullifier to prevent replay. Delegates the actual cryptographic
      *         verification entirely to Semaphore's audited verifier — this contract
      *         does no proof math itself.
-     * @dev The `message` field inside `proof` is applications-defined — bind it to
-     *      whatever this proof should authorize (e.g. a specific wallet address or
-     *      transfer intent) before calling this, per the class-level NatSpec above.
+     * @dev Guardian audit HIGH "lacks Proof-to-Wallet Binding": previously this
+     *      accepted any valid proof from any caller, so a submission generated for
+     *      (or broadcast by) one wallet could be resubmitted by a completely
+     *      different msg.sender and still pass — the proof was valid, but not
+     *      actually tied to whoever was presenting it. Now requires
+     *      `proof.message == uint256(uint160(msg.sender))`: callers MUST set the
+     *      Semaphore proof's message field to their own address when generating the
+     *      proof client-side. Because `message` is a public input baked into the
+     *      proof itself, nobody can alter it to a different address after the fact
+     *      without invalidating the proof — so a proof bound to wallet A cannot be
+     *      replayed by wallet B. This does not deanonymize which GROUP MEMBER
+     *      submitted it (that's still hidden, which is the actual zero-knowledge
+     *      property Semaphore provides) — it only ties a given submission to the
+     *      address that presented it, which is what makes hasVerifiedCompliance
+     *      below meaningful to record at all.
+     *      Still deliberately NOT wired into IdentityRegistry/ComplianceRules — per
+     *      the class-level NatSpec, whether/how to merge anonymous ZK verification
+     *      with the wallet-keyed compliance flow is a product decision, not
+     *      something this hardening pass should default silently. This just makes
+     *      the verification result queryable so that decision can be made later.
      */
     function verifyCompliance(ISemaphore.SemaphoreProof calldata proof) external returns (bool) {
+        if (proof.message != uint256(uint160(msg.sender))) revert ProofNotBoundToCaller();
+
         semaphore.validateProof(groupId, proof);
+
+        hasVerifiedCompliance[msg.sender] = true;
+        lastVerifiedNullifier[msg.sender] = proof.nullifier;
+
         emit ComplianceProofVerified(proof.nullifier, proof.message);
         return true;
     }
