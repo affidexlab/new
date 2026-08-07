@@ -9,6 +9,11 @@ import "./RiskOracle.sol";
  * ██  UNAUDITED REFERENCE IMPLEMENTATION — DO NOT USE FOR REAL SECURITIES  ██
  * See IdentityRegistry.sol for the full pre-production checklist. It applies here too.
  *
+ * Status update (this commit): Guardian Enterprises' 31 Jul 2026 findings have been
+ * remediated (see README.md + this file's own NatSpec) -- that is NOT the same as an
+ * audit or re-audit. No re-audit has happened, and no multi-sig is actually configured
+ * for owner/emergencyCouncil yet. Still not for real securities.
+ *
  * @title ComplianceRules
  * @notice Reference implementation of the roadmap's Phase 3 "CanTransfer" check —
  *         a rules engine consulted before every token transfer. Deliberately simple:

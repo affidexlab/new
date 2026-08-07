@@ -84,12 +84,14 @@ found, it doesn't re-run the audit itself.
   status (see audit response above), but still isn't wired into the existing
   wallet-keyed `IdentityRegistry`/`ComplianceRules` flow — that binding is a
   protocol design decision, not a coding task, see `ZKIdentityGate.sol`'s NatSpec
-- No automated test suite lives in this repo yet — the audit-response changes
-  above were verified against a local chain by hand for this pass (deploy, drive
-  the exact attack/edge-case scenarios each finding describes, confirm the fix),
-  but that coverage doesn't persist as a re-runnable suite. Writing one — especially
-  around `emergencyForcedTransfer` and the compliance-rules timelock — is a
-  natural next step before this goes further.
+- **Automated tests now exist**: `test/rwa-institutional/` (run `npm test` from
+  `contracts/`), covering IdentityRegistry, ComplianceRules, RWAToken (including
+  the Critical-finding attack/fix scenario end to end), RiskOracle, and
+  ZKIdentityGate's access control + new proof-binding check. Not covered: an
+  actually-valid Semaphore proof verifying successfully — that needs the
+  off-chain proof-generation toolchain (`@semaphore-protocol/identity`/`proof` +
+  snarkjs), noted as a scoped gap in the test file itself rather than silently
+  skipped.
 
 ## Before this touches a real offering
 
@@ -101,10 +103,12 @@ found, it doesn't re-run the audit itself.
 3. A real, licensed KYC/accreditation verification integration behind
    `IdentityRegistry.setIdentity` — right now nothing stops a compromised
    or misconfigured verifier key from marking anyone "accredited."
-4. A decision on multi-sig tooling (Gnosis Safe or similar) for `owner` AND for
-   the new `emergencyCouncil` role — the Critical-finding fix above only holds
-   if these are genuinely separate, well-protected keys/multisigs, not two EOAs
-   controlled by the same person.
+4. A decision on multi-sig tooling (Safe or similar) for `owner` AND for the
+   new `emergencyCouncil` role — the Critical-finding fix above only holds if
+   these are genuinely separate, well-protected multisigs, not two EOAs (or two
+   Safes with the same effective signers) controlled by the same person. See
+   `MULTISIG_SETUP.md` in this folder for the concrete checklist — this is a
+   real-world custody decision, not something addressable in code.
 5. `ZKIdentityGate` proofs are now bound to the submitting wallet, but whether
    (and how) to merge anonymous ZK verification into the wallet-keyed compliance
    flow is still an open product decision — see the file's NatSpec.

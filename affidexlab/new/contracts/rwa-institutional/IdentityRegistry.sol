@@ -6,6 +6,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * ██  UNAUDITED REFERENCE IMPLEMENTATION — DO NOT USE FOR REAL SECURITIES  ██
  *
+ * Status update: Guardian Enterprises' 31 Jul 2026 findings against the OTHER files
+ * in this folder (RWAToken.sol, ComplianceRules.sol, RiskOracle.sol,
+ * ZKIdentityGate.sol) have been remediated — see README.md. This file itself wasn't
+ * a Guardian finding target, and item 5 below (multi-sig for the owner role) is
+ * still open. Remediating other files' findings is not the same as an audit or
+ * re-audit of this one. Still not for real securities.
+ *
  * This is a starting point for the roadmap's Phase 1-2 (Identity Layer), not a
  * finished product. Before this — or anything built on top of it — touches a
  * real securities offering, it needs, at minimum:
