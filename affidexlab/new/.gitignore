@@ -6,3 +6,7 @@ affidexlab/new/backend/node_modules/
 affidexlab/new/app/dist/
 affidexlab/new/backend/.vercel/
 partners/.vercel/
+# generic (not path-prefixed like the entries above) so it matches node_modules
+# anywhere below this file regardless of that path-prefix inconsistency —
+# contracts/node_modules specifically wasn't covered by anything above
+node_modules/

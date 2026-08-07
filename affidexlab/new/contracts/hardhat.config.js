@@ -8,14 +8,23 @@ console.log('Config loaded - Private key present:', !!DEPLOYER_PRIVATE_KEY);
 
 module.exports = {
   solidity: {
-    version: '0.8.20',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    // Kept as an array rather than bumping the single `version` above: every other
+    // contract in this repo pragmas ^0.8.20 and is already deployed on mainnet
+    // chains compiled with exactly 0.8.20 — changing that wholesale would recompile
+    // already-live contracts against a different compiler than what's on-chain, for
+    // no reason. ZKIdentityGate.sol (rwa-institutional, not deployed anywhere yet —
+    // see its own file header) needs ^0.8.23. Hardhat auto-selects per file by
+    // pragma, so this only affects that one file.
+    compilers: [
+      {
+        version: '0.8.20',
+        settings: { optimizer: { enabled: true, runs: 200 }, viaIR: true },
       },
-      viaIR: true,
-    },
+      {
+        version: '0.8.28',
+        settings: { optimizer: { enabled: true, runs: 200 }, viaIR: true },
+      },
+    ],
   },
   etherscan: {
     apiKey: {
