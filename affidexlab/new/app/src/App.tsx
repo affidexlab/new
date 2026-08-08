@@ -23,6 +23,7 @@ import Institutional from "./pages/Institutional";
 import IssuerPortal from "./pages/IssuerPortal";
 import Agents from "./pages/Agents";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
+import ProductGate from "./components/ProductGate";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
@@ -120,29 +121,29 @@ export default function App() {
       {currentPage === "sdk-landing" && <SDKLanding />}
       {currentPage === "dashboard-landing" && <DashboardLanding />}
       {currentPage === "pricing" && <Pricing />}
-      {currentPage === "advanced-analytics" && <AdvancedAnalytics />}
-      {currentPage === "mev-dashboard" && <MEVDashboard />}
+      {currentPage === "advanced-analytics" && <ProductGate productKey="analytics"><AdvancedAnalytics /></ProductGate>}
+      {currentPage === "mev-dashboard" && <ProductGate productKey="analytics"><MEVDashboard /></ProductGate>}
       {currentPage === "investor-metrics" && (
         <div className="min-h-screen bg-[#0A0E27] text-white">
           <InvestorMetrics />
         </div>
       )}
-      {currentPage === "staking" && <SolanaStaking />}
+      {currentPage === "staking" && <ProductGate productKey="staking"><SolanaStaking /></ProductGate>}
       {currentPage === "leaderboard" && <Leaderboard />}
       {currentPage === "vdm-admin" && <VDMAdmin />}
       {currentPage === "admin" && <Admin />}
       {currentPage === "founder-admin" && <FounderAdmin />}
-      {currentPage === "privacy" && <AppPage initialTab="privacy" />}
-      {currentPage === "app" && <AppPage />}
+      {currentPage === "privacy" && <ProductGate productKey="swap_bridge"><AppPage initialTab="privacy" /></ProductGate>}
+      {currentPage === "app" && <ProductGate productKey="swap_bridge"><AppPage /></ProductGate>}
       {currentPage === "quests" && <Quests />}
       {currentPage === "contact" && <Contact />}
-      {currentPage === "compliance" && <Compliance />}
-      {currentPage === "audit" && <Audit />}
-      {currentPage === "verify" && <Verify />}
-      {currentPage === "shield" && <Shield />}
-      {currentPage === "institutional" && <Institutional />}
-      {currentPage === "agents" && <Agents />}
-      {currentPage === "issuer-portal" && <IssuerPortal />}
+      {currentPage === "compliance" && <ProductGate productKey="compliance"><Compliance /></ProductGate>}
+      {currentPage === "audit" && <ProductGate productKey="audit"><Audit /></ProductGate>}
+      {currentPage === "verify" && <ProductGate productKey="verify"><Verify /></ProductGate>}
+      {currentPage === "shield" && <ProductGate productKey="shield"><Shield /></ProductGate>}
+      {currentPage === "institutional" && <ProductGate productKey="institutional"><Institutional /></ProductGate>}
+      {currentPage === "agents" && <ProductGate productKey="agents"><Agents /></ProductGate>}
+      {currentPage === "issuer-portal" && <ProductGate productKey="institutional"><IssuerPortal /></ProductGate>}
     </TransactionEventsProvider>
   );
 }

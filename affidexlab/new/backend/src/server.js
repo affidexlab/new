@@ -29,6 +29,7 @@ import riskRoutes from './routes/v1/risk.js';
 import adminRoutes from './routes/v1/admin.js';
 import orgRoutes from './routes/v1/orgs.js';
 import orgAuthRoutes from './routes/v1/org-auth.js';
+import productRoutes from './routes/v1/products.js';
 
 dotenv.config();
 
@@ -206,6 +207,7 @@ app.use('/v1/risk', riskRoutes);             // DecaFlow-owned risk intelligence
 app.use('/v1/admin', adminRoutes);            // Scoped admin keys and audit logs
 app.use('/v1/orgs', orgRoutes);              // Organization accounts, members, and keys
 app.use('/v1/org-auth', orgAuthRoutes);      // Organization magic-link sessions
+app.use('/v1/products', productRoutes);      // Public product status controls
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
