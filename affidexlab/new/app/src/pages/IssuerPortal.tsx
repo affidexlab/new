@@ -136,10 +136,6 @@ export default function IssuerPortal() {
       </nav>
 
       <div style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1.5rem" }}>
-        <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: "12px", padding: "1rem 1.25rem", marginBottom: "2rem", fontSize: "0.85rem", color: "#fbbf24", lineHeight: 1.6 }}>
-          ⚠️ Connects to <strong>unaudited reference contracts</strong> (see <code>/contracts/rwa-institutional/README.md</code>). Real on-chain reads, not mock data — but do not point this at a contract holding real securities.
-        </div>
-
         <div style={{ marginBottom: "2rem" }}>
           <label style={{ display: "block", fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.5rem", fontWeight: 600 }}>Token contract address</label>
           <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)} placeholder="0x..."
