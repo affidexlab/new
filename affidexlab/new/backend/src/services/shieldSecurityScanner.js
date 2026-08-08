@@ -133,9 +133,9 @@ async function scanContract(contract, options = {}) {
   if (!provider) return { ...contract, skipped: true, reason: `RPC URL missing for ${contract.chain}` };
 
   const currentBlock = await provider.getBlockNumber();
-  const maxRange = Number(options.maxRange || process.env.SHIELD_SECURITY_SCAN_MAX_RANGE || 10);
+  const maxRange = Math.max(1, Number(options.maxRange || process.env.SHIELD_SECURITY_SCAN_MAX_RANGE || 10));
   const fromBlock = await getCursor(contract.chain, contract.address, currentBlock, options.lookbackBlocks);
-  const toBlock = Math.min(currentBlock, fromBlock + maxRange);
+  const toBlock = Math.min(currentBlock, fromBlock + maxRange - 1);
   const alerts = [];
   let codeAlerts = await checkCodeHash({ provider, ...contract, blockNumber: currentBlock });
 

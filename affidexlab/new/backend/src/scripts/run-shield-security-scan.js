@@ -3,8 +3,10 @@ import { runShieldSecurityScan } from '../services/shieldSecurityScanner.js';
 
 async function main() {
   const result = await runShieldSecurityScan();
-  console.log(JSON.stringify({ success: true, result }, null, 2));
+  const failed = result.results.filter(item => item.error);
+  console.log(JSON.stringify({ success: failed.length === 0, result }, null, 2));
   await pool.end();
+  if (failed.length > 0) process.exit(1);
 }
 
 main().catch(async (err) => {
