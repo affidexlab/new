@@ -91,6 +91,48 @@ router.get('/overview', async (req, res) => {
   }
 });
 
+
+router.get('/products', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'products:admin'))) return;
+    const { rows } = await pool.query(
+      `SELECT * FROM product_control_settings ORDER BY
+       CASE priority WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+       product_name ASC`
+    );
+    return res.json({ success: true, products: rows });
+  } catch (err) {
+    console.error('❌ Product settings list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch product settings.' });
+  }
+});
+
+router.patch('/products/:productKey', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'products:admin'))) return;
+    const { publicStatus, acceptingCustomers, priority, owner, opsNotes, publicMessage } = req.body || {};
+    const { rows } = await pool.query(
+      `UPDATE product_control_settings
+       SET public_status = COALESCE($1, public_status),
+           accepting_customers = COALESCE($2, accepting_customers),
+           priority = COALESCE($3, priority),
+           owner = COALESCE($4, owner),
+           ops_notes = COALESCE($5, ops_notes),
+           public_message = COALESCE($6, public_message),
+           updated_by = $7,
+           updated_at = NOW()
+       WHERE product_key = $8
+       RETURNING *`,
+      [publicStatus || null, typeof acceptingCustomers === 'boolean' ? acceptingCustomers : null, priority || null, owner || null, opsNotes || null, publicMessage || null, req.admin?.name || 'founder-dashboard', req.params.productKey]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Product not found.' });
+    return res.json({ success: true, product: rows[0] });
+  } catch (err) {
+    console.error('❌ Product settings update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update product settings.' });
+  }
+});
+
 router.post('/keys', async (req, res) => {
   try {
     if (!(await authorizeAdmin(req, res, 'admin:keys'))) return;
