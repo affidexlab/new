@@ -1,8 +1,29 @@
+import crypto from 'crypto';
 import express from 'express';
 import pool from '../../db/connection.js';
 import { addRiskEdge, addRiskLabel, screenWalletInternal } from '../../services/internalRiskEngine.js';
+import { ingestAlchemyTransfers, ingestAlchemyWebhookActivity } from '../../services/alchemyGraphIngestionService.js';
 
 const router = express.Router();
+function safeEqualHex(left, right) {
+  const a = Buffer.from(String(left || ''), 'hex');
+  const b = Buffer.from(String(right || '').replace(/^sha256=/i, ''), 'hex');
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+}
+
+function verifyAlchemyWebhook(req) {
+  const signingKey = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
+  if (signingKey) {
+    const signature = req.headers['x-alchemy-signature'];
+    const digest = crypto.createHmac('sha256', signingKey).update(req.rawBody || Buffer.from(JSON.stringify(req.body || {}))).digest('hex');
+    return safeEqualHex(digest, signature);
+  }
+
+  const sharedSecret = process.env.ALCHEMY_WEBHOOK_SECRET;
+  if (sharedSecret) return req.headers['x-alchemy-webhook-secret'] === sharedSecret;
+  return true;
+}
+
 const requireAdmin = (req, res) => {
   if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
     res.status(401).json({ success: false, error: 'Unauthorized.' });
@@ -84,6 +105,92 @@ router.patch('/weights/:category', async (req, res) => {
   } catch (err) {
     console.error('❌ Risk weight update error:', err);
     return res.status(500).json({ success: false, error: 'Could not update category weight.' });
+  }
+});
+
+router.post('/ingest/alchemy-transfers', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const result = await ingestAlchemyTransfers(req.body);
+    return res.status(202).json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Alchemy transfer ingestion error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Could not ingest Alchemy transfers.' });
+  }
+});
+
+router.get('/webhooks/alchemy', (_req, res) => res.status(200).send('ok'));
+
+router.post('/webhooks/alchemy', async (req, res) => {
+  try {
+    if (!verifyAlchemyWebhook(req)) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const activity = req.body?.event?.activity || req.body?.activity || [];
+    const chain = req.body?.event?.network || req.body?.network || req.body?.chain || 'ethereum';
+    const result = await ingestAlchemyWebhookActivity({ chain, activity });
+    return res.status(200).json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Alchemy webhook ingestion error:', err);
+    return res.status(500).json({ success: false, error: 'Could not ingest webhook activity.' });
+  }
+});
+
+router.post('/case-reviews', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { screeningId = null, walletAddress, chain = 'ethereum', analyst, decision, category = null, severity = 'high', notes = null } = req.body;
+    if (!walletAddress) return res.status(400).json({ success: false, error: 'walletAddress is required.' });
+    if (!analyst?.trim()) return res.status(400).json({ success: false, error: 'analyst is required.' });
+    if (!['confirmed_risk', 'false_positive', 'needs_more_data', 'trusted'].includes(decision)) return res.status(400).json({ success: false, error: 'Invalid decision.' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO risk_case_reviews (screening_id, wallet_address, chain, analyst, decision, category, severity, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [screeningId, walletAddress.toLowerCase(), String(chain).toLowerCase(), analyst, decision, category, severity, notes]
+    );
+
+    let label = null;
+    let feedbackApplied = null;
+    if (decision === 'confirmed_risk' && category) {
+      label = await addRiskLabel({
+        chain,
+        address: walletAddress,
+        category,
+        label: `Analyst-confirmed ${category}`,
+        severity,
+        confidence: 0.9,
+        source: 'decaflow-analyst-review',
+        evidence: notes,
+        metadata: { screeningId, analyst, reviewId: rows[0].id }
+      });
+      feedbackApplied = 'created_confirmed_risk_label';
+    } else if (decision === 'false_positive') {
+      const params = [String(chain).toLowerCase(), walletAddress.toLowerCase()];
+      let categoryFilter = '';
+      if (category) {
+        params.push(category);
+        categoryFilter = ` AND category = $${params.length}`;
+      }
+      const update = await pool.query(
+        `UPDATE risk_address_labels
+         SET active = false, updated_at = NOW(), metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deactivatedByReviewId', $${params.length + 1}, 'deactivationDecision', 'false_positive')
+         WHERE chain = $1 AND lower(address) = $2${categoryFilter} AND source != 'ofac-sdn' AND active = true`,
+        [...params, rows[0].id]
+      );
+      feedbackApplied = `deactivated_${update.rowCount}_labels`;
+    } else if (decision === 'trusted') {
+      const update = await pool.query(
+        `UPDATE risk_address_labels
+         SET active = false, updated_at = NOW(), metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deactivatedByReviewId', $3, 'deactivationDecision', 'trusted')
+         WHERE chain = $1 AND lower(address) = $2 AND source NOT IN ('ofac-sdn', 'un-consolidated', 'eu-consolidated', 'uk-hmt-consolidated') AND active = true`,
+        [String(chain).toLowerCase(), walletAddress.toLowerCase(), rows[0].id]
+      );
+      feedbackApplied = `deactivated_${update.rowCount}_labels`;
+    }
+
+    return res.status(201).json({ success: true, review: rows[0], label, feedbackApplied });
+  } catch (err) {
+    console.error('❌ Risk case review error:', err);
+    return res.status(500).json({ success: false, error: 'Could not record case review.' });
   }
 });
 

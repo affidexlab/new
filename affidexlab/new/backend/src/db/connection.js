@@ -260,6 +260,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/017_case_review_feedback.sql');
+    console.log('✅ Risk case feedback migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Risk case feedback migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Risk case feedback migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 

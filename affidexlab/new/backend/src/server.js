@@ -105,7 +105,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key', 'X-Alchemy-Signature', 'X-Alchemy-Webhook-Secret']
 }));
 
 // Stripe needs the raw, unparsed request body to verify webhook signatures, so this
@@ -113,7 +113,11 @@ app.use(cors({
 // raw parser scoped to just this one path. Every other route keeps using JSON as normal.
 app.use('/v1/shield/webhook', express.raw({ type: 'application/json' }), shieldWebhook);
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
