@@ -26,6 +26,7 @@ import institutionalRoutes from './routes/v1/institutional.js';
 import agentsRoutes from './routes/v1/agents.js';
 import partnersRoutes from './routes/v1/partners.js';
 import riskRoutes from './routes/v1/risk.js';
+import adminRoutes from './routes/v1/admin.js';
 
 dotenv.config();
 
@@ -200,6 +201,7 @@ app.use('/v1/institutional', institutionalRoutes);  // Institutional/RWA waitlis
 app.use('/v1/agents', agentsRoutes);         // Compliance workflow rules + human review queue
 app.use('/v1/partners', partnersRoutes);     // Partner dashboard + usage stats
 app.use('/v1/risk', riskRoutes);             // DecaFlow-owned risk intelligence graph/admin
+app.use('/v1/admin', adminRoutes);            // Scoped admin keys and audit logs
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {
