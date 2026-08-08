@@ -122,8 +122,12 @@ async function main() {
       results.push({ source: source.key, error: err.message });
     }
   }
-  console.log(JSON.stringify({ success: true, results }, null, 2));
+  const errors = results.filter(result => result.error);
+  console.log(JSON.stringify({ success: errors.length === 0, results }, null, 2));
   await pool.end();
+  if (errors.length && process.env.ALLOW_PARTIAL_SANCTIONS_INGESTION !== 'true') {
+    throw new Error(`${errors.length} public sanctions source(s) failed: ${errors.map(e => e.source).join(', ')}`);
+  }
 }
 
 main().catch(async (err) => {

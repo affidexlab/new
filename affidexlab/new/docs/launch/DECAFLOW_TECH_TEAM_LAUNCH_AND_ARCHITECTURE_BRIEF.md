@@ -405,3 +405,13 @@ How to run manually:
 6. Run it and check logs.
 
 This is the best free/low-friction replacement for Render Shell because it uses the same production DB secrets, creates logs, supports scheduling, and avoids exposing production database credentials on a personal laptop.
+
+## Post-run review update — ingestion and scanner truthfulness
+
+The first successful GitHub Actions run proved the runner can reach production secrets and the database, but the logs showed three operational issues that must be treated as launch blockers, not ignored:
+
+1. OFAC ingestion returned zero labels because OFAC now publishes most crypto addresses in `idList` fields, not only in remarks. The parser has been updated to read both formats and to fail loudly if it ever finds zero digital-currency labels again.
+2. EU sanctions ingestion returned 403 from the default EU endpoint. This requires a proper EU FSF crawler/token URL stored in `EU_CONSOLIDATED_SANCTIONS_URL`, or the pipeline will now fail instead of pretending partial coverage is complete.
+3. The Alchemy free tier limits `eth_getLogs` requests to a 10-block range. Shield scanner defaults are now set to 10 blocks so scans work on the free tier, but production-grade monitoring should use PAYG/private RPCs or chain-specific indexed webhooks for wider catch-up windows.
+
+Calibration now exits non-zero when a known risky/sanctioned calibration case fails, unless deliberately run with `--allow-fail`. This prevents a green workflow from hiding an ineffective risk dataset.

@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const file = process.argv[2] || join(__dirname, '../data/riskCalibrationCases.json');
 const shouldApply = process.argv.includes('--apply');
+const allowFail = process.argv.includes('--allow-fail');
 
 function recommendationRank(value) {
   return { APPROVE: 0, REVIEW: 1, REJECT: 2 }[value] ?? 0;
@@ -47,8 +48,12 @@ async function main() {
       adjustment
     });
   }
-  console.log(JSON.stringify({ success: true, applied: shouldApply, results }, null, 2));
+  const failed = results.filter(result => !result.pass);
+  console.log(JSON.stringify({ success: failed.length === 0, applied: shouldApply, results }, null, 2));
   await pool.end();
+  if (failed.length && !allowFail) {
+    throw new Error(`${failed.length} risk calibration case(s) failed`);
+  }
 }
 
 main().catch(async (err) => {

@@ -193,3 +193,7 @@ This improves launch readiness, but it does not remove the need for production o
 The team does not need Render Shell to operate ingestion. GitHub Actions has been added as the production ops runner. It can refresh sanctions and curated labels every 6 hours, run calibration, and run Shield monitoring/scanning every 15 minutes using GitHub encrypted secrets.
 
 Leadership only needs to make sure the required production secrets are added to GitHub and that the first manual run succeeds from the Actions tab.
+
+## Post-run review update
+
+The GitHub Actions runner works, but the first run exposed operational gaps: OFAC parsing needed an update, EU sanctions requires a proper tokenized download URL, and Alchemy free-tier RPCs require small scan ranges. The team updated the code so these issues fail loudly instead of producing misleading green runs. This is good governance: a security product should prefer a noisy failure over a quiet blind spot.

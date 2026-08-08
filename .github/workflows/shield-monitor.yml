@@ -35,6 +35,8 @@ jobs:
           RPC_OPTIMISM: ${{ secrets.RPC_OPTIMISM }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_CA_CERT: ${{ secrets.DATABASE_CA_CERT }}
+          SHIELD_SECURITY_SCAN_LOOKBACK_BLOCKS: 10
+          SHIELD_SECURITY_SCAN_MAX_RANGE: 10
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}

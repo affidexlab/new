@@ -27,6 +27,7 @@ jobs:
       NODE_ENV: production
       RISK_PROVIDER: internal
       ALLOW_DEMO_RISK: 'false'
+      ALLOW_PARTIAL_SANCTIONS_INGESTION: 'false'
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DATABASE_CA_CERT: ${{ secrets.DATABASE_CA_CERT }}
       ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}

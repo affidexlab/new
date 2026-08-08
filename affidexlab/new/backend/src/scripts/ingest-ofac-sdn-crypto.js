@@ -7,6 +7,7 @@ function chainForAddress(address, currency = '') {
   const c = String(currency || '').toUpperCase();
   if (/^0x[a-fA-F0-9]{40}$/.test(address) || c.includes('ETH')) return 'ethereum';
   if (c.includes('XBT') || c.includes('BTC')) return 'bitcoin';
+  if (c.includes('TRX') || c.includes('TRON')) return 'tron';
   if (c.includes('LTC')) return 'litecoin';
   if (c.includes('ZEC')) return 'zcash';
   if (c.includes('DASH')) return 'dash';
@@ -25,28 +26,50 @@ function extractNames(entryXml) {
   return stripXml(`${first} ${last} ${title}`) || 'OFAC SDN listed entity';
 }
 
+function buildLabel({ name, currency, address, evidence }) {
+  return {
+    chain: chainForAddress(address, currency),
+    address,
+    category: 'sanctions',
+    label: `OFAC SDN: ${name}`,
+    severity: 'critical',
+    confidence: 1,
+    source: 'ofac-sdn',
+    evidence,
+    metadata: { currency, name }
+  };
+}
+
 function extractDigitalCurrencyAddresses(xml) {
   const entries = xml.match(/<sdnEntry>[\s\S]*?<\/sdnEntry>/gi) || [];
   const labels = [];
+  const seen = new Set();
   for (const entry of entries) {
     const name = extractNames(entry);
     const remarks = stripXml(/<remarks>([\s\S]*?)<\/remarks>/i.exec(entry)?.[1] || '');
-    const regex = /Digital Currency Address\s*-\s*([A-Z0-9]+)\s+([^;\]<\s]+)/gi;
-    let match;
-    while ((match = regex.exec(remarks))) {
-      const currency = match[1];
-      const address = match[2].replace(/[.,)]$/, '');
-      labels.push({
-        chain: chainForAddress(address, currency),
-        address,
-        category: 'sanctions',
-        label: `OFAC SDN: ${name}`,
-        severity: 'critical',
-        confidence: 1,
-        source: 'ofac-sdn',
-        evidence: `${currency} digital currency address in OFAC SDN remarks`,
-        metadata: { currency, name }
-      });
+
+    const remarksRegex = /Digital Currency Address\s*-\s*([A-Z0-9]+)\s+([^;\]<\s]+)/gi;
+    let remarksMatch;
+    while ((remarksMatch = remarksRegex.exec(remarks))) {
+      const currency = remarksMatch[1];
+      const address = remarksMatch[2].replace(/[.,)]$/, '');
+      const key = `${currency}:${address}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      labels.push(buildLabel({ name, currency, address, evidence: `${currency} digital currency address in OFAC SDN remarks` }));
+    }
+
+    const ids = entry.match(/<id>[\s\S]*?<\/id>/gi) || [];
+    for (const id of ids) {
+      const idType = stripXml(/<idType>([\s\S]*?)<\/idType>/i.exec(id)?.[1] || '');
+      if (!/^Digital Currency Address\s*-/i.test(idType)) continue;
+      const currency = idType.split('-').slice(1).join('-').trim();
+      const address = stripXml(/<idNumber>([\s\S]*?)<\/idNumber>/i.exec(id)?.[1] || '').replace(/[.,)]$/, '');
+      if (!address) continue;
+      const key = `${currency}:${address}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      labels.push(buildLabel({ name, currency, address, evidence: `${currency} digital currency address in OFAC SDN idList` }));
     }
   }
   return labels;
@@ -63,6 +86,7 @@ async function main() {
     count += 1;
   }
   console.log(`✅ Ingested ${count} OFAC SDN digital currency labels`);
+  if (count === 0) throw new Error('OFAC SDN ingestion found zero digital currency labels; parser/source likely needs review.');
   await pool.end();
 }
 

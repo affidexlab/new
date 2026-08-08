@@ -74,7 +74,7 @@ async function getCursor(chain, address, currentBlock, lookbackBlocks) {
     [chain, address]
   );
   if (rows[0]) return Number(rows[0].last_block) + 1;
-  return Math.max(0, currentBlock - Number(lookbackBlocks || process.env.SHIELD_SECURITY_SCAN_LOOKBACK_BLOCKS || 200));
+  return Math.max(0, currentBlock - Number(lookbackBlocks || process.env.SHIELD_SECURITY_SCAN_LOOKBACK_BLOCKS || 10));
 }
 
 async function setCursor(chain, address, blockNumber) {
@@ -133,7 +133,7 @@ async function scanContract(contract, options = {}) {
   if (!provider) return { ...contract, skipped: true, reason: `RPC URL missing for ${contract.chain}` };
 
   const currentBlock = await provider.getBlockNumber();
-  const maxRange = Number(options.maxRange || process.env.SHIELD_SECURITY_SCAN_MAX_RANGE || 2000);
+  const maxRange = Number(options.maxRange || process.env.SHIELD_SECURITY_SCAN_MAX_RANGE || 10);
   const fromBlock = await getCursor(contract.chain, contract.address, currentBlock, options.lookbackBlocks);
   const toBlock = Math.min(currentBlock, fromBlock + maxRange);
   const alerts = [];

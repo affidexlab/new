@@ -306,3 +306,7 @@ When a customer asks what they need to provide, ask for chain, contract address,
 ## Operations note for BD
 
 DecaFlow production risk ingestion and Shield monitoring can run from GitHub Actions, so Render Shell is not a dependency for launch operations. BD should not mention the internal runner to customers unless asked; the customer-facing point is that DecaFlow runs scheduled sanctions refreshes, curated-label refreshes, graph/scanner jobs, and alert workflows.
+
+## Post-run review update
+
+BD should not claim complete sanctions coverage until the EU sanctions URL/token issue is resolved and calibration passes with real production data. The strongest current claim remains: DecaFlow owns the engine, ingestion, scoring, alerts, and feedback loop, and is expanding coverage through scheduled data operations.
