@@ -14,7 +14,7 @@ interface LeaderboardEntry {
 
 type Period = 'all' | 'weekly' | 'monthly';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 const formatCurrency = (value?: number, digits = 0) => {
   if (value === undefined || value === null || Number.isNaN(value)) {

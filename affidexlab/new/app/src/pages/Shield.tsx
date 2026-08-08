@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const FEATURES = [
   { icon: "📡", title: "Continuous On-Chain Monitoring", desc: "Your deployed contracts are watched on an ongoing basis, not checked once and forgotten. Balance, ownership, and admin-function changes are tracked automatically." },

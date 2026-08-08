@@ -1,3 +1,4 @@
+import { API_BASE } from './apiBase';
 import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountIdempotentInstruction, createTransferInstruction, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
@@ -332,7 +333,6 @@ export async function getUserStake(
   walletAddress: PublicKey
 ): Promise<UserStake | null> {
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
     const response = await fetch(`${API_BASE}/v1/solana-staking/stake-info?wallet=${walletAddress.toString()}`);
     const data = await response.json();
     
@@ -363,7 +363,6 @@ export async function getUserStake(
 
 export async function getVDMPriceUsdt(): Promise<{ priceUsd: number; timestamp: number; source?: string } | null> {
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
     const response = await fetch(`${API_BASE}/v1/solana-staking/vdm-price`);
     const data = await response.json();
 
@@ -399,7 +398,6 @@ export async function getVDMPriceUsdt(): Promise<{ priceUsd: number; timestamp: 
 
 export async function getPoolStats(): Promise<PoolStats | null> {
   try {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
     const response = await fetch(`${API_BASE}/v1/solana-staking/pool-stats`);
     const data = await response.json();
     
@@ -583,7 +581,6 @@ export async function registerOffchainStake(
   lockPeriod: LockPeriod,
   depositSignature: string,
 ): Promise<any> {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
   
   const response = await fetch(`${API_BASE}/v1/solana-staking/stake`, {
     method: 'POST',
@@ -614,7 +611,6 @@ export async function registerOffchainStake(
 export async function requestOffchainClaim(
   walletAddress: PublicKey,
 ): Promise<{ principalAmount: number; principalValueUsdtSnapshot: number; rewardsAmount: number; vdmPriceUsdtSnapshot: number; withdrawalFee: number }> {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
   
   const response = await fetch(`${API_BASE}/v1/solana-staking/claim`, {
     method: 'POST',

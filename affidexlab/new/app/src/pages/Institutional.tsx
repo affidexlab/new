@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const FEATURES = [
   { icon: "🪪", title: "On-Chain Identity Registry", desc: "ERC-3643 (T-REX) identity registry — wallets carry a verified compliance status without exposing personal data on a public ledger." },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 export default function Contact() {
   useEffect(() => { document.title = "Contact Us | DecaFlow"; }, []);

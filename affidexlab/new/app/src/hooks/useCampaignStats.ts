@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 export interface GlobalStats {
   totalTrades: number;

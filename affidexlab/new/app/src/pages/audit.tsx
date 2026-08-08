@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const AUDIT_SCOPE = [
   { icon: "🔐", title: "Reentrancy Vulnerabilities", desc: "Detect cross-function, cross-contract, and read-only reentrancy patterns before they cost your users everything." },

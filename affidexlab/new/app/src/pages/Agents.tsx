@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const FEATURES = [
   { icon: "⚙️", title: "Configurable Workflow Rules", desc: "Set conditions like \"if risk score > 80, flag for review\" — no code, applied automatically to every check that runs through your account." },

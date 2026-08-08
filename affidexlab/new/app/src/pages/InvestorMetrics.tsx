@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, DollarSign, Users, Activity, BarChart3, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 interface InvestorData {
   tvl: {

@@ -3,7 +3,7 @@ import { useAccount } from "wagmi";
 import { TrendingUp, Activity, Users, Zap, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useTransactionEvents } from "@/contexts/TransactionEventsContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 interface AnalyticsData {
   totalVolume: string;

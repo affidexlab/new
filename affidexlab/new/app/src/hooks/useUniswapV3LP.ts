@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 import { readContract } from 'wagmi/actions';
 import { config } from '@/wagmi';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 const PARTNER_ID = import.meta.env.VITE_PARTNER_ID || 'tychi_prod_pk_live_8x9y2z3a4b5c6d7e';
 const defaultHeaders: HeadersInit = {
   'Content-Type': 'application/json',

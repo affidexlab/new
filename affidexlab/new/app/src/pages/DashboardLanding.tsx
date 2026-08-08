@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, TrendingUp, Shield, Database, Bell, Code, Menu, X, Check } from "lucide-react";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com').trim().replace(/\/+$/, '');
+import { API_BASE } from "../lib/apiBase";
 
 export default function DashboardLanding() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { safeCompare } from '../../utils/security.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -320,6 +321,12 @@ router.post('/payment-request', async (req, res) => {
     if (!companyName?.trim()) return res.status(400).json({ success: false, error: 'Company name is required.' });
     if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
 
+    await pool.query(
+      `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, status)
+       VALUES ($1, $2, $3, $4, 'bank', 'pending_payment')`,
+      [companyName, contactName || null, email, plan]
+    );
+
     await sendEnquiryEmail({
       type: 'Agents', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
       subject: `[DecaFlow] Agents bank transfer request — ${companyName}`,
@@ -346,7 +353,12 @@ router.post('/nowpayments/create-invoice', async (req, res) => {
     if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
 
     const priceUsd = PLAN_PRICES_CENTS[plan] / 100;
-    const orderId = `agents-${crypto.randomBytes(8).toString('hex')}`;
+    const insertResult = await pool.query(
+      `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, status)
+       VALUES ($1, $2, $3, $4, 'nowpayments', 'pending_payment') RETURNING id`,
+      [companyName, contactName || null, email, plan]
+    );
+    const orderId = `agents-${insertResult.rows[0].id}`;
     const apiBase = process.env.NOWPAYMENTS_ENV === 'sandbox' ? 'https://api-sandbox.nowpayments.io' : 'https://api.nowpayments.io';
     const frontendUrl = process.env.FRONTEND_URL || 'https://decaflow.xyz';
     const backendUrl = process.env.BACKEND_URL || 'https://decaflow-backend.onrender.com';
@@ -364,6 +376,8 @@ router.post('/nowpayments/create-invoice', async (req, res) => {
     const npData = await npRes.json();
     const invoiceUrl = npData.invoice_url || npData.url;
     if (!npRes.ok || !invoiceUrl) return res.status(502).json({ success: false, error: 'Could not start crypto checkout.' });
+
+    await pool.query(`UPDATE agents_customers SET gateway_order_id = $1 WHERE id = $2`, [String(npData.id || npData.invoice_id || orderId), insertResult.rows[0].id]);
 
     await sendEnquiryEmail({
       type: 'Agents', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
@@ -384,20 +398,39 @@ router.post('/nowpayments/callback', async (req, res) => {
     const sig = req.headers['x-nowpayments-sig'];
     const sortObjectKeys = (obj) => Object.keys(obj).sort().reduce((r, k) => { r[k] = (obj[k] && typeof obj[k] === 'object') ? sortObjectKeys(obj[k]) : obj[k]; return r; }, {});
     const expectedSig = crypto.createHmac('sha512', process.env.NOWPAYMENTS_IPN_SECRET).update(JSON.stringify(sortObjectKeys(req.body))).digest('hex');
-    if (!sig || sig !== expectedSig) return res.status(403).send('invalid signature');
-    res.status(200).send('ok');
-    // Payment confirmation here notifies your team — deliberately does NOT auto-provision
-    // any workflow-rule capability. Same reasoning as Institutional: no system exists yet
-    // to instantly grant access to, so this stays a notification, not an activation.
-    if (req.body.payment_status === 'finished') {
+    if (!sig || !safeCompare(sig, expectedSig)) return res.status(403).send('invalid signature');
+
+    const { order_id, payment_status, pay_currency, pay_amount, payment_id } = req.body;
+    const match = /^agents-(\d+)$/.exec(order_id || '');
+    if (!match) return res.status(200).send('ok');
+
+    const dbId = match[1];
+    const { rows } = await pool.query(`SELECT * FROM agents_customers WHERE id = $1`, [dbId]);
+    const customer = rows[0];
+    if (!customer) return res.status(200).send('ok');
+
+    if (payment_status === 'finished' && customer.status !== 'paid_queued') {
+      await pool.query(
+        `UPDATE agents_customers SET status = 'paid_queued', gateway_order_id = $1, updated_at = NOW() WHERE id = $2`,
+        [String(payment_id), dbId]
+      );
+
+      res.status(200).send('ok');
+
       sendEnquiryEmail({
         type: 'Agents', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
-        subject: `[DecaFlow] Agents payment confirmed — ${req.body.order_id}`,
-        fields: { 'Order ID': req.body.order_id, Amount: `${req.body.pay_amount} ${req.body.pay_currency}` },
+        subject: `[DecaFlow] Agents payment confirmed — ${order_id}`,
+        fields: { Company: customer.company_name, Email: customer.email, Plan: customer.plan, 'Order ID': order_id, Amount: `${pay_amount} ${pay_currency}` },
       }).catch(err => console.error('Agents payment notify failed:', err));
+    } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
+      await pool.query(`UPDATE agents_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
+      res.status(200).send('ok');
+    } else {
+      res.status(200).send('ok');
     }
   } catch (err) {
     console.error('❌ Agents NOWPayments callback error:', err);
+    if (!res.headersSent) return res.status(500).send('callback processing failed');
   }
 });
 

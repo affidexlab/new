@@ -28,7 +28,7 @@ interface Transaction {
   created_at: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 export default function PointsDashboard() {
   const { address, isConnected } = useAccount();

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const FEATURES = [
   { icon: "🌍", title: "Global Sanctions Coverage", desc: "Real-time checks against OFAC, UN Security Council, EU, HMT (UK), and FATF blacklists. Updated within minutes of every new designation." },

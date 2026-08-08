@@ -34,7 +34,7 @@ import {
   Award,
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 export function AdvancedAnalytics() {
   const { address } = useAccount();

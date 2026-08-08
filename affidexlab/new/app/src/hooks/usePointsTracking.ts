@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAccount, useWatchBlockNumber } from 'wagmi';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 
 interface TransactionData {
   txHash: string;

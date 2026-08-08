@@ -16,10 +16,16 @@ const __dirname = dirname(__filename);
 // actually valid — a MITM on the network path could present any certificate and go
 // unnoticed. Now verifies properly by default, using Node's built-in public CA trust
 // store (covers Supabase's current certs for most projects). If a specific deployment
-// needs a pinned/custom CA (self-hosted Postgres, private CA, etc.), point
-// DATABASE_CA_CERT_PATH at a PEM file rather than disabling verification again.
+// needs a pinned/custom CA (Supabase pooler, self-hosted Postgres, private CA,
+// etc.), set DATABASE_CA_CERT to the PEM contents or point DATABASE_CA_CERT_PATH
+// at a PEM file rather than disabling verification again.
 function buildSslConfig() {
   if (process.env.NODE_ENV !== 'production') return false;
+
+  if (process.env.DATABASE_CA_CERT) {
+    return { rejectUnauthorized: true, ca: process.env.DATABASE_CA_CERT.replace(/\\n/g, '\n') };
+  }
+
   const caPath = process.env.DATABASE_CA_CERT_PATH;
   if (caPath) {
     try {
@@ -206,6 +212,20 @@ export const initializeDatabase = async () => {
       console.log('ℹ️  Compliance workflows migration already applied');
     } else if (migrationError.code === 'ENOENT') {
       console.log('ℹ️  Compliance workflows migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
+  try {
+    await runSqlFile('migrations/014_agents_tables.sql');
+    console.log('✅ Agents tables migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Agents tables migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Agents tables migration file not found, skipping');
     } else {
       console.warn('⚠️  Migration warning:', migrationError.message);
       throw migrationError;

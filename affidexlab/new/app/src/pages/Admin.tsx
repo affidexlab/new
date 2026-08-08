@@ -22,7 +22,7 @@ interface Multiplier {
   active: boolean;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'admin-2025';
 
 export default function Admin() {

@@ -10,6 +10,11 @@ const { Pool } = pg;
 
 function buildSslConfig() {
   if (process.env.NODE_ENV !== 'production') return false;
+
+  if (process.env.DATABASE_CA_CERT) {
+    return { rejectUnauthorized: true, ca: process.env.DATABASE_CA_CERT.replace(/\\n/g, '\n') };
+  }
+
   const caPath = process.env.DATABASE_CA_CERT_PATH;
   if (caPath) {
     try {

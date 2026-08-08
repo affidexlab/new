@@ -41,7 +41,7 @@ interface Investment {
   returns?: number;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://decaflow-backend.onrender.com';
+import { API_BASE } from "../lib/apiBase";
 const ADMIN_PASSWORD = import.meta.env.VITE_VDM_ADMIN_PASSWORD || 'vdm-admin-2025';
 
 export default function VDMAdmin() {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "https://decaflow-backend.onrender.com";
+import { API_BASE } from "../lib/apiBase";
 
 const FEATURES = [
   { icon: "🔍", title: "Real-Time Transaction Monitoring", desc: "Every on-chain transaction is scored the moment it hits the mempool. Suspicious patterns flagged before settlement — not after." },
