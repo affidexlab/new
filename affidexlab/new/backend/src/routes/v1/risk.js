@@ -11,12 +11,22 @@ function safeEqualHex(left, right) {
   return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
 }
 
+function configuredAlchemySigningKeys() {
+  return [
+    process.env.ALCHEMY_WEBHOOK_SIGNING_KEY,
+    ...(process.env.ALCHEMY_WEBHOOK_SIGNING_KEYS || '').split(',')
+  ].map(key => key?.trim()).filter(Boolean);
+}
+
 function verifyAlchemyWebhook(req) {
-  const signingKey = process.env.ALCHEMY_WEBHOOK_SIGNING_KEY;
-  if (signingKey) {
+  const signingKeys = configuredAlchemySigningKeys();
+  if (signingKeys.length) {
     const signature = req.headers['x-alchemy-signature'];
-    const digest = crypto.createHmac('sha256', signingKey).update(req.rawBody || Buffer.from(JSON.stringify(req.body || {}))).digest('hex');
-    return safeEqualHex(digest, signature);
+    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+    return signingKeys.some((signingKey) => {
+      const digest = crypto.createHmac('sha256', signingKey).update(rawBody).digest('hex');
+      return safeEqualHex(digest, signature);
+    });
   }
 
   const sharedSecret = process.env.ALCHEMY_WEBHOOK_SECRET;
