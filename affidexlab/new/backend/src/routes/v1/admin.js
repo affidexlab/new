@@ -191,13 +191,137 @@ router.patch('/keys/:id', async (req, res) => {
   }
 });
 
+
+router.get('/customers', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
+    const safeRows = async (query, params = []) => {
+      try { const { rows } = await pool.query(query, params); return rows; } catch { return []; }
+    };
+    const [orgs, shield, agents, institutional, verify, compliance, audit] = await Promise.all([
+      safeRows(`SELECT 'organization' AS source, id, name AS company_name, billing_email AS email, plan, status, created_at FROM organizations ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'shield' AS source, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at FROM shield_customers ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'agents' AS source, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at FROM agents_customers ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'institutional' AS source, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at FROM institutional_customers ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'verify_enquiry' AS source, id, company_name, email, plan, status, created_at FROM verify_enquiries ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'compliance_enquiry' AS source, id, company_name, email, plan, status, created_at FROM compliance_enquiries ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'audit_enquiry' AS source, id, project_name AS company_name, email, audit_package AS plan, status, created_at FROM audit_enquiries ORDER BY created_at DESC LIMIT 100`)
+    ]);
+    return res.json({ success: true, customers: [...orgs, ...shield, ...agents, ...institutional, ...verify, ...compliance, ...audit].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200) });
+  } catch (err) {
+    console.error('❌ Admin customers error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch customers.' });
+  }
+});
+
+router.get('/payments', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
+    const safeRows = async (query) => { try { const { rows } = await pool.query(query); return rows; } catch { return []; } };
+    const [shield, agents, institutional] = await Promise.all([
+      safeRows(`SELECT 'shield' AS product, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at, updated_at FROM shield_customers ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'agents' AS product, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at, updated_at FROM agents_customers ORDER BY created_at DESC LIMIT 100`),
+      safeRows(`SELECT 'institutional' AS product, id, company_name, email, plan, status, payment_gateway, gateway_order_id, created_at, updated_at FROM institutional_customers ORDER BY created_at DESC LIMIT 100`)
+    ]);
+    return res.json({ success: true, payments: [...shield, ...agents, ...institutional].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200) });
+  } catch (err) {
+    console.error('❌ Admin payments error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch payments.' });
+  }
+});
+
+router.get('/members', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { rows } = await pool.query(
+      `SELECT m.id, m.organization_id, o.name AS organization_name, u.email, u.name, m.role, m.status, m.created_at, m.updated_at
+       FROM org_memberships m JOIN organizations o ON o.id = m.organization_id JOIN org_users u ON u.id = m.user_id
+       ORDER BY m.created_at DESC LIMIT 200`
+    );
+    return res.json({ success: true, members: rows });
+  } catch (err) {
+    console.error('❌ Admin members error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch members.' });
+  }
+});
+
+router.patch('/members/:id', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { role, status } = req.body || {};
+    const { rows } = await pool.query(
+      `UPDATE org_memberships SET role = COALESCE($1, role), status = COALESCE($2, status), updated_at = NOW() WHERE id = $3 RETURNING *`,
+      [role || null, status || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Member not found.' });
+    return res.json({ success: true, member: rows[0] });
+  } catch (err) {
+    console.error('❌ Admin member update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update member.' });
+  }
+});
+
+router.get('/org-api-keys', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { rows } = await pool.query(
+      `SELECT k.id, k.organization_id, o.name AS organization_name, k.name, k.scopes, k.active, k.expires_at, k.last_used_at, k.created_at, k.updated_at
+       FROM org_api_keys k JOIN organizations o ON o.id = k.organization_id ORDER BY k.created_at DESC LIMIT 200`
+    );
+    return res.json({ success: true, keys: rows });
+  } catch (err) {
+    console.error('❌ Org API keys list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch organization API keys.' });
+  }
+});
+
+router.patch('/org-api-keys/:id', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { active, name, scopes, expiresAt } = req.body || {};
+    const normalizedScopes = Array.isArray(scopes) ? scopes.map(String).filter(Boolean) : scopes ? String(scopes).split(',').map(s => s.trim()).filter(Boolean) : null;
+    const { rows } = await pool.query(
+      `UPDATE org_api_keys SET active = COALESCE($1, active), name = COALESCE($2, name), scopes = COALESCE($3, scopes), expires_at = COALESCE($4, expires_at), updated_at = NOW() WHERE id = $5 RETURNING *`,
+      [typeof active === 'boolean' ? active : null, name?.trim() || null, normalizedScopes ? JSON.stringify(normalizedScopes) : null, expiresAt || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'API key not found.' });
+    return res.json({ success: true, key: rows[0] });
+  } catch (err) {
+    console.error('❌ Org API key update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update organization API key.' });
+  }
+});
+
+router.patch('/shield-incidents/:id', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'shield:admin'))) return;
+    const { status, assignedTo, summary, nextSteps } = req.body || {};
+    const { rows } = await pool.query(
+      `UPDATE shield_incidents SET status = COALESCE($1, status), assigned_to = COALESCE($2, assigned_to), summary = COALESCE($3, summary), next_steps = COALESCE($4, next_steps), updated_at = NOW(), closed_at = CASE WHEN $1 = 'closed' THEN NOW() ELSE closed_at END WHERE id = $5 RETURNING *`,
+      [status || null, assignedTo || null, summary || null, nextSteps || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Incident not found.' });
+    return res.json({ success: true, incident: rows[0] });
+  } catch (err) {
+    console.error('❌ Admin incident update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update incident.' });
+  }
+});
+
 router.get('/audit-logs', async (req, res) => {
   try {
     if (!(await authorizeAdmin(req, res, 'admin:audit'))) return;
-    const { limit = 100, offset = 0 } = req.query;
+    const { limit = 100, offset = 0, principal, scope, allowed } = req.query;
+    const params = [];
+    const where = [];
+    if (principal) { params.push(`%${principal}%`); where.push(`principal ILIKE $${params.length}`); }
+    if (scope) { params.push(scope); where.push(`scope = $${params.length}`); }
+    if (allowed === 'true' || allowed === 'false') { params.push(allowed === 'true'); where.push(`allowed = $${params.length}`); }
+    params.push(Number(limit), Number(offset));
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const { rows } = await pool.query(
-      `SELECT * FROM admin_audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-      [Number(limit), Number(offset)]
+      `SELECT * FROM admin_audit_logs ${whereSql} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
     );
     return res.json({ success: true, logs: rows });
   } catch (err) {
