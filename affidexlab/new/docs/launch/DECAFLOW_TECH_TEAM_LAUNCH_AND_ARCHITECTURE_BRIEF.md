@@ -363,3 +363,45 @@ Authorization: Bearer df_admin_...
 ```
 
 After confirming the new key works, remove or rotate the legacy `ADMIN_KEY`. The database stores only the SHA-256 hash and logs admin attempts to `admin_audit_logs`.
+
+## Render Shell alternative — GitHub Actions ops runner
+
+Render Shell is not required. The repo now includes GitHub Actions workflows that run production operations against the production database using GitHub encrypted secrets:
+
+- `.github/workflows/production-risk-ingestion.yml` runs OFAC, public sanctions, curated labels, and calibration every 6 hours, and can also be triggered manually from the GitHub Actions tab.
+- `.github/workflows/shield-monitor.yml` runs the Shield balance monitor plus the Shield security scanner every 15 minutes.
+
+Required GitHub repository secrets:
+
+- `DATABASE_URL`
+- `DATABASE_CA_CERT`
+- `ALCHEMY_API_KEY`
+- `RPC_ARBITRUM`
+- `RPC_BASE`
+- `RPC_POLYGON`
+- `RPC_AVALANCHE`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `NOTIFY_EMAIL`
+- `SHIELD_ALERT_EMAIL`
+
+Optional override secrets:
+
+- `RPC_ETHEREUM`
+- `RPC_OPTIMISM`
+- `UN_CONSOLIDATED_SANCTIONS_URL`
+- `EU_CONSOLIDATED_SANCTIONS_URL`
+- `UK_HMT_CONSOLIDATED_SANCTIONS_URL`
+
+How to run manually:
+
+1. Open GitHub repo.
+2. Go to **Actions**.
+3. Open **Production Risk Ingestion**.
+4. Click **Run workflow**.
+5. Choose `all`, `ofac`, `sanctions`, `curated`, or `calibrate`.
+6. Run it and check logs.
+
+This is the best free/low-friction replacement for Render Shell because it uses the same production DB secrets, creates logs, supports scheduling, and avoids exposing production database credentials on a personal laptop.

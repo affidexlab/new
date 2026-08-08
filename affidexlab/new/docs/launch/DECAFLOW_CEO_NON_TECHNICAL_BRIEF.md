@@ -187,3 +187,9 @@ The team has started moving DecaFlow from beta foundations toward stronger publi
 3. **Scoped admin keys.** Admin APIs now support hashed database-backed admin keys with scopes and audit logs, while the old single `ADMIN_KEY` remains only as a transition fallback.
 
 This improves launch readiness, but it does not remove the need for production operations. Leadership still needs to confirm the jobs actually ran in production, the Shield scanner is scheduled, and the first customer/pilot addresses are being monitored.
+
+## Render Shell alternative approved
+
+The team does not need Render Shell to operate ingestion. GitHub Actions has been added as the production ops runner. It can refresh sanctions and curated labels every 6 hours, run calibration, and run Shield monitoring/scanning every 15 minutes using GitHub encrypted secrets.
+
+Leadership only needs to make sure the required production secrets are added to GitHub and that the first manual run succeeds from the Actions tab.

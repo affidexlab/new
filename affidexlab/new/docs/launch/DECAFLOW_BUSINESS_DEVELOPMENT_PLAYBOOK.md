@@ -302,3 +302,7 @@ Updated compliance/risk pitch:
 > DecaFlow’s authenticated production checks use DecaFlow-owned risk labels, public sanctions ingestion, curated labels, Alchemy graph ingestion, scoring calibration, and analyst feedback. Public website demos are previews; production API checks are the compliance workflow surface.
 
 When a customer asks what they need to provide, ask for chain, contract address, label, admin/owner address if known, alert recipients, and the events they consider critical.
+
+## Operations note for BD
+
+DecaFlow production risk ingestion and Shield monitoring can run from GitHub Actions, so Render Shell is not a dependency for launch operations. BD should not mention the internal runner to customers unless asked; the customer-facing point is that DecaFlow runs scheduled sanctions refreshes, curated-label refreshes, graph/scanner jobs, and alert workflows.
