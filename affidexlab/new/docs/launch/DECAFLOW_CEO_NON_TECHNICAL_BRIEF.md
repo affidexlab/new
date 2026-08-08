@@ -197,3 +197,13 @@ Leadership only needs to make sure the required production secrets are added to 
 ## Post-run review update
 
 The GitHub Actions runner works, but the first run exposed operational gaps: OFAC parsing needed an update, EU sanctions requires a proper tokenized download URL, and Alchemy free-tier RPCs require small scan ranges. The team updated the code so these issues fail loudly instead of producing misleading green runs. This is good governance: a security product should prefer a noisy failure over a quiet blind spot.
+
+## Founder console and checkout update — 2026-08-08
+
+DecaFlow now has a founder control center at `/founder-control`. This gives the founder one private place to manage products, customers, test access, API keys, incidents, payment/customer records, product availability, and operational links without using the repository for day-to-day control.
+
+The most important business change is that Compliance, Audit, and Verify now follow the same payment direction as Shield: crypto checkout uses NOWPayments, while bank transfer remains a manual request that DecaFlow handles by email. This keeps payment operations consistent and avoids splitting product revenue flows across multiple systems.
+
+Public product availability is also now controllable from the founder console. A product can be marked active, beta, pre-production, paused, internal-only, or not accepting customers, and those settings affect the public pages. This gives leadership a practical launch-control switch for each product line.
+
+The public pages also received brand harmonization. DecaFlow should use a dark-blue/blue system as the core identity; red/yellow/green should be reserved for risk/status communication, not broad product branding.

@@ -415,3 +415,64 @@ The first successful GitHub Actions run proved the runner can reach production s
 3. The Alchemy free tier limits `eth_getLogs` requests to a 10-block range. Shield scanner defaults are now set to 10 blocks so scans work on the free tier, but production-grade monitoring should use PAYG/private RPCs or chain-specific indexed webhooks for wider catch-up windows.
 
 Calibration now exits non-zero when a known risky/sanctioned calibration case fails, unless deliberately run with `--allow-fail`. This prevents a green workflow from hiding an ineffective risk dataset.
+
+## Founder console, checkout, and branding update — 2026-08-08
+
+### Founder control center
+
+DecaFlow now has a behind-the-scenes founder console at `/founder-control`. It is protected by the founder/admin `df_admin_...` key and lets the founder operate the platform without opening the repository for normal business tasks.
+
+Current console capabilities:
+
+- Product control settings for Verify, Compliance, Shield, Agents, Institutional/RWA, Audit, Swap/Bridge, Analytics/MEV, and Staking.
+- Public product gating: `active`, `beta`, `pre-production`, `paused`, `internal-only`, and `accepting customers` settings now affect public pages through `ProductGate`.
+- Founder/customer overview counts and recent operational records.
+- Customer and payment views across orgs, Shield, Agents, Institutional, Verify, Compliance, and Audit.
+- Organization/customer creation with org-scoped API keys.
+- Free founder test-customer access across Verify, Compliance, Shield, Agents, Institutional/RWA, and Audit without payment.
+- Organization member role management.
+- Organization API-key revoke/reactivate controls.
+- Founder/admin key creation.
+- Shield incident status/assignee editing.
+- Manual risk-label creation.
+- Shield security scan trigger.
+- Audit-log filtering.
+- Ops links to GitHub Actions ingestion/scanner/admin/org workflows.
+
+The console stores the founder key in browser localStorage only. It should not be used on shared machines. A later hardening pass should replace direct key entry with the org magic-link/session UI and server-side session cookies.
+
+### Product-control enforcement
+
+The backend now exposes public product status through:
+
+- `GET /v1/products/status`
+- `GET /v1/products/status/:productKey`
+
+The frontend wraps public product pages in `ProductGate`. If a product is paused, internal-only, or not accepting customers, the public page is blocked and replaced with a product-status message and contact CTA. If a product is `beta` or `pre-production`, the page stays visible but displays the founder-controlled status banner.
+
+### NOWPayments checkout expansion
+
+NOWPayments checkout now covers more than Shield:
+
+- Compliance paid plans use `POST /v1/compliance/nowpayments/create-invoice` and `POST /v1/compliance/nowpayments/callback`.
+- Verify paid Growth/Business plans use `POST /v1/verify/nowpayments/create-invoice` and `POST /v1/verify/nowpayments/callback`.
+- Audit packages use `POST /v1/audit/nowpayments/create-invoice` and `POST /v1/audit/nowpayments/callback`.
+- Shield, Agents, and Institutional/RWA already have NOWPayments checkout flows.
+
+Bank transfer remains manual. The public pages collect the request, store it as pending/manual in the backend, and DecaFlow sends payment instructions manually by email.
+
+New database/payment fields were added to Compliance, Verify, and Audit enquiry tables:
+
+- `payment_gateway`
+- `gateway_order_id`
+- `payment_status`
+
+The shared backend service `nowpaymentsService.js` now centralizes invoice creation and IPN signature verification.
+
+### Branding update
+
+The public-facing affected pages were harmonized toward DecaFlow’s dark-blue/blue visual system. Loud standalone purple/orange styling was removed from Compliance, Verify, Audit, Agents, Institutional, Issuer Portal, and landing-page accents where it was being used as primary brand color. Risk/severity colors can still use red/yellow/green where they communicate status; product identity should stay dark-blue/blue.
+
+### Operational requirement
+
+Before public promotion, confirm Render and Vercel have deployed at least commit `c7e4bb6010ccd134d3d03b968f257f017282b3ba`, because that is the commit containing Compliance/Audit/Verify NOWPayments checkout and color harmonization.

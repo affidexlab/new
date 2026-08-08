@@ -310,3 +310,18 @@ DecaFlow production risk ingestion and Shield monitoring can run from GitHub Act
 ## Post-run review update
 
 BD should not claim complete sanctions coverage until the EU sanctions URL/token issue is resolved and calibration passes with real production data. The strongest current claim remains: DecaFlow owns the engine, ingestion, scoring, alerts, and feedback loop, and is expanding coverage through scheduled data operations.
+
+## Checkout, product controls, and brand update — 2026-08-08
+
+BD should now describe payment flows consistently across paid products:
+
+- Compliance paid plans: NOWPayments crypto checkout or manual bank-transfer request.
+- Verify Growth/Business: NOWPayments crypto checkout or manual bank-transfer request.
+- Audit packages: NOWPayments crypto checkout or manual bank-transfer request.
+- Shield, Agents, and Institutional/RWA: already support NOWPayments checkout, with manual bank transfer where applicable.
+
+For bank transfer, do not tell customers the website gives instant bank details. The correct message is: submit the request, then DecaFlow sends bank-transfer instructions manually by email.
+
+The founder console can now pause or reopen customer intake for each product. If BD is running a campaign, confirm the relevant product is marked as accepting customers in `/founder-control` before outreach. If a product is paused or internal-only, the public page will block new customer intake.
+
+Brand guidance for outreach and screenshots: use DecaFlow dark-blue/blue as the visual identity. Avoid pitching with purple/orange-heavy visuals; risk/severity colors are fine only when they communicate an actual risk state.
