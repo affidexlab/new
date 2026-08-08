@@ -4,6 +4,93 @@ import { authorizeAdmin, createAdminKeyMaterial } from '../../services/adminAuth
 
 const router = express.Router();
 
+
+router.get('/overview', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
+    const safeCount = async (table, where = 'TRUE') => {
+      try {
+        const { rows } = await pool.query(`SELECT COUNT(*)::int AS count FROM ${table} WHERE ${where}`);
+        return rows[0]?.count || 0;
+      } catch {
+        return 0;
+      }
+    };
+    const [
+      organizations,
+      orgUsers,
+      orgApiKeys,
+      riskLabels,
+      riskEdges,
+      riskScreenings,
+      shieldAlertsOpen,
+      shieldIncidentsOpen,
+      adminKeys,
+      verifyEnquiries,
+      complianceEnquiries,
+      auditEnquiries
+    ] = await Promise.all([
+      safeCount('organizations'),
+      safeCount('org_users'),
+      safeCount('org_api_keys', 'active = true'),
+      safeCount('risk_address_labels', 'active = true'),
+      safeCount('risk_graph_edges'),
+      safeCount('risk_screenings'),
+      safeCount('shield_alerts', "status = 'open'"),
+      safeCount('shield_incidents', "status != 'closed'"),
+      safeCount('admin_api_keys', 'active = true'),
+      safeCount('verify_enquiries'),
+      safeCount('compliance_enquiries'),
+      safeCount('audit_enquiries')
+    ]);
+
+    const recent = async (query, params = []) => {
+      try {
+        const { rows } = await pool.query(query, params);
+        return rows;
+      } catch {
+        return [];
+      }
+    };
+
+    const [recentAlerts, recentIncidents, recentAuditLogs, recentScreenings, recentOrgs] = await Promise.all([
+      recent(`SELECT id, chain, address, label, severity, alert_type, message, status, created_at FROM shield_alerts ORDER BY created_at DESC LIMIT 10`),
+      recent(`SELECT id, title, severity, status, assigned_to, created_at, updated_at FROM shield_incidents ORDER BY created_at DESC LIMIT 10`),
+      recent(`SELECT id, principal, scope, method, path, allowed, reason, created_at FROM admin_audit_logs ORDER BY created_at DESC LIMIT 10`),
+      recent(`SELECT id, product, wallet_address, chain, provider, risk_score, risk_level, recommendation, created_at FROM risk_screenings ORDER BY created_at DESC LIMIT 10`),
+      recent(`SELECT id, name, slug, status, plan, billing_email, created_at FROM organizations ORDER BY created_at DESC LIMIT 10`)
+    ]);
+
+    return res.json({
+      success: true,
+      counts: {
+        organizations,
+        orgUsers,
+        orgApiKeys,
+        riskLabels,
+        riskEdges,
+        riskScreenings,
+        shieldAlertsOpen,
+        shieldIncidentsOpen,
+        adminKeys,
+        verifyEnquiries,
+        complianceEnquiries,
+        auditEnquiries
+      },
+      recent: { alerts: recentAlerts, incidents: recentIncidents, auditLogs: recentAuditLogs, screenings: recentScreenings, organizations: recentOrgs },
+      actions: {
+        productionRiskIngestion: 'https://github.com/affidexlab/new/actions/workflows/production-risk-ingestion.yml',
+        shieldMonitor: 'https://github.com/affidexlab/new/actions/workflows/shield-monitor.yml',
+        createAdminKey: 'https://github.com/affidexlab/new/actions/workflows/create-admin-key.yml',
+        createOrganization: 'https://github.com/affidexlab/new/actions/workflows/create-organization.yml'
+      }
+    });
+  } catch (err) {
+    console.error('❌ Admin overview error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch founder overview.' });
+  }
+});
+
 router.post('/keys', async (req, res) => {
   try {
     if (!(await authorizeAdmin(req, res, 'admin:keys'))) return;

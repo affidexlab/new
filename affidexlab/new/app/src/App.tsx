@@ -4,6 +4,7 @@ import AppPage from "./pages/AppPage";
 import PrivacySwap from "./pages/PrivacySwap";
 import Leaderboard from "./pages/Leaderboard";
 import Admin from "./pages/Admin";
+import FounderAdmin from "./pages/FounderAdmin";
 import VDMAdmin from "./pages/VDMAdmin";
 import SolanaStaking from "./pages/SolanaStaking";
 import InvestorMetrics from "./pages/InvestorMetrics";
@@ -53,6 +54,9 @@ function getPageFromLocation(): string {
   }
   if (path.startsWith("/still-vdm-decalab") || hash === "#still-vdm-decalab") {
     return "vdm-admin";
+  }
+  if (path.startsWith("/founder-control") || hash === "#founder-control") {
+    return "founder-admin";
   }
   if (path.startsWith("/timothy-access") || hash === "#timothy-access") {
     return "admin";
@@ -127,6 +131,7 @@ export default function App() {
       {currentPage === "leaderboard" && <Leaderboard />}
       {currentPage === "vdm-admin" && <VDMAdmin />}
       {currentPage === "admin" && <Admin />}
+      {currentPage === "founder-admin" && <FounderAdmin />}
       {currentPage === "privacy" && <AppPage initialTab="privacy" />}
       {currentPage === "app" && <AppPage />}
       {currentPage === "quests" && <Quests />}
