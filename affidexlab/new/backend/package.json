@@ -15,7 +15,8 @@
     "ingest:curated": "node src/scripts/ingest-curated-risk-labels.js",
     "risk:calibrate": "node src/scripts/calibrate-risk-scoring.js",
     "shield:scan-security": "node src/scripts/run-shield-security-scan.js",
-    "admin:create-key": "node src/scripts/create-admin-api-key.js"
+    "admin:create-key": "node src/scripts/create-admin-api-key.js",
+    "org:create": "node src/scripts/create-organization.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

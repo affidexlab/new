@@ -4,6 +4,7 @@ import pool from '../../db/connection.js';
 import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { screenWallet } from '../../services/riskIntelligenceService.js';
+import { findOrgApiKey } from '../../services/orgApiKeyAuth.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -99,16 +100,21 @@ router.post('/check', async (req, res) => {
     const apiKey = req.headers['x-api-key'] || req.headers.authorization?.replace(/^Bearer\s+/i, '');
     if (!apiKey) return res.status(401).json({ success: false, error: 'x-api-key header is required.' });
 
-    const keyResult = await pool.query(
-      `SELECT id, email, plan FROM verify_enquiries WHERE api_key = $1 AND api_key_issued = TRUE LIMIT 1`,
-      [apiKey]
-    );
-    if (!keyResult.rows.length) return res.status(401).json({ success: false, error: 'Invalid API key.' });
+    const orgKey = await findOrgApiKey(apiKey, 'verify:check');
+    let customerId = orgKey ? `org:${orgKey.organization_id}` : null;
+    if (!orgKey) {
+      const keyResult = await pool.query(
+        `SELECT id, email, plan FROM verify_enquiries WHERE api_key = $1 AND api_key_issued = TRUE LIMIT 1`,
+        [apiKey]
+      );
+      if (!keyResult.rows.length) return res.status(401).json({ success: false, error: 'Invalid API key.' });
+      customerId = keyResult.rows[0].email;
+    }
 
     const { address, chain = 'ethereum' } = req.body;
     if (!address || typeof address !== 'string' || address.trim().length < 4) return res.status(400).json({ success: false, error: 'Wallet address is required.' });
 
-    const data = await screenWallet({ address: address.trim(), chain, customerId: keyResult.rows[0].email, purpose: 'verify-api' });
+    const data = await screenWallet({ address: address.trim(), chain, customerId, purpose: 'verify-api' });
 
     await pool.query(
       `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
