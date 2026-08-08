@@ -1,0 +1,37 @@
+name: Create Admin Key
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Human-readable name for this admin key'
+        required: true
+        default: 'Launch Admin'
+      scopes:
+        description: 'Comma-separated scopes. Use * for full admin access.'
+        required: true
+        default: '*'
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: affidexlab/new/backend
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_CA_CERT: ${{ secrets.DATABASE_CA_CERT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Create admin key
+        run: npm run admin:create-key -- "${{ inputs.name }}" "${{ inputs.scopes }}"
