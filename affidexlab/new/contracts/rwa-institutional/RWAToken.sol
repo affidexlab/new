@@ -34,14 +34,15 @@ import "./ComplianceRules.sol";
  *        is fully compromised. It can only move funds to a single pre-approved
  *        `escrowAddress`, which `emergencyCouncil` — not `owner` — controls,
  *        so owner compromise alone can't redirect it.
- *      - MEDIUM "Unrestricted Compliance Rules Reassignment": `setComplianceRules`
- *        is now a two-step, timelocked change (`proposeComplianceRules` /
- *        `executeComplianceRulesUpdate`) instead of an instant switch, so a
- *        compromised owner key can't silently swap in a malicious
- *        ComplianceRules contract with no window to notice and react.
+ *      - Re-review H-01 "ComplianceRules replacement resets holder-count state":
+ *        live ComplianceRules replacement is now disabled for this reference
+ *        implementation. Holder-count state lives in ComplianceRules and cannot be
+ *        reconstructed from a plain ERC-20 without holder enumeration, so a safe
+ *        upgrade path needs a separately audited migration design rather than a
+ *        generic owner-controlled setter.
  */
 contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
-    ComplianceRules public complianceRules;
+    ComplianceRules public immutable complianceRules;
 
     /// @notice Higher-threshold multi-sig role, entirely separate from `owner`, whose
     /// only power is `emergencyForcedTransfer` below. Set once at deployment and never
@@ -56,16 +57,9 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     /// destination out from under the council.
     address public escrowAddress;
 
-    uint256 public constant COMPLIANCE_TIMELOCK_DELAY = 2 days;
-    ComplianceRules public pendingComplianceRules;
-    uint256 public complianceRulesEta;
-
     event ForcedTransfer(address indexed from, address indexed to, uint256 amount, string reason);
     event EmergencyForcedTransfer(address indexed from, uint256 amount, string reason);
     event EscrowAddressUpdated(address indexed escrowAddress);
-    event ComplianceRulesUpdated(address indexed newComplianceRules);
-    event ComplianceRulesProposed(address indexed newComplianceRules, uint256 eta);
-    event ComplianceRulesCancelled(address indexed cancelledComplianceRules);
 
     error TransferNotCompliant();
     error CannotSendToTokenContract();
@@ -75,6 +69,8 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     error InvalidFromAddress();
     error TimelockNotElapsed();
     error NoPendingComplianceRules();
+    error NoContractCode();
+    error ComplianceRulesUpdateDisabled();
 
     modifier onlyEmergencyCouncil() {
         if (msg.sender != emergencyCouncil) revert NotEmergencyCouncil();
@@ -89,6 +85,8 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         address _emergencyCouncil
     ) ERC20(name_, symbol_) Ownable(initialOwner) {
         if (_emergencyCouncil == address(0)) revert ZeroAddress();
+        if (address(_complianceRules) == address(0)) revert ZeroAddress();
+        if (address(_complianceRules).code.length == 0) revert NoContractCode();
         complianceRules = _complianceRules;
         emergencyCouncil = _emergencyCouncil;
     }
@@ -99,38 +97,23 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         _mint(to, amount);
     }
 
-    /// @notice Step 1 of 2 for changing ComplianceRules — starts a timelock instead of
-    /// switching immediately (Guardian audit MEDIUM finding). A compromised owner key
-    /// can still propose a malicious ComplianceRules contract, but now there's a
-    /// mandatory delay before it takes effect, during which the change is visible
-    /// on-chain (ComplianceRulesProposed) and reactable (pause(), rotate the owner
-    /// key, cancel the proposal once a legitimate owner regains control).
-    function proposeComplianceRules(ComplianceRules _complianceRules) external onlyOwner {
-        pendingComplianceRules = _complianceRules;
-        complianceRulesEta = block.timestamp + COMPLIANCE_TIMELOCK_DELAY;
-        emit ComplianceRulesProposed(address(_complianceRules), complianceRulesEta);
+    /// @notice ComplianceRules replacement is deliberately disabled in this reference
+    /// implementation. A live replacement without an audited state-migration path can
+    /// reset holder-count accounting and bypass maxHolders.
+    function proposeComplianceRules(ComplianceRules /* _complianceRules */) external pure {
+        revert ComplianceRulesUpdateDisabled();
     }
 
-    /// @notice Step 2 — deliberately callable by anyone once the timelock has
-    /// elapsed, not just `owner`, so a legitimately-proposed change can still execute
-    /// even if the owner key is rotated away or becomes unavailable in the meantime.
-    /// The content of the change was already fixed at proposal time, so open
-    /// execution here adds no attack surface.
-    function executeComplianceRulesUpdate() external {
-        if (complianceRulesEta == 0) revert NoPendingComplianceRules();
-        if (block.timestamp < complianceRulesEta) revert TimelockNotElapsed();
-        complianceRules = pendingComplianceRules;
-        emit ComplianceRulesUpdated(address(complianceRules));
-        pendingComplianceRules = ComplianceRules(address(0));
-        complianceRulesEta = 0;
+    /// @notice Disabled with proposeComplianceRules; retained only so older callers
+    /// get an explicit, typed revert rather than a missing-function failure.
+    function executeComplianceRulesUpdate() external pure {
+        revert ComplianceRulesUpdateDisabled();
     }
 
-    /// @notice Lets `owner` abort a pending change before it executes — e.g. after
-    /// recovering a compromised key and discovering an attacker's proposal in flight.
-    function cancelPendingComplianceRules() external onlyOwner {
-        emit ComplianceRulesCancelled(address(pendingComplianceRules));
-        pendingComplianceRules = ComplianceRules(address(0));
-        complianceRulesEta = 0;
+    /// @notice Disabled with proposeComplianceRules; retained only so older callers
+    /// get an explicit, typed revert rather than a missing-function failure.
+    function cancelPendingComplianceRules() external pure {
+        revert ComplianceRulesUpdateDisabled();
     }
 
     /// @notice Settable only by `emergencyCouncil` — see the state variable's NatSpec
@@ -163,7 +146,7 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         if (from == to) {
             // No identity/compliance bypass — still enforced — just no holder-count
             // side effects, since a self-transfer can't create or remove a holder.
-            if (from != address(0) && !complianceRules.canTransfer(from, to, amount, false)) revert TransferNotCompliant();
+            if (from != address(0) && !complianceRules.canTransfer(from, to, amount, false, false)) revert TransferNotCompliant();
             super._update(from, to, amount);
             return;
         }
@@ -173,12 +156,11 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
 
         // Minting (from == 0) and burning (to == 0) still get checked — canTransfer
         // handles address(0) as "no identity check needed for that side" (see ComplianceRules).
-        if (!complianceRules.canTransfer(from, to, amount, toIsNewHolder)) revert TransferNotCompliant();
+        if (!complianceRules.canTransfer(from, to, amount, toIsNewHolder, fromWillBeEmptied)) revert TransferNotCompliant();
 
         super._update(from, to, amount);
 
-        if (toIsNewHolder) complianceRules.recordHolderChange(true);
-        if (fromWillBeEmptied) complianceRules.recordHolderChange(false);
+        complianceRules.recordHolderTransfer(toIsNewHolder, fromWillBeEmptied);
     }
 
     /**
@@ -247,8 +229,7 @@ contract RWAToken is ERC20, Ownable, Pausable, ReentrancyGuard {
 
         super._update(from, escrowAddress, amount);
 
-        if (toIsNewHolder) complianceRules.recordHolderChange(true);
-        if (fromWillBeEmptied) complianceRules.recordHolderChange(false);
+        complianceRules.recordHolderTransfer(toIsNewHolder, fromWillBeEmptied);
 
         emit EmergencyForcedTransfer(from, amount, reason);
     }

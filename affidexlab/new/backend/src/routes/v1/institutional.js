@@ -217,21 +217,21 @@ router.post('/nowpayments/callback', async (req, res) => {
       return res.status(403).send('invalid signature');
     }
 
-    res.status(200).send('ok');
-
     const { order_id, payment_status, pay_currency, pay_amount, payment_id } = req.body;
     const match = /^institutional-(\d+)$/.exec(order_id || '');
-    if (!match) { console.warn('⚠️  Institutional callback: unrecognized order_id', order_id); return; }
+    if (!match) { console.warn('⚠️  Institutional callback: unrecognized order_id', order_id); return res.status(200).send('ok'); }
     const dbId = match[1];
 
     const { rows } = await pool.query(`SELECT * FROM institutional_customers WHERE id = $1`, [dbId]);
     const customer = rows[0];
-    if (!customer) return;
+    if (!customer) return res.status(200).send('ok');
 
     if (payment_status === 'finished' && customer.status !== 'paid_queued') {
       // Deliberately "paid_queued", not "active" — payment secures a place in line
       // for a guided onboarding conversation, not access to any system.
       await pool.query(`UPDATE institutional_customers SET status = 'paid_queued', gateway_order_id = $1, updated_at = NOW() WHERE id = $2`, [String(payment_id), dbId]);
+
+      res.status(200).send('ok');
 
       sendEnquiryEmail({
         type: 'Institutional', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
@@ -250,9 +250,13 @@ router.post('/nowpayments/callback', async (req, res) => {
       }).catch(err => console.error('Institutional confirmation email failed:', err));
     } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
       await pool.query(`UPDATE institutional_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
+      res.status(200).send('ok');
+    } else {
+      res.status(200).send('ok');
     }
   } catch (err) {
     console.error('❌ Institutional NOWPayments callback error:', err);
+    if (!res.headersSent) return res.status(500).send('callback processing failed');
   }
 });
 

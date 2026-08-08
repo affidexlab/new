@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {ISemaphore} from "@semaphore-protocol/contracts/interfaces/ISemaphore.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * ██  UNAUDITED REFERENCE IMPLEMENTATION — DO NOT USE FOR REAL SECURITIES  ██
@@ -48,7 +49,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *            app, via semaphore-protocol's proof-generation library), this contract
  *            only verifies.
  */
-contract ZKIdentityGate is Ownable {
+contract ZKIdentityGate is Ownable, ReentrancyGuard {
     ISemaphore public immutable semaphore;
     uint256 public immutable groupId;
 
@@ -73,6 +74,8 @@ contract ZKIdentityGate is Ownable {
 
     error NotKYCAdmin();
     error ProofNotBoundToCaller();
+    error ZeroAddress();
+    error NoContractCode();
 
     modifier onlyKYCAdmin() {
         if (!isKYCAdmin[msg.sender] && msg.sender != owner()) revert NotKYCAdmin();
@@ -84,11 +87,14 @@ contract ZKIdentityGate is Ownable {
     ///        point at a canonical deployment on your target chain, or deploy your
     ///        own Semaphore + SemaphoreVerifier from the same npm package).
     constructor(ISemaphore _semaphore, address initialOwner) Ownable(initialOwner) {
+        if (address(_semaphore) == address(0)) revert ZeroAddress();
+        if (address(_semaphore).code.length == 0) revert NoContractCode();
         semaphore = _semaphore;
         groupId = _semaphore.createGroup(address(this));
     }
 
     function setKYCAdmin(address admin, bool allowed) external onlyOwner {
+        if (admin == address(0)) revert ZeroAddress();
         isKYCAdmin[admin] = allowed;
         emit KYCAdminUpdated(admin, allowed);
     }
@@ -97,16 +103,16 @@ contract ZKIdentityGate is Ownable {
     /// @param identityCommitment Computed off-chain from the investor's own Semaphore
     ///        identity secret — this contract never sees the secret, only the
     ///        commitment, which is the whole point of the "zero-knowledge" part.
-    function addToVerifiedGroup(uint256 identityCommitment) external onlyKYCAdmin {
+    function addToVerifiedGroup(uint256 identityCommitment) external onlyKYCAdmin nonReentrant {
         semaphore.addMember(groupId, identityCommitment);
         emit MemberAdded(identityCommitment);
     }
 
-    function addManyToVerifiedGroup(uint256[] calldata identityCommitments) external onlyKYCAdmin {
+    function addManyToVerifiedGroup(uint256[] calldata identityCommitments) external onlyKYCAdmin nonReentrant {
         semaphore.addMembers(groupId, identityCommitments);
     }
 
-    function removeFromVerifiedGroup(uint256 identityCommitment, uint256[] calldata merkleProofSiblings) external onlyKYCAdmin {
+    function removeFromVerifiedGroup(uint256 identityCommitment, uint256[] calldata merkleProofSiblings) external onlyKYCAdmin nonReentrant {
         semaphore.removeMember(groupId, identityCommitment, merkleProofSiblings);
         emit MemberRemoved(identityCommitment);
     }
@@ -137,13 +143,13 @@ contract ZKIdentityGate is Ownable {
      *      something this hardening pass should default silently. This just makes
      *      the verification result queryable so that decision can be made later.
      */
-    function verifyCompliance(ISemaphore.SemaphoreProof calldata proof) external returns (bool) {
+    function verifyCompliance(ISemaphore.SemaphoreProof calldata proof) external nonReentrant returns (bool) {
         if (proof.message != uint256(uint160(msg.sender))) revert ProofNotBoundToCaller();
-
-        semaphore.validateProof(groupId, proof);
 
         hasVerifiedCompliance[msg.sender] = true;
         lastVerifiedNullifier[msg.sender] = proof.nullifier;
+
+        semaphore.validateProof(groupId, proof);
 
         emit ComplianceProofVerified(proof.nullifier, proof.message);
         return true;

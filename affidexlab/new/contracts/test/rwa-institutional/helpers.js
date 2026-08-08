@@ -1,4 +1,5 @@
 const { ethers } = require('hardhat');
+const DEFAULT_EVIDENCE_HASH = '0x' + '11'.repeat(32);
 
 /**
  * Shared fixtures for the rwa-institutional test suite. Each returns freshly
@@ -50,8 +51,8 @@ async function deployRiskOracle() {
 }
 
 /** Verifies `wallet` in IdentityRegistry with sensible defaults, as `owner` (who is always an implicit verifier). */
-async function verifyWallet(identityRegistry, owner, wallet, { jurisdictionEligible = true, accreditedInvestor = false, evidenceHash = ethers.ZeroHash } = {}) {
+async function verifyWallet(identityRegistry, owner, wallet, { jurisdictionEligible = true, accreditedInvestor = false, evidenceHash = DEFAULT_EVIDENCE_HASH } = {}) {
   await identityRegistry.connect(owner).setIdentity(wallet.address, jurisdictionEligible, accreditedInvestor, evidenceHash);
 }
 
-module.exports = { deployIdentityRegistry, deployComplianceRules, deployFullStack, deployRiskOracle, verifyWallet };
+module.exports = { DEFAULT_EVIDENCE_HASH, deployIdentityRegistry, deployComplianceRules, deployFullStack, deployRiskOracle, verifyWallet };

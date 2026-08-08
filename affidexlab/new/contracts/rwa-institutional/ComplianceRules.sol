@@ -53,6 +53,8 @@ contract ComplianceRules is Ownable {
     error MaxHoldersReached();
     error TokenAlreadySet();
     error MaxHoldersExceeded();
+    error ZeroAddress();
+    error NoContractCode();
 
     modifier onlyToken() {
         if (msg.sender != token) revert NotToken();
@@ -60,6 +62,8 @@ contract ComplianceRules is Ownable {
     }
 
     constructor(address initialOwner, IdentityRegistry _identityRegistry, uint256 _maxHolders) Ownable(initialOwner) {
+        if (address(_identityRegistry) == address(0)) revert ZeroAddress();
+        if (address(_identityRegistry).code.length == 0) revert NoContractCode();
         identityRegistry = _identityRegistry;
         maxHolders = _maxHolders;
     }
@@ -73,6 +77,8 @@ contract ComplianceRules is Ownable {
     /// already been tracking a live token.
     function setToken(address _token) external onlyOwner {
         if (token != address(0)) revert TokenAlreadySet();
+        if (_token == address(0)) revert ZeroAddress();
+        if (_token.code.length == 0) revert NoContractCode();
         token = _token;
         emit TokenSet(_token);
     }
@@ -91,6 +97,7 @@ contract ComplianceRules is Ownable {
     /// same as before this feature existed.
     function setRiskOracle(RiskOracle _riskOracle, uint8 _maxRiskScore) external onlyOwner {
         require(_maxRiskScore <= 100, "score must be 0-100");
+        if (address(_riskOracle) != address(0) && address(_riskOracle).code.length == 0) revert NoContractCode();
         riskOracle = _riskOracle;
         maxRiskScore = _maxRiskScore;
         emit RiskOracleUpdated(address(_riskOracle), _maxRiskScore);
@@ -106,6 +113,13 @@ contract ComplianceRules is Ownable {
      *      the extension point, not the finished rule set.
      */
     function canTransfer(address from, address to, uint256 /* amount */, bool toIsNewHolder) external view returns (bool) {
+        return canTransfer(from, to, 0, toIsNewHolder, false);
+    }
+
+    /// @notice Transfer pre-check that enforces holder limits against the final
+    ///         post-transfer holder count, so one-for-one holder replacements are
+    ///         not blocked at the cap.
+    function canTransfer(address from, address to, uint256 /* amount */, bool toIsNewHolder, bool fromWillBeEmptied) public view returns (bool) {
         if (from != address(0) && !identityRegistry.isVerified(from)) return false;
         if (to != address(0) && !identityRegistry.isVerified(to)) return false;
 
@@ -114,7 +128,7 @@ contract ComplianceRules is Ownable {
             if (!toIdentity.jurisdictionEligible) return false;
             if (requireAccreditation && !toIdentity.accreditedInvestor) return false;
 
-            if (toIsNewHolder && maxHolders != 0 && currentHolders >= maxHolders) return false;
+            if (toIsNewHolder && !fromWillBeEmptied && maxHolders != 0 && currentHolders >= maxHolders) return false;
 
             if (address(riskOracle) != address(0)) {
                 (uint8 score, bool fresh) = riskOracle.getRiskScore(to);
@@ -158,5 +172,22 @@ contract ComplianceRules is Ownable {
         } else if (currentHolders > 0) {
             currentHolders -= 1;
         }
+    }
+
+    /// @notice Records holder-count effects for a settled token transfer using
+    ///         the net post-transfer delta, rather than applying gross increments
+    ///         before decrements. This preserves the holder cap while allowing
+    ///         one-for-one holder replacement and emergency transfers into an
+    ///         initially empty escrow account.
+    function recordHolderTransfer(bool toIsNewHolder, bool fromWillBeEmptied) external onlyToken {
+        if (toIsNewHolder == fromWillBeEmptied) return;
+
+        if (fromWillBeEmptied) {
+            if (currentHolders > 0) currentHolders -= 1;
+            return;
+        }
+
+        currentHolders += 1;
+        if (maxHolders != 0 && currentHolders > maxHolders) revert MaxHoldersExceeded();
     }
 }

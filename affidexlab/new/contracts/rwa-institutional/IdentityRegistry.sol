@@ -72,6 +72,8 @@ contract IdentityRegistry is Ownable {
     event VerifierUpdated(address indexed verifier, bool allowed);
 
     error NotAVerifier();
+    error ZeroAddress();
+    error EmptyEvidenceHash();
 
     modifier onlyVerifier() {
         if (!isVerifier[msg.sender] && msg.sender != owner()) revert NotAVerifier();
@@ -105,6 +107,9 @@ contract IdentityRegistry is Ownable {
         bool accreditedInvestor,
         bytes32 evidenceHash
     ) external onlyVerifier {
+        if (wallet == address(0)) revert ZeroAddress();
+        if (evidenceHash == bytes32(0)) revert EmptyEvidenceHash();
+
         _identities[wallet] = Identity({
             verified: true,
             jurisdictionEligible: jurisdictionEligible,
@@ -116,11 +121,13 @@ contract IdentityRegistry is Ownable {
     }
 
     function revokeIdentity(address wallet) external onlyVerifier {
+        if (wallet == address(0)) revert ZeroAddress();
         delete _identities[wallet];
         emit IdentityRevoked(wallet);
     }
 
     function setVerifier(address verifier, bool allowed) external onlyOwner {
+        if (verifier == address(0)) revert ZeroAddress();
         isVerifier[verifier] = allowed;
         emit VerifierUpdated(verifier, allowed);
     }

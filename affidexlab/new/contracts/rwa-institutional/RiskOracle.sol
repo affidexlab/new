@@ -70,6 +70,7 @@ contract RiskOracle is Ownable {
     error ArrayLengthMismatch();
     error BatchTooLarge();
     error UpdatesArePaused();
+    error ZeroAddress();
 
     modifier onlyUpdater() {
         if (!isUpdater[msg.sender] && msg.sender != owner()) revert NotAnUpdater();
@@ -81,6 +82,7 @@ contract RiskOracle is Ownable {
     }
 
     function setUpdater(address updater, bool allowed) external onlyOwner {
+        if (updater == address(0)) revert ZeroAddress();
         isUpdater[updater] = allowed;
         emit UpdaterSet(updater, allowed);
     }
@@ -121,6 +123,7 @@ contract RiskOracle is Ownable {
     /// @notice Pushes a fresh Verify API risk score on-chain for a wallet.
     function setRiskScore(address wallet, uint8 score) external onlyUpdater {
         if (updatesPaused) revert UpdatesArePaused();
+        if (wallet == address(0)) revert ZeroAddress();
         if (score > 100) revert InvalidScore();
         _riskScores[wallet] = RiskData({ score: score, updatedAt: uint40(block.timestamp), exists: true });
         emit RiskScoreUpdated(wallet, score);
@@ -141,6 +144,7 @@ contract RiskOracle is Ownable {
         if (wallets.length != scores.length) revert ArrayLengthMismatch();
         if (wallets.length > maxBatchSize) revert BatchTooLarge();
         for (uint256 i = 0; i < wallets.length; i++) {
+            if (wallets[i] == address(0)) revert ZeroAddress();
             if (scores[i] > 100) revert InvalidScore();
             _riskScores[wallets[i]] = RiskData({ score: scores[i], updatedAt: uint40(block.timestamp), exists: true });
             emit RiskScoreUpdated(wallets[i], scores[i]);

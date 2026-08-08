@@ -296,22 +296,22 @@ router.post('/nowpayments/callback', async (req, res) => {
       return res.status(403).send('invalid signature');
     }
 
-    // Respond fast (NOWPayments expects a response within 3s) — do DB + email work,
-    // but don't let slow email sending risk the response window.
-    res.status(200).send('ok');
-
     const { order_id, payment_status, pay_currency, pay_amount, payment_id } = req.body;
     const match = /^shield-(\d+)$/.exec(order_id || '');
-    if (!match) { console.warn('⚠️  Shield NOWPayments callback: unrecognized order_id', order_id); return; }
+    if (!match) { console.warn('⚠️  Shield NOWPayments callback: unrecognized order_id', order_id); return res.status(200).send('ok'); }
     const dbId = match[1];
 
     const { rows } = await pool.query(`SELECT * FROM shield_customers WHERE id = $1`, [dbId]);
     const customer = rows[0];
-    if (!customer) { console.warn('⚠️  Shield NOWPayments callback: no matching customer for', order_id); return; }
+    if (!customer) { console.warn('⚠️  Shield NOWPayments callback: no matching customer for', order_id); return res.status(200).send('ok'); }
 
     if (payment_status === 'finished' && customer.status !== 'active') {
       await pool.query(`UPDATE shield_customers SET status = 'active', coingate_order_id = $1, updated_at = NOW() WHERE id = $2`, [String(payment_id), dbId]);
       await pool.query(`UPDATE shield_contracts SET status = 'active' WHERE customer_id = $1`, [dbId]);
+
+      // Acknowledge only after durable provisioning state is written. Email can
+      // happen after the response; payment state cannot.
+      res.status(200).send('ok');
 
       sendEnquiryEmail({
         type: 'Shield',
@@ -333,10 +333,14 @@ router.post('/nowpayments/callback', async (req, res) => {
       }).catch(err => console.error('Shield confirmation email failed:', err));
     } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
       await pool.query(`UPDATE shield_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
+      res.status(200).send('ok');
+    } else {
+      res.status(200).send('ok');
     }
     // waiting / confirming / partially_paid / sending: no action yet, more callbacks follow.
   } catch (err) {
     console.error('❌ Shield NOWPayments callback error:', err);
+    if (!res.headersSent) return res.status(500).send('callback processing failed');
   }
 });
 

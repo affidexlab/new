@@ -18,12 +18,8 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 async function deployZKIdentityGate() {
   const [owner] = await ethers.getSigners();
 
-  const SemaphoreVerifier = await ethers.getContractFactory('SemaphoreVerifier');
-  const verifier = await SemaphoreVerifier.deploy();
-  await verifier.waitForDeployment();
-
-  const Semaphore = await ethers.getContractFactory('Semaphore');
-  const semaphore = await Semaphore.deploy(await verifier.getAddress());
+  const Semaphore = await ethers.getContractFactory('MockSemaphore');
+  const semaphore = await Semaphore.deploy();
   await semaphore.waitForDeployment();
 
   const ZKIdentityGate = await ethers.getContractFactory('ZKIdentityGate');

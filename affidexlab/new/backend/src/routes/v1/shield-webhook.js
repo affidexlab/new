@@ -88,6 +88,7 @@ router.post('/', async (req, res) => {
         subject: `[URGENT] Shield payment succeeded but provisioning failed — ${email}`,
         fields: { Email: email, Plan: plan, Error: dbErr.message, 'Stripe session': session.id },
       }).catch(() => {});
+      return res.status(500).json({ received: false, error: 'Provisioning failed; retry requested.' });
     }
   }
 

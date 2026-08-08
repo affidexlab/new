@@ -8,10 +8,23 @@ dotenv.config();
 
 const { Pool } = pg;
 
+function buildSslConfig() {
+  if (process.env.NODE_ENV !== 'production') return false;
+  const caPath = process.env.DATABASE_CA_CERT_PATH;
+  if (caPath) {
+    try {
+      return { rejectUnauthorized: true, ca: readFileSync(caPath, 'utf8') };
+    } catch (err) {
+      throw new Error(`DATABASE_CA_CERT_PATH is set to "${caPath}" but could not be read (${err.message}). Refusing to run migrations with an unverifiable database TLS config.`);
+    }
+  }
+  return { rejectUnauthorized: true };
+}
+
 async function runMigration() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: buildSslConfig(),
   });
 
   try {

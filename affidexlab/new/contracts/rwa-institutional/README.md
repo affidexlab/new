@@ -57,10 +57,11 @@ found, it doesn't re-run the audit itself.
 - **`RWAToken.sol`** — an ERC-20 that routes every mint/transfer/burn through
   `ComplianceRules.canTransfer`, plus `forcedTransfer` (the roadmap's
   "Global Kill-Switch"), `emergencyForcedTransfer` (the audit-response break-glass
-  path — see above), a timelocked `ComplianceRules` change process, and
-  pause/unpause. Hardened with `ReentrancyGuard`, an explicit self-transfer
-  short-circuit, and a guard against sending tokens to the token contract's own
-  address.
+  path — see above), and pause/unpause. Re-review hardening now disables live
+  `ComplianceRules` replacement because holder-count state cannot be safely reset
+  or migrated without a separately audited migration design. Hardened with
+  `ReentrancyGuard`, an explicit self-transfer short-circuit, and a guard against
+  sending tokens to the token contract's own address.
 - **`RiskOracle.sol`** — a trusted-updater oracle for Verify API risk scores, now
   with an owner-tunable circuit breaker that auto-pauses updates if a single
   updater key pushes an unusually large burst of score changes (Guardian audit
