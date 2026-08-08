@@ -2,9 +2,73 @@ import express from 'express';
 import pool from '../../db/connection.js';
 import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { createNowPaymentsInvoice, verifyNowPaymentsSignature } from '../../services/nowpaymentsService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const PLAN_PRICES_USD = { 'Smart Contract Review': 800, 'Protocol Audit': 2000, 'Full System Audit': 4500 };
+
+
+
+router.post('/nowpayments/create-invoice', async (req, res) => {
+  try {
+    const { projectName, contactName, email, telegram, projectUrl, githubRepo, blockchain, language, linesOfCode, auditPackage = 'Protocol Audit', timeline, description } = req.body;
+    if (!PLAN_PRICES_USD[auditPackage]) return res.status(400).json({ success: false, error: 'Unknown audit package.' });
+    if (!projectName?.trim()) return res.status(400).json({ success: false, error: 'Project name is required.' });
+    if (!contactName?.trim()) return res.status(400).json({ success: false, error: 'Contact name is required.' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    if (!githubRepo?.trim()) return res.status(400).json({ success: false, error: 'GitHub repository link is required.' });
+    if (!description || description.trim().length < 20) return res.status(400).json({ success: false, error: 'Please provide a brief project description.' });
+    const { rows } = await pool.query(
+      `INSERT INTO audit_enquiries (project_name, contact_name, email, telegram, project_url, github_repo, blockchain, language, lines_of_code, audit_package, timeline, description, source, status, payment_gateway, payment_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'audit-nowpayments','pending_payment','nowpayments','waiting') RETURNING id`,
+      [projectName.trim(), contactName.trim(), email.trim().toLowerCase(), telegram?.trim() || null, projectUrl?.trim() || null, githubRepo.trim(), blockchain?.trim() || null, language?.trim() || null, linesOfCode?.trim() || null, auditPackage, timeline?.trim() || null, description.trim()]
+    );
+    const orderId = `audit-${rows[0].id}`;
+    const invoice = await createNowPaymentsInvoice({ priceUsd: PLAN_PRICES_USD[auditPackage], orderId, description: `DecaFlow Audit — ${auditPackage} — ${projectName}`, successPath: '/audit?checkout=success', cancelPath: '/audit?checkout=cancelled', callbackPath: '/v1/audit/nowpayments/callback' });
+    await pool.query(`UPDATE audit_enquiries SET gateway_order_id = $1 WHERE id = $2`, [String(invoice.raw.id || invoice.raw.invoice_id || orderId), rows[0].id]);
+    return res.json({ success: true, url: invoice.invoiceUrl });
+  } catch (err) {
+    console.error('❌ Audit NOWPayments invoice error:', err);
+    return res.status(500).json({ success: false, error: 'Could not start NOWPayments checkout.' });
+  }
+});
+
+router.post('/payment-request', async (req, res) => {
+  try {
+    const { projectName, contactName, email, telegram, projectUrl, githubRepo, blockchain, language, linesOfCode, auditPackage = 'Protocol Audit', timeline, description } = req.body;
+    if (!projectName?.trim()) return res.status(400).json({ success: false, error: 'Project name is required.' });
+    if (!contactName?.trim()) return res.status(400).json({ success: false, error: 'Contact name is required.' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    if (!githubRepo?.trim()) return res.status(400).json({ success: false, error: 'GitHub repository link is required.' });
+    if (!description || description.trim().length < 20) return res.status(400).json({ success: false, error: 'Please provide a brief project description.' });
+    const { rows } = await pool.query(
+      `INSERT INTO audit_enquiries (project_name, contact_name, email, telegram, project_url, github_repo, blockchain, language, lines_of_code, audit_package, timeline, description, source, status, payment_gateway, payment_status, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'audit-bank-transfer','pending_payment','bank_transfer','manual_details_pending','Manual bank transfer details to be sent by DecaFlow') RETURNING id`,
+      [projectName.trim(), contactName.trim(), email.trim().toLowerCase(), telegram?.trim() || null, projectUrl?.trim() || null, githubRepo.trim(), blockchain?.trim() || null, language?.trim() || null, linesOfCode?.trim() || null, auditPackage, timeline?.trim() || null, description.trim()]
+    );
+    await sendEnquiryEmail({ type: 'Audit Bank Transfer', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com', subject: `[DecaFlow] Audit bank transfer request — ${projectName}`, fields: { Project: projectName, Contact: contactName, Email: email, Package: auditPackage, 'Enquiry ID': `#${rows[0].id}` } });
+    return res.json({ success: true, message: 'Bank transfer request received. DecaFlow will send payment details manually.', enquiryId: rows[0].id });
+  } catch (err) {
+    console.error('❌ Audit payment request error:', err);
+    return res.status(500).json({ success: false, error: 'Could not submit payment request.' });
+  }
+});
+
+router.post('/nowpayments/callback', async (req, res) => {
+  try {
+    if (!verifyNowPaymentsSignature(req.body, req.headers['x-nowpayments-sig'])) return res.status(403).send('invalid signature');
+    const { order_id, payment_status, payment_id } = req.body;
+    const match = /^audit-(\d+)$/.exec(order_id || '');
+    if (!match) return res.status(200).send('ok');
+    const status = payment_status === 'finished' ? 'paid_ready_to_scope' : ['failed','expired','refunded'].includes(payment_status) ? payment_status : 'pending_payment';
+    await pool.query(`UPDATE audit_enquiries SET status = $1, payment_status = $2, gateway_order_id = COALESCE($3, gateway_order_id), updated_at = NOW() WHERE id = $4`, [status, payment_status, payment_id ? String(payment_id) : null, match[1]]);
+    return res.status(200).send('ok');
+  } catch (err) {
+    console.error('❌ Audit NOWPayments callback error:', err);
+    return res.status(500).send('error');
+  }
+});
 
 // POST /v1/audit/enquiry — public form submission
 router.post('/enquiry', async (req, res) => {

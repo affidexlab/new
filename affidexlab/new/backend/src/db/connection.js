@@ -316,6 +316,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/021_enquiry_nowpayments.sql');
+    console.log('✅ Enquiry NOWPayments migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710', '42701'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Enquiry NOWPayments migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Enquiry NOWPayments migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 

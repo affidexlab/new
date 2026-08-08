@@ -3,9 +3,69 @@ import pool from '../../db/connection.js';
 import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { screenWallet } from '../../services/riskIntelligenceService.js';
+import { createNowPaymentsInvoice, verifyNowPaymentsSignature } from '../../services/nowpaymentsService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const PLAN_PRICES_USD = { Starter: 299, Business: 799 };
+
+
+
+router.post('/nowpayments/create-invoice', async (req, res) => {
+  try {
+    const { companyName, contactName, email, telegram, businessType, chains = [], monthlyTxVolume, plan = 'Business', message } = req.body;
+    if (!PLAN_PRICES_USD[plan]) return res.status(400).json({ success: false, error: 'Enterprise is custom pricing — use bank/manual sales flow.' });
+    if (!companyName?.trim()) return res.status(400).json({ success: false, error: 'Company name is required.' });
+    if (!contactName?.trim()) return res.status(400).json({ success: false, error: 'Contact name is required.' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO compliance_enquiries (company_name, contact_name, email, telegram, business_type, chains, monthly_tx_volume, plan, message, source, status, payment_gateway, payment_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'compliance-nowpayments','pending_payment','nowpayments','waiting') RETURNING id`,
+      [companyName.trim(), contactName.trim(), email.trim().toLowerCase(), telegram?.trim() || null, businessType?.trim() || null, Array.isArray(chains) ? chains : [], monthlyTxVolume?.trim() || null, plan, message?.trim() || null]
+    );
+    const orderId = `compliance-${rows[0].id}`;
+    const invoice = await createNowPaymentsInvoice({ priceUsd: PLAN_PRICES_USD[plan], orderId, description: `DecaFlow Compliance — ${plan}`, successPath: '/compliance?checkout=success', cancelPath: '/compliance?checkout=cancelled', callbackPath: '/v1/compliance/nowpayments/callback' });
+    await pool.query(`UPDATE compliance_enquiries SET gateway_order_id = $1 WHERE id = $2`, [String(invoice.raw.id || invoice.raw.invoice_id || orderId), rows[0].id]);
+    return res.json({ success: true, url: invoice.invoiceUrl });
+  } catch (err) {
+    console.error('❌ Compliance NOWPayments invoice error:', err);
+    return res.status(500).json({ success: false, error: 'Could not start NOWPayments checkout.' });
+  }
+});
+
+router.post('/payment-request', async (req, res) => {
+  try {
+    const { companyName, contactName, email, telegram, businessType, chains = [], monthlyTxVolume, plan = 'Business', message } = req.body;
+    if (!companyName?.trim()) return res.status(400).json({ success: false, error: 'Company name is required.' });
+    if (!contactName?.trim()) return res.status(400).json({ success: false, error: 'Contact name is required.' });
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO compliance_enquiries (company_name, contact_name, email, telegram, business_type, chains, monthly_tx_volume, plan, message, source, status, payment_gateway, payment_status, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'compliance-bank-transfer','pending_payment','bank_transfer','manual_details_pending','Manual bank transfer details to be sent by DecaFlow') RETURNING id`,
+      [companyName.trim(), contactName.trim(), email.trim().toLowerCase(), telegram?.trim() || null, businessType?.trim() || null, Array.isArray(chains) ? chains : [], monthlyTxVolume?.trim() || null, plan, message?.trim() || null]
+    );
+    await sendEnquiryEmail({ type: 'Compliance Bank Transfer', to: process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com', subject: `[DecaFlow] Compliance bank transfer request — ${companyName}`, fields: { Company: companyName, Contact: contactName, Email: email, Plan: plan, 'Enquiry ID': `#${rows[0].id}` } });
+    return res.json({ success: true, message: 'Bank transfer request received. DecaFlow will send payment details manually.', enquiryId: rows[0].id });
+  } catch (err) {
+    console.error('❌ Compliance payment request error:', err);
+    return res.status(500).json({ success: false, error: 'Could not submit payment request.' });
+  }
+});
+
+router.post('/nowpayments/callback', async (req, res) => {
+  try {
+    if (!verifyNowPaymentsSignature(req.body, req.headers['x-nowpayments-sig'])) return res.status(403).send('invalid signature');
+    const { order_id, payment_status, payment_id } = req.body;
+    const match = /^compliance-(\d+)$/.exec(order_id || '');
+    if (!match) return res.status(200).send('ok');
+    const status = payment_status === 'finished' ? 'converted' : ['failed','expired','refunded'].includes(payment_status) ? payment_status : 'pending_payment';
+    await pool.query(`UPDATE compliance_enquiries SET status = $1, payment_status = $2, gateway_order_id = COALESCE($3, gateway_order_id), updated_at = NOW() WHERE id = $4`, [status, payment_status, payment_id ? String(payment_id) : null, match[1]]);
+    return res.status(200).send('ok');
+  } catch (err) {
+    console.error('❌ Compliance NOWPayments callback error:', err);
+    return res.status(500).send('error');
+  }
+});
 
 // POST /v1/compliance/enquiry — public form submission
 router.post('/enquiry', async (req, res) => {

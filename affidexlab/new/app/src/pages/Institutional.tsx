@@ -121,7 +121,7 @@ export default function Institutional() {
           {NAV_LINKS.map(l => (
             <a key={l.label} href={l.href} style={{ color: l.active ? "#fff" : "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 }}>{l.label}</a>
           ))}
-          <a href="#" onClick={(e) => { e.preventDefault(); openForm("Scale"); }} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Talk to Us</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); openForm("Scale"); }} style={{ background: "#3B82F6", color: "#3a2404", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Talk to Us</a>
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-btn" style={{ display: "none", background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer" }}>{menuOpen ? "✕" : "☰"}</button>
       </nav>
@@ -142,13 +142,13 @@ export default function Institutional() {
             Checkout was cancelled — no charge was made.
           </div>
         )}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#fbbf24", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#93C5FD", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
           Early Development — Not Audited
         </div>
         <h1 style={{ fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.5rem" }}>
           The compliance layer{" "}
-          <span style={{ background: "linear-gradient(135deg,#f59e0b 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>for tokenized assets</span>
+          <span style={{ background: "linear-gradient(135deg,#3B82F6 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>for tokenized assets</span>
         </h1>
         <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "640px", margin: "0 auto 1.5rem", lineHeight: 1.75 }}>
           On-chain identity, transfer restrictions, and reporting for real-world-asset issuers, built on ERC-3643 — the open standard for compliant security tokens.
@@ -156,7 +156,7 @@ export default function Institutional() {
         <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.4)", maxWidth: "560px", margin: "0 auto 2.5rem", lineHeight: 1.6 }}>
           Not a substitute for securities counsel. Talk to your own lawyer before issuing anything.
         </p>
-        <button onClick={() => openForm("Scale")} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(245,158,11,0.3)" }}>
+        <button onClick={() => openForm("Scale")} style={{ background: "#3B82F6", color: "#3a2404", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(59,130,246,0.3)" }}>
           Talk to Us
         </button>
         <div style={{ marginTop: "1.5rem" }}>
@@ -183,13 +183,13 @@ export default function Institutional() {
         </div>
         <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1.5rem" }}>
           {PLANS.map(p => (
-            <div key={p.name} style={{ background: p.highlight ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.03)", border: p.highlight ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: "2rem" }}>
+            <div key={p.name} style={{ background: p.highlight ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.03)", border: p.highlight ? "1px solid rgba(59,130,246,0.4)" : "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.5rem" }}>{p.name}</h3>
               <div style={{ fontSize: "1.7rem", fontWeight: 800, marginBottom: "1.25rem" }}>{p.price}<span style={{ fontSize: "0.9rem", fontWeight: 500, color: "rgba(255,255,255,0.5)" }}>{p.period}</span></div>
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                {p.features.map(f => <li key={f} style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", display: "flex", gap: "0.5rem" }}><span style={{ color: "#fbbf24" }}>✓</span>{f}</li>)}
+                {p.features.map(f => <li key={f} style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", display: "flex", gap: "0.5rem" }}><span style={{ color: "#93C5FD" }}>✓</span>{f}</li>)}
               </ul>
-              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#f59e0b" : "transparent", color: p.highlight ? "#3a2404" : "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>{p.name === "Enterprise" ? "Talk to Us" : "Get Started"}</button>
+              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#3B82F6" : "transparent", color: p.highlight ? "#3a2404" : "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>{p.name === "Enterprise" ? "Talk to Us" : "Get Started"}</button>
             </div>
           ))}
         </div>
@@ -211,7 +211,7 @@ export default function Institutional() {
 
       {formOpen && (
         <div onClick={e => e.target === e.currentTarget && closeForm()} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", overflowY: "auto" }}>
-          <div style={{ background: "#111827", border: "1px solid rgba(245,158,11,0.3)", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ background: "#111827", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
                 <h2 style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: "0.25rem" }}>{formStep === "success" ? "Thanks — we'll be in touch" : isPaidPlan ? `Get Started — ${selectedPlan}` : `Talk to Us — ${selectedPlan}`}</h2>
@@ -226,18 +226,18 @@ export default function Institutional() {
                     <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem" }}>Send payment to proceed</h3>
                     <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "1rem", marginBottom: "1rem" }}>
                       <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.25rem" }}>Amount ({paymentInfo.chain})</div>
-                      <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#fbbf24", marginBottom: "0.75rem" }}>${paymentInfo.exactAmount}</div>
+                      <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#93C5FD", marginBottom: "0.75rem" }}>${paymentInfo.exactAmount}</div>
                       <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.25rem" }}>To address</div>
                       <div style={{ fontSize: "0.85rem", fontFamily: "monospace", wordBreak: "break-all", color: "#fff" }}>{paymentInfo.walletAddress}</div>
                     </div>
                     <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.85rem", lineHeight: 1.7, marginBottom: "1.5rem" }}>Once confirmed, our team reaches out to <strong>{formData.email}</strong> to scope your requirements — this secures your place in the queue, it does not grant system access.</p>
-                    <button onClick={closeForm} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Got it</button>
+                    <button onClick={closeForm} style={{ background: "#3B82F6", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Got it</button>
                   </>
                 ) : (
                   <>
                     <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.75rem" }}>Request received ✅</h3>
                     <p style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.7, marginBottom: "1.5rem" }}>Our team will email <strong>{formData.email}</strong> with bank transfer details within one business day, then follow up to scope your requirements.</p>
-                    <button onClick={closeForm} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
+                    <button onClick={closeForm} style={{ background: "#3B82F6", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
                   </>
                 )}
               </div>
@@ -246,7 +246,7 @@ export default function Institutional() {
                 <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>✅</div>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.75rem" }}>Thanks, {formData.contactName || "there"}.</h3>
                 <p style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.7, marginBottom: "2rem" }}>A member of the team will reach out to <strong>{formData.email}</strong> to talk through your asset and compliance needs.</p>
-                <button onClick={closeForm} style={{ background: "#f59e0b", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
+                <button onClick={closeForm} style={{ background: "#3B82F6", color: "#3a2404", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
@@ -269,7 +269,7 @@ export default function Institutional() {
                   <label style={{ display: "block", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.5rem", fontWeight: 600 }}>Target jurisdiction(s)</label>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                     {["United States", "European Union", "United Kingdom", "UAE", "Singapore", "Other"].map(c => (
-                      <button key={c} type="button" onClick={() => toggleJurisdiction(c)} style={{ padding: "0.35rem 0.75rem", borderRadius: "100px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", border: formData.jurisdictions.includes(c) ? "1px solid #f59e0b" : "1px solid rgba(255,255,255,0.12)", background: formData.jurisdictions.includes(c) ? "rgba(245,158,11,0.2)" : "transparent", color: formData.jurisdictions.includes(c) ? "#fbbf24" : "rgba(255,255,255,0.6)" }}>{c}</button>
+                      <button key={c} type="button" onClick={() => toggleJurisdiction(c)} style={{ padding: "0.35rem 0.75rem", borderRadius: "100px", fontSize: "0.78rem", fontWeight: 600, cursor: "pointer", border: formData.jurisdictions.includes(c) ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.12)", background: formData.jurisdictions.includes(c) ? "rgba(59,130,246,0.2)" : "transparent", color: formData.jurisdictions.includes(c) ? "#93C5FD" : "rgba(255,255,255,0.6)" }}>{c}</button>
                     ))}
                   </div>
                 </div>
@@ -282,8 +282,8 @@ export default function Institutional() {
                   <div style={{ marginBottom: "1.25rem" }}>
                     <label style={{ display: "block", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginBottom: "0.5rem", fontWeight: 600 }}>Pay with</label>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem" }}>
-                      <button type="button" onClick={() => setPaymentMethod("crypto")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "crypto" ? "1px solid #f59e0b" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "crypto" ? "rgba(245,158,11,0.15)" : "transparent", color: paymentMethod === "crypto" ? "#fbbf24" : "rgba(255,255,255,0.75)" }}>Crypto</button>
-                      <button type="button" onClick={() => setPaymentMethod("bank")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "bank" ? "1px solid #f59e0b" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "bank" ? "rgba(245,158,11,0.15)" : "transparent", color: paymentMethod === "bank" ? "#fbbf24" : "rgba(255,255,255,0.75)" }}>Bank Transfer</button>
+                      <button type="button" onClick={() => setPaymentMethod("crypto")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "crypto" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "crypto" ? "rgba(59,130,246,0.15)" : "transparent", color: paymentMethod === "crypto" ? "#93C5FD" : "rgba(255,255,255,0.75)" }}>Crypto</button>
+                      <button type="button" onClick={() => setPaymentMethod("bank")} style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "bank" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "bank" ? "rgba(59,130,246,0.15)" : "transparent", color: paymentMethod === "bank" ? "#93C5FD" : "rgba(255,255,255,0.75)" }}>Bank Transfer</button>
                       <button type="button" disabled title="Coming soon" style={{ padding: "0.7rem 0.5rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "not-allowed", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", color: "rgba(255,255,255,0.3)" }}>
                         Card
                         <span style={{ display: "block", fontSize: "0.62rem", fontWeight: 500, marginTop: "0.15rem" }}>Coming soon</span>
@@ -294,7 +294,7 @@ export default function Institutional() {
                   </div>
                 )}
                 {formError && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: "8px", padding: "0.7rem 0.875rem", fontSize: "0.82rem", marginBottom: "1rem" }}>{formError}</div>}
-                <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#f59e0b", color: "#3a2404", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "1rem", opacity: formLoading ? 0.6 : 1 }}>
+                <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#3B82F6", color: "#3a2404", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "1rem", opacity: formLoading ? 0.6 : 1 }}>
                   {formLoading ? (paymentMethod === "crypto" ? "Redirecting to NOWPayments..." : "Submitting...") : isPaidPlan ? "Continue" : "Send"}
                 </button>
               </form>

@@ -152,7 +152,7 @@ export default function Agents() {
         </a>
         <div className="desktop-nav" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
           {NAV_LINKS.map(l => <a key={l.label} href={l.href} style={{ color: l.label === "Agents" ? "#fff" : "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 }}>{l.label}</a>)}
-          <a href="#" onClick={(e) => { e.preventDefault(); openForm("Growth"); }} style={{ background: "#6366f1", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Get Started</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); openForm("Growth"); }} style={{ background: "#3B82F6", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Get Started</a>
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-btn" style={{ display: "none", background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer" }}>{menuOpen ? "✕" : "☰"}</button>
       </nav>
@@ -161,16 +161,16 @@ export default function Agents() {
       <section className="hero-section" style={{ padding: "7rem 2rem 4rem", maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
         {checkoutStatus === "success" && <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "#86efac", fontSize: "0.9rem" }}>✅ Payment received — confirmation on its way to your email.</div>}
         {checkoutStatus === "cancelled" && <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "rgba(255,255,255,0.7)", fontSize: "0.9rem" }}>Checkout was cancelled — no charge was made.</div>}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#a5b4fc", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#a5b4fc", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} /> Phase 3: Pattern Suggestions Live — Never Autonomous
         </div>
         <h1 style={{ fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.5rem" }}>
-          Compliance rules that <span style={{ background: "linear-gradient(135deg,#6366f1 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>flag, never freeze</span>
+          Compliance rules that <span style={{ background: "linear-gradient(135deg,#3B82F6 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>flag, never freeze</span>
         </h1>
         <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "640px", margin: "0 auto 2.5rem", lineHeight: 1.75 }}>
           Set rules on risk scores, route matches to a review queue, keep a human accountable for every decision. Now: the system notices your own consistent patterns and asks before automating anything — it never decides that on its own.
         </p>
-        <button onClick={() => openForm("Growth")} style={{ background: "#6366f1", color: "#fff", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(99,102,241,0.35)" }}>Get Started</button>
+        <button onClick={() => openForm("Growth")} style={{ background: "#3B82F6", color: "#fff", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(59,130,246,0.35)" }}>Get Started</button>
       </section>
 
       <section style={{ padding: "4rem 2rem", maxWidth: "1150px", margin: "0 auto" }}>
@@ -202,7 +202,7 @@ export default function Agents() {
             <input value={newRule.threshold} onChange={e => setNewRule(p => ({ ...p, threshold: e.target.value }))} type="number" style={{ width: "70px", padding: "0.6rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem" }} />
           </div>
           {ruleBuilderError && <p style={{ color: "#fca5a5", fontSize: "0.78rem", marginBottom: "0.75rem" }}>{ruleBuilderError}</p>}
-          <button onClick={createRule} disabled={ruleBuilderLoading} style={{ background: "#6366f1", color: "#fff", border: "none", padding: "0.6rem 1.2rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", opacity: ruleBuilderLoading ? 0.6 : 1 }}>{ruleBuilderLoading ? "Creating..." : "+ Add rule"}</button>
+          <button onClick={createRule} disabled={ruleBuilderLoading} style={{ background: "#3B82F6", color: "#fff", border: "none", padding: "0.6rem 1.2rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", opacity: ruleBuilderLoading ? 0.6 : 1 }}>{ruleBuilderLoading ? "Creating..." : "+ Add rule"}</button>
 
           {rules.length > 0 && (
             <div style={{ marginTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -217,7 +217,7 @@ export default function Agents() {
         </div>
 
         {suggestions.length > 0 && (
-          <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: "16px", padding: "1.5rem", marginTop: "1.25rem" }}>
+          <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "16px", padding: "1.5rem", marginTop: "1.25rem" }}>
             <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.5rem", color: "#a5b4fc" }}>🔎 Pattern detected — Phase 3</h3>
             <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", marginBottom: "1rem" }}>Based on your own past decisions, not a guess. Nothing changes until you say so.</p>
             <input value={reviewerName} onChange={e => setReviewerName(e.target.value)} placeholder="Your name (required to enable automation)"
@@ -227,7 +227,7 @@ export default function Agents() {
                 <p style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>{s.message}</p>
                 <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.75rem" }}>{s.totalDecisions} past decisions, {s.consistencyPct}% consistent.</p>
                 <button onClick={() => enableAuto(s.ruleId, s.suggestedAction)} disabled={enablingId === s.ruleId}
-                  style={{ background: "#6366f1", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: enablingId === s.ruleId ? 0.6 : 1 }}>
+                  style={{ background: "#3B82F6", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: enablingId === s.ruleId ? 0.6 : 1 }}>
                   {enablingId === s.ruleId ? "Enabling..." : `Yes, auto-${s.suggestedAction} future matches`}
                 </button>
               </div>
@@ -240,13 +240,13 @@ export default function Agents() {
         <h2 style={{ textAlign: "center", fontSize: "clamp(1.6rem,3.5vw,2.2rem)", fontWeight: 800, marginBottom: "2.5rem" }}>Pricing</h2>
         <div className="plans-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1.5rem" }}>
           {PLANS.map(p => (
-            <div key={p.name} style={{ background: p.highlight ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)", border: p.highlight ? "1px solid rgba(99,102,241,0.4)" : "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: "2rem" }}>
+            <div key={p.name} style={{ background: p.highlight ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.03)", border: p.highlight ? "1px solid rgba(59,130,246,0.4)" : "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "0.5rem" }}>{p.name}</h3>
               <div style={{ fontSize: "1.7rem", fontWeight: 800, marginBottom: "1.25rem" }}>{p.price}<span style={{ fontSize: "0.9rem", fontWeight: 500, color: "rgba(255,255,255,0.5)" }}>{p.period}</span></div>
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {p.features.map(f => <li key={f} style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.65)", display: "flex", gap: "0.5rem" }}><span style={{ color: "#a5b4fc" }}>✓</span>{f}</li>)}
               </ul>
-              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#6366f1" : "transparent", color: "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>{p.name === "Enterprise" ? "Talk to Us" : "Get Started"}</button>
+              <button onClick={() => openForm(p.name)} style={{ width: "100%", padding: "0.8rem", borderRadius: "10px", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.15)", background: p.highlight ? "#3B82F6" : "transparent", color: "#fff", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}>{p.name === "Enterprise" ? "Talk to Us" : "Get Started"}</button>
             </div>
           ))}
         </div>
@@ -263,7 +263,7 @@ export default function Agents() {
 
       {formOpen && (
         <div onClick={e => e.target === e.currentTarget && closeForm()} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", overflowY: "auto" }}>
-          <div style={{ background: "#111827", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ background: "#111827", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between" }}>
               <h2 style={{ fontSize: "1.2rem", fontWeight: 800 }}>{formStep === "success" ? "Thanks!" : `${selectedPlan}`}</h2>
               <button onClick={closeForm} style={{ background: "rgba(255,255,255,0.07)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer" }}>✕</button>
@@ -278,16 +278,16 @@ export default function Agents() {
                       <div style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.5)" }}>To address</div>
                       <div style={{ fontSize: "0.85rem", fontFamily: "monospace", wordBreak: "break-all" }}>{paymentInfo.walletAddress}</div>
                     </div>
-                    <button onClick={closeForm} style={{ background: "#6366f1", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Got it</button>
+                    <button onClick={closeForm} style={{ background: "#3B82F6", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Got it</button>
                   </>
                 ) : (
-                  <><p style={{ color: "rgba(255,255,255,0.6)", marginBottom: "1.5rem" }}>Bank details are on their way to <strong>{formData.email}</strong>.</p><button onClick={closeForm} style={{ background: "#6366f1", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button></>
+                  <><p style={{ color: "rgba(255,255,255,0.6)", marginBottom: "1.5rem" }}>Bank details are on their way to <strong>{formData.email}</strong>.</p><button onClick={closeForm} style={{ background: "#3B82F6", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button></>
                 )}
               </div>
             ) : formStep === "success" ? (
               <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
                 <p style={{ color: "rgba(255,255,255,0.6)", marginBottom: "2rem" }}>We'll follow up at <strong>{formData.email}</strong>.</p>
-                <button onClick={closeForm} style={{ background: "#6366f1", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
+                <button onClick={closeForm} style={{ background: "#3B82F6", color: "#fff", padding: "0.875rem 2rem", borderRadius: "10px", border: "none", cursor: "pointer", fontWeight: 700 }}>Close</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
@@ -300,14 +300,14 @@ export default function Agents() {
                 {isPaidPlan && (
                   <div style={{ marginBottom: "1.25rem" }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem" }}>
-                      <button type="button" onClick={() => setPaymentMethod("crypto")} style={{ padding: "0.7rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "crypto" ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "crypto" ? "rgba(99,102,241,0.15)" : "transparent", color: "#fff" }}>Crypto</button>
-                      <button type="button" onClick={() => setPaymentMethod("bank")} style={{ padding: "0.7rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "bank" ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "bank" ? "rgba(99,102,241,0.15)" : "transparent", color: "#fff" }}>Bank</button>
+                      <button type="button" onClick={() => setPaymentMethod("crypto")} style={{ padding: "0.7rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "crypto" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "crypto" ? "rgba(59,130,246,0.15)" : "transparent", color: "#fff" }}>Crypto</button>
+                      <button type="button" onClick={() => setPaymentMethod("bank")} style={{ padding: "0.7rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", border: paymentMethod === "bank" ? "1px solid #3B82F6" : "1px solid rgba(255,255,255,0.15)", background: paymentMethod === "bank" ? "rgba(59,130,246,0.15)" : "transparent", color: "#fff" }}>Bank</button>
                       <button type="button" disabled style={{ padding: "0.7rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}>Card<span style={{ display: "block", fontSize: "0.6rem" }}>Coming soon</span></button>
                     </div>
                   </div>
                 )}
                 {formError && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: "8px", padding: "0.7rem", fontSize: "0.82rem", marginBottom: "1rem" }}>{formError}</div>}
-                <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#6366f1", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: formLoading ? 0.6 : 1 }}>{formLoading ? "Submitting..." : "Continue"}</button>
+                <button type="submit" disabled={formLoading} style={{ width: "100%", padding: "1rem", borderRadius: "10px", background: "#3B82F6", color: "#fff", border: "none", fontWeight: 700, cursor: "pointer", opacity: formLoading ? 0.6 : 1 }}>{formLoading ? "Submitting..." : "Continue"}</button>
               </form>
             )}
           </div>

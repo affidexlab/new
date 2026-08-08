@@ -131,7 +131,7 @@ export default function IssuerPortal() {
   return (
     <div style={{ background: "#0A0E27", color: "#fff", minHeight: "100vh", fontFamily: "Inter,system-ui,sans-serif" }}>
       <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.1rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-        <a href="/institutional" style={{ textDecoration: "none", color: "#fff", fontWeight: 800, fontSize: "1.2rem" }}>← Deca<span style={{ color: "#f59e0b" }}>Flow</span> Issuer Portal</a>
+        <a href="/institutional" style={{ textDecoration: "none", color: "#fff", fontWeight: 800, fontSize: "1.2rem" }}>← Deca<span style={{ color: "#3B82F6" }}>Flow</span> Issuer Portal</a>
         <ConnectButton />
       </nav>
 
@@ -187,7 +187,7 @@ export default function IssuerPortal() {
                   <input value={wlEvidenceRef} onChange={e => setWlEvidenceRef(e.target.value)} placeholder="Evidence reference (e.g. compliance vault doc ID) — hashed, never stored raw"
                     style={{ padding: "0.65rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.85rem" }} />
                   <button onClick={submitWhitelist} disabled={!isAddress(wlAddress) || writePending || txConfirming}
-                    style={{ background: "#f59e0b", color: "#3a2404", padding: "0.75rem", borderRadius: "8px", border: "none", fontWeight: 700, cursor: "pointer", opacity: (!isAddress(wlAddress) || writePending || txConfirming) ? 0.5 : 1 }}>
+                    style={{ background: "#3B82F6", color: "#07111f", padding: "0.75rem", borderRadius: "8px", border: "none", fontWeight: 700, cursor: "pointer", opacity: (!isAddress(wlAddress) || writePending || txConfirming) ? 0.5 : 1 }}>
                     {writePending ? "Confirm in wallet..." : txConfirming ? "Confirming..." : "Whitelist wallet"}
                   </button>
                   {writeError && <p style={{ color: "#fca5a5", fontSize: "0.8rem" }}>{writeError.message.split("\n")[0]}</p>}
@@ -204,7 +204,7 @@ export default function IssuerPortal() {
                 <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>Compliance events (recent)</h3>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button onClick={loadEvents} disabled={eventsLoading} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", padding: "0.4rem 0.9rem", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}>{eventsLoading ? "Loading..." : "Load"}</button>
-                  {events.length > 0 && <button onClick={downloadCsv} style={{ background: "#f59e0b", color: "#3a2404", border: "none", padding: "0.4rem 0.9rem", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Export CSV</button>}
+                  {events.length > 0 && <button onClick={downloadCsv} style={{ background: "#3B82F6", color: "#07111f", border: "none", padding: "0.4rem 0.9rem", borderRadius: "6px", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}>Export CSV</button>}
                 </div>
               </div>
               <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.75rem" }}>Reads recent forced-transfer events directly from the chain — no indexer behind this yet, so very old events on a long-lived contract may be out of range.</p>

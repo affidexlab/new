@@ -29,8 +29,8 @@ const PLANS = [
 ];
 
 const CHAINS = ["Ethereum","Arbitrum","Base","Optimism","Polygon","Avalanche","BNB Chain"];
-const levelColor = (l: string) => l==="LOW"?"#22c55e":l==="MEDIUM"?"#f59e0b":l==="HIGH"?"#f97316":"#ef4444";
-const recColor   = (r: string) => r==="APPROVE"?"#22c55e":r==="REVIEW"?"#f59e0b":"#ef4444";
+const levelColor = (l: string) => l==="LOW"?"#22c55e":l==="MEDIUM"?"#3B82F6":l==="HIGH"?"#60A5FA":"#ef4444";
+const recColor   = (r: string) => r==="APPROVE"?"#22c55e":r==="REVIEW"?"#3B82F6":"#ef4444";
 const NAV_LINKS = [
   {label:"Compliance",href:"/compliance"},
   {label:"Security Audit",href:"/audit"},
@@ -49,10 +49,12 @@ export default function Verify() {
   const [selectedPlan, setSelectedPlan] = useState("");
   const [formStep, setFormStep] = useState<"form"|"success">("form");
   const [formLoading, setFormLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"crypto"|"bank"|"">("");
+  const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState({companyName:"",contactName:"",email:"",telegram:"",useCase:"",chains:[] as string[],monthlyChecks:"",plan:"",message:""});
 
   const openForm = (plan: string) => {setSelectedPlan(plan);setFormData(p=>({...p,plan}));setFormStep("form");setFormOpen(true);document.body.style.overflow="hidden";};
-  const closeForm = () => {setFormOpen(false);document.body.style.overflow="";};
+  const closeForm = () => {setFormOpen(false);setPaymentMethod("");setFormError("");document.body.style.overflow="";};
   const toggleChain = (c: string) => setFormData(p=>({...p,chains:p.chains.includes(c)?p.chains.filter((x:string)=>x!==c):[...p.chains,c]}));
 
   const runDemo = async () => {
@@ -70,9 +72,18 @@ export default function Verify() {
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setFormLoading(true);
-    try{await fetch(`${API_BASE}/v1/verify/enquiry`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...formData,source:"verify-page"})});}catch{}
-    setFormStep("success"); setFormLoading(false);
+    e.preventDefault(); setFormLoading(true); setFormError("");
+    const isPaid = selectedPlan === "Growth" || selectedPlan === "Business";
+    if (isPaid && !paymentMethod) { setFormError("Choose NOWPayments crypto checkout or manual bank transfer."); setFormLoading(false); return; }
+    try{
+      const endpoint = !isPaid ? "/v1/verify/enquiry" : paymentMethod === "crypto" ? "/v1/verify/nowpayments/create-invoice" : "/v1/verify/payment-request";
+      const res = await fetch(`${API_BASE}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...formData,source:"verify-page"})});
+      const data = await res.json().catch(()=>({}));
+      if (paymentMethod === "crypto" && data.success && data.url) { window.location.href = data.url; return; }
+      if (!res.ok || data.success === false) throw new Error(data.error || "Could not submit request.");
+      setFormStep("success");
+    }catch(err:any){ setFormError(err.message || "Could not submit request."); }
+    setFormLoading(false);
   };
 
   const inp: React.CSSProperties = {width:"100%",padding:"0.75rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",boxSizing:"border-box",fontFamily:"inherit"};
@@ -102,9 +113,9 @@ export default function Verify() {
         </a>
         <div className="desk-nav" style={{gap:"1.5rem",alignItems:"center"}}>
           {NAV_LINKS.map(({label,href,active})=>(
-            <a key={label} href={href} style={{color:active?"#8b5cf6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:active?600:400}}>{label}</a>
+            <a key={label} href={href} style={{color:active?"#3B82F6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:active?600:400}}>{label}</a>
           ))}
-          <button onClick={()=>openForm("Business")} style={{background:"#8b5cf6",color:"#fff",padding:"0.5rem 1.25rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.875rem",fontWeight:600}}>Get API Access</button>
+          <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.5rem 1.25rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.875rem",fontWeight:600}}>Get API Access</button>
         </div>
         <button className="mob-btn" onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:"#fff",fontSize:"1.5rem",cursor:"pointer",padding:"0.25rem"}}>{menuOpen?"✕":"☰"}</button>
       </nav>
@@ -112,23 +123,23 @@ export default function Verify() {
       {menuOpen&&(
         <div style={{position:"fixed",inset:0,background:"rgba(10,14,39,0.98)",zIndex:99,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"2rem"}}>
           {NAV_LINKS.map(({label,href})=>(<a key={label} href={href} onClick={()=>setMenuOpen(false)} style={{color:"#fff",textDecoration:"none",fontSize:"1.5rem",fontWeight:700}}>{label}</a>))}
-          <button onClick={()=>{setMenuOpen(false);openForm("Business");}} style={{background:"#8b5cf6",color:"#fff",padding:"0.875rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get API Access</button>
+          <button onClick={()=>{setMenuOpen(false);openForm("Business");}} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get API Access</button>
         </div>
       )}
 
       {/* Hero */}
       <section style={{padding:"5rem 2rem 3rem",maxWidth:"1100px",margin:"0 auto",textAlign:"center"}}>
-        <div style={{display:"inline-block",background:"rgba(139,92,246,0.12)",border:"1px solid rgba(139,92,246,0.3)",borderRadius:"100px",padding:"0.4rem 1rem",fontSize:"0.78rem",color:"#C4B5FD",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:"1.5rem"}}>DecaFlow Verify API</div>
-        <h1 style={{fontSize:"clamp(1.8rem,5vw,3.4rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>Know Who You're Dealing With.{" "}<span style={{background:"linear-gradient(135deg,#8b5cf6,#3B82F6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Before It's Too Late.</span></h1>
+        <div style={{display:"inline-block",background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"100px",padding:"0.4rem 1rem",fontSize:"0.78rem",color:"#93C5FD",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:"1.5rem"}}>DecaFlow Verify API</div>
+        <h1 style={{fontSize:"clamp(1.8rem,5vw,3.4rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>Know Who You're Dealing With.{" "}<span style={{background:"linear-gradient(135deg,#3B82F6,#3B82F6)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Before It's Too Late.</span></h1>
         <p style={{fontSize:"1.05rem",color:"rgba(255,255,255,0.65)",maxWidth:"640px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Instant wallet screening against global sanctions lists, mixer databases, darknet exposure records, and jurisdiction risk profiles — across 7 blockchain networks. One API. Sub-100ms.</p>
         <div style={{display:"flex",gap:"1rem",justifyContent:"center",flexWrap:"wrap"}}>
-          <button onClick={()=>openForm("Business")} style={{background:"#8b5cf6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get API Access</button>
+          <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get API Access</button>
           <a href="#demo" style={{background:"rgba(255,255,255,0.06)",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",textDecoration:"none",fontSize:"1rem",fontWeight:600,border:"1px solid rgba(255,255,255,0.12)"}}>Try Live Demo</a>
         </div>
         <div className="stats-bar" style={{display:"flex",marginTop:"3.5rem",flexWrap:"wrap",background:"rgba(255,255,255,0.04)",borderRadius:"16px",border:"1px solid rgba(255,255,255,0.08)",overflow:"hidden"}}>
           {[["7","Blockchain networks"],["50+","Sanctions lists monitored"],["<100ms","API response time"],["5 hops","Graph analysis depth"],["99.9%","Uptime SLA"]].map(([v,l],i)=>(
             <div key={i} style={{flex:"1 1 120px",padding:"1.5rem 0.75rem",textAlign:"center",borderRight:i<4?"1px solid rgba(255,255,255,0.08)":"none"}}>
-              <div style={{fontSize:"1.6rem",fontWeight:800,color:"#8b5cf6"}}>{v}</div>
+              <div style={{fontSize:"1.6rem",fontWeight:800,color:"#3B82F6"}}>{v}</div>
               <div style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.5)",marginTop:"0.3rem"}}>{l}</div>
             </div>
           ))}
@@ -139,14 +150,14 @@ export default function Verify() {
       <section id="demo" style={{padding:"3rem 2rem",maxWidth:"900px",margin:"0 auto"}}>
         <h2 style={{fontSize:"clamp(1.4rem,3.5vw,1.75rem)",fontWeight:800,textAlign:"center",marginBottom:"0.5rem"}}>Try it now</h2>
         <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"2rem",fontSize:"0.9rem"}}>Enter a wallet address and preview the response shape. Authenticated production checks use DecaFlow's internal labels, graph ingestion, and case-review feedback.</p>
-        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(139,92,246,0.25)",borderRadius:"20px",padding:"2rem 1.5rem"}}>
+        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:"20px",padding:"2rem 1.5rem"}}>
           <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",marginBottom:"1rem"}}>
             <input type="text" placeholder="Enter wallet address (0x...)" value={demoAddress} onChange={e=>setDemoAddress(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runDemo()}
               style={{flex:"1",padding:"0.875rem 1rem",borderRadius:"10px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.9rem",outline:"none",minWidth:"0",fontFamily:"monospace"}}/>
             <select value={demoChain} onChange={e=>setDemoChain(e.target.value)} style={{padding:"0.875rem 0.75rem",borderRadius:"10px",background:"#1f2937",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.85rem",outline:"none",cursor:"pointer"}}>
               {CHAINS.map(c=><option key={c} value={c.toLowerCase().replace(/\s/g,"")} style={{background:"#1f2937"}}>{c}</option>)}
             </select>
-            <button onClick={runDemo} disabled={demoLoading||!demoAddress.trim()} style={{background:"#8b5cf6",color:"#fff",padding:"0.875rem 1.25rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700,fontSize:"0.9rem",opacity:(demoLoading||!demoAddress.trim())?0.5:1,whiteSpace:"nowrap"}}>
+            <button onClick={runDemo} disabled={demoLoading||!demoAddress.trim()} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 1.25rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700,fontSize:"0.9rem",opacity:(demoLoading||!demoAddress.trim())?0.5:1,whiteSpace:"nowrap"}}>
               {demoLoading?"Scanning...":"Verify Wallet"}
             </button>
           </div>
@@ -164,7 +175,7 @@ export default function Verify() {
               </div>
               <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
                 {(["response","fields"] as const).map(tab=>(
-                  <button key={tab} onClick={()=>setActiveTab(tab)} style={{padding:"0.4rem 0.9rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.8rem",fontWeight:600,background:activeTab===tab?"#8b5cf6":"rgba(255,255,255,0.07)",color:"#fff"}}>
+                  <button key={tab} onClick={()=>setActiveTab(tab)} style={{padding:"0.4rem 0.9rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.8rem",fontWeight:600,background:activeTab===tab?"#3B82F6":"rgba(255,255,255,0.07)",color:"#fff"}}>
                     {tab==="response"?"API Response":"Field Reference"}
                   </button>
                 ))}
@@ -172,7 +183,7 @@ export default function Verify() {
               {activeTab==="response"&&(
                 <div style={{background:"#0D1117",borderRadius:"12px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{padding:"0.6rem 1rem",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",gap:"0.4rem"}}>
-                    {["#ef4444","#f59e0b","#22c55e"].map((c,i)=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:c}}/>)}
+                    {["#ef4444","#3B82F6","#22c55e"].map((c,i)=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:c}}/>)}
                   </div>
                   <pre style={{margin:0,padding:"1.25rem",fontSize:"0.78rem",lineHeight:1.7,color:"#e2e8f0",overflowX:"auto"}}>{JSON.stringify(demoResult,null,2)}</pre>
                 </div>
@@ -181,7 +192,7 @@ export default function Verify() {
                 <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                   {[["riskScore","number (0–100)","Composite risk score."],["riskLevel",'"LOW"|"MEDIUM"|"HIGH"|"CRITICAL"',"Human-readable risk band."],["sanctionsMatch","boolean","True if address matches a sanctions list."],["mixerExposure","number (0–1)","Fraction of funds with traceable mixer origin."],["recommendation",'"APPROVE"|"REVIEW"|"REJECT"',"Suggested action for this wallet."],["reportId","string","Unique ID for your audit trail."]].map(([f,t,d],i)=>(
                     <div key={i} style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:"1rem",padding:"0.75rem",borderRadius:"8px",background:i%2===0?"rgba(255,255,255,0.03)":"transparent",fontSize:"0.8rem"}}>
-                      <div><div style={{fontFamily:"monospace",color:"#8b5cf6",fontWeight:700}}>{f}</div><div style={{color:"rgba(255,255,255,0.35)",fontSize:"0.72rem",marginTop:"0.15rem"}}>{t}</div></div>
+                      <div><div style={{fontFamily:"monospace",color:"#3B82F6",fontWeight:700}}>{f}</div><div style={{color:"rgba(255,255,255,0.35)",fontSize:"0.72rem",marginTop:"0.15rem"}}>{t}</div></div>
                       <div style={{color:"rgba(255,255,255,0.6)",lineHeight:1.5}}>{d}</div>
                     </div>
                   ))}
@@ -198,7 +209,7 @@ export default function Verify() {
         <h2 style={{fontSize:"clamp(1.4rem,3.5vw,1.75rem)",fontWeight:800,textAlign:"center",marginBottom:"2rem"}}>Integrate in minutes</h2>
         <div style={{background:"#0D1117",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"16px",overflow:"hidden"}}>
           <div style={{padding:"0.75rem 1.25rem",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",gap:"0.5rem",alignItems:"center"}}>
-            {["#ef4444","#f59e0b","#22c55e"].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:c}}/>)}
+            {["#ef4444","#3B82F6","#22c55e"].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:"50%",background:c}}/>)}
             <span style={{marginLeft:"0.75rem",color:"rgba(255,255,255,0.4)",fontSize:"0.8rem"}}>verify-wallet.ts</span>
           </div>
           <pre style={{margin:0,padding:"1.5rem",fontSize:"0.82rem",lineHeight:1.75,color:"#e2e8f0",overflowX:"auto"}}>{`import { DecaFlowVerify } from '@decaflow/verify';
@@ -265,18 +276,18 @@ switch (result.recommendation) {
           <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"3rem"}}>Enterprise-grade wallet screening for every scale.</p>
           <div className="plan-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:"1.5rem"}}>
             {PLANS.map((plan,i)=>(
-              <div key={i} style={{background:plan.highlight?"rgba(139,92,246,0.08)":"rgba(255,255,255,0.03)",border:plan.highlight?"1px solid rgba(139,92,246,0.4)":"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"1.75rem",position:"relative"}}>
-                {plan.highlight&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#8b5cf6",color:"#fff",padding:"0.25rem 1rem",borderRadius:"100px",fontSize:"0.75rem",fontWeight:700,whiteSpace:"nowrap"}}>Most Popular</div>}
+              <div key={i} style={{background:plan.highlight?"rgba(59,130,246,0.08)":"rgba(255,255,255,0.03)",border:plan.highlight?"1px solid rgba(59,130,246,0.4)":"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"1.75rem",position:"relative"}}>
+                {plan.highlight&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#3B82F6",color:"#fff",padding:"0.25rem 1rem",borderRadius:"100px",fontSize:"0.75rem",fontWeight:700,whiteSpace:"nowrap"}}>Most Popular</div>}
                 <h3 style={{fontSize:"1rem",fontWeight:700,marginBottom:"0.25rem"}}>{plan.name}</h3>
                 <div style={{display:"flex",alignItems:"baseline",gap:"0.2rem",marginBottom:"0.25rem"}}>
-                  <span style={{fontSize:"2rem",fontWeight:800,color:plan.highlight?"#8b5cf6":"#fff"}}>{plan.price}</span>
+                  <span style={{fontSize:"2rem",fontWeight:800,color:plan.highlight?"#3B82F6":"#fff"}}>{plan.price}</span>
                   <span style={{color:"rgba(255,255,255,0.4)",fontSize:"0.85rem"}}>{plan.period}</span>
                 </div>
-                <div style={{fontSize:"0.78rem",color:"#8b5cf6",fontWeight:600,marginBottom:"1.25rem"}}>{plan.checks}</div>
+                <div style={{fontSize:"0.78rem",color:"#3B82F6",fontWeight:600,marginBottom:"1.25rem"}}>{plan.checks}</div>
                 <ul style={{listStyle:"none",padding:0,margin:"0 0 1.5rem",display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                   {plan.features.map((f,j)=><li key={j} style={{display:"flex",gap:"0.5rem",fontSize:"0.83rem",color:"rgba(255,255,255,0.7)"}}><span style={{color:"#22c55e",flexShrink:0}}>✓</span>{f}</li>)}
                 </ul>
-                <button onClick={()=>openForm(plan.name)} style={{display:"block",width:"100%",padding:"0.8rem",borderRadius:"10px",fontWeight:700,fontSize:"0.875rem",background:plan.highlight?"#8b5cf6":"rgba(255,255,255,0.07)",color:"#fff",border:plan.highlight?"none":"1px solid rgba(255,255,255,0.12)",cursor:"pointer"}}>
+                <button onClick={()=>openForm(plan.name)} style={{display:"block",width:"100%",padding:"0.8rem",borderRadius:"10px",fontWeight:700,fontSize:"0.875rem",background:plan.highlight?"#3B82F6":"rgba(255,255,255,0.07)",color:"#fff",border:plan.highlight?"none":"1px solid rgba(255,255,255,0.12)",cursor:"pointer"}}>
                   {plan.name==="Enterprise"?"Contact Sales":"Get Started"}
                 </button>
               </div>
@@ -289,7 +300,7 @@ switch (result.recommendation) {
       <section style={{padding:"5rem 2rem",textAlign:"center"}}>
         <h2 style={{fontSize:"clamp(1.6rem,4vw,2.2rem)",fontWeight:800,marginBottom:"1rem"}}>Start verifying wallets today.</h2>
         <p style={{color:"rgba(255,255,255,0.55)",fontSize:"1rem",maxWidth:"480px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Enterprise-grade wallet screening. Production-ready in minutes.</p>
-        <button onClick={()=>openForm("Business")} style={{background:"#8b5cf6",color:"#fff",padding:"1rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1.05rem",fontWeight:700}}>Get API Access</button>
+        <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"1rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1.05rem",fontWeight:700}}>Get API Access</button>
       </section>
 
       <footer style={{borderTop:"1px solid rgba(255,255,255,0.08)",padding:"2rem 1.25rem",textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.8rem"}}>
@@ -299,7 +310,7 @@ switch (result.recommendation) {
       {/* Form Modal */}
       {formOpen&&(
         <div onClick={e=>e.target===e.currentTarget&&closeForm()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(8px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem",overflowY:"auto"}}>
-          <div style={{background:"#111827",border:"1px solid rgba(139,92,246,0.3)",borderRadius:"20px",width:"100%",maxWidth:"580px",maxHeight:"90vh",overflowY:"auto"}}>
+          <div style={{background:"#111827",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"20px",width:"100%",maxWidth:"580px",maxHeight:"90vh",overflowY:"auto"}}>
             <div style={{padding:"1.5rem 1.5rem 1rem",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
               <div>
                 <h2 style={{fontSize:"1.2rem",fontWeight:800,marginBottom:"0.25rem"}}>{formStep==="success"?"You're in! 🚀":`Verify API — ${selectedPlan} Plan`}</h2>
@@ -312,7 +323,7 @@ switch (result.recommendation) {
                 <div style={{fontSize:"3.5rem",marginBottom:"1rem"}}>🔑</div>
                 <h3 style={{fontSize:"1.2rem",fontWeight:700,marginBottom:"0.75rem"}}>Request received!</h3>
                 <p style={{color:"rgba(255,255,255,0.6)",lineHeight:1.7,marginBottom:"2rem"}}>We'll send your API credentials and integration guide to <strong>{formData.email}</strong> within 24 hours.</p>
-                <button onClick={closeForm} style={{background:"#8b5cf6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700}}>Close</button>
+                <button onClick={closeForm} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700}}>Close</button>
               </div>
             ):(
               <form onSubmit={handleFormSubmit} style={{padding:"1.5rem"}}>
@@ -335,7 +346,7 @@ switch (result.recommendation) {
                   <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.5rem",fontWeight:600}}>Chains you need covered</label>
                   <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
                     {CHAINS.map(c=>(
-                      <button key={c} type="button" onClick={()=>toggleChain(c)} style={{padding:"0.35rem 0.8rem",borderRadius:"100px",fontSize:"0.78rem",fontWeight:600,cursor:"pointer",border:formData.chains.includes(c)?"1px solid #8b5cf6":"1px solid rgba(255,255,255,0.12)",background:formData.chains.includes(c)?"rgba(139,92,246,0.2)":"transparent",color:formData.chains.includes(c)?"#C4B5FD":"rgba(255,255,255,0.6)"}}>{c}</button>
+                      <button key={c} type="button" onClick={()=>toggleChain(c)} style={{padding:"0.35rem 0.8rem",borderRadius:"100px",fontSize:"0.78rem",fontWeight:600,cursor:"pointer",border:formData.chains.includes(c)?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:formData.chains.includes(c)?"rgba(59,130,246,0.2)":"transparent",color:formData.chains.includes(c)?"#93C5FD":"rgba(255,255,255,0.6)"}}>{c}</button>
                     ))}
                   </div>
                 </div>
@@ -350,8 +361,16 @@ switch (result.recommendation) {
                   <label style={{display:"block",fontSize:"0.78rem",color:"rgba(255,255,255,0.6)",marginBottom:"0.35rem",fontWeight:600}}>Tell us more (optional)</label>
                   <textarea value={formData.message} onChange={e=>setFormData(p=>({...p,message:e.target.value}))} rows={3} placeholder="Any specific compliance requirements or integration questions..." style={{...inp,resize:"vertical"}}/>
                 </div>
-                <button type="submit" disabled={formLoading} style={{width:"100%",padding:"1rem",borderRadius:"10px",background:"#8b5cf6",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:"1rem",opacity:formLoading?0.6:1}}>
-                  {formLoading?"Submitting...":`Get Started — ${selectedPlan} Plan`}
+                {(selectedPlan==="Growth"||selectedPlan==="Business")&&<div style={{marginBottom:"1rem",background:"rgba(59,130,246,0.08)",border:"1px solid rgba(59,130,246,0.22)",borderRadius:"12px",padding:"1rem"}}>
+                  <div style={{fontWeight:700,marginBottom:"0.75rem"}}>Checkout method</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+                    <button type="button" onClick={()=>setPaymentMethod("crypto")} style={{padding:"0.85rem",borderRadius:"10px",border:paymentMethod==="crypto"?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:paymentMethod==="crypto"?"rgba(59,130,246,0.18)":"rgba(255,255,255,0.04)",color:"#fff",fontWeight:700,cursor:"pointer"}}>NOWPayments Crypto</button>
+                    <button type="button" onClick={()=>setPaymentMethod("bank")} style={{padding:"0.85rem",borderRadius:"10px",border:paymentMethod==="bank"?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:paymentMethod==="bank"?"rgba(59,130,246,0.18)":"rgba(255,255,255,0.04)",color:"#fff",fontWeight:700,cursor:"pointer"}}>Bank Transfer (manual)</button>
+                  </div>
+                </div>}
+                {formError&&<p style={{color:"#fca5a5",fontSize:"0.85rem"}}>{formError}</p>}
+                <button type="submit" disabled={formLoading} style={{width:"100%",padding:"1rem",borderRadius:"10px",background:"#3B82F6",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:"1rem",opacity:formLoading?0.6:1}}>
+                  {formLoading?"Submitting...":(selectedPlan==="Growth"||selectedPlan==="Business")?(paymentMethod==="bank"?"Request Bank Transfer Details":"Continue to NOWPayments"):`Get Started — ${selectedPlan} Plan`}
                 </button>
                 <p style={{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.72rem",marginTop:"0.75rem"}}>🔒 No commitment. We'll reach out within 24 hours.</p>
               </form>

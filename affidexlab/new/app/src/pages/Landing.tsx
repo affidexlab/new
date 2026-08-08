@@ -16,8 +16,8 @@ const NAV_LINKS: NavLink[] = [
 const STATS = [
   { val: "$1.4B+", label: "Lost to MEV annually across DeFi", color: "#ef4444" },
   { val: "$154B+", label: "Illicit crypto volume detected globally (2025)", color: "#3B82F6" },
-  { val: "188K+", label: "Transactions hit by MEV monthly on Arbitrum", color: "#f97316" },
-  { val: "7", label: "Chains protected by DecaFlow infrastructure", color: "#8b5cf6" },
+  { val: "188K+", label: "Transactions hit by MEV monthly on Arbitrum", color: "#60A5FA" },
+  { val: "7", label: "Chains protected by DecaFlow infrastructure", color: "#3B82F6" },
   { val: "500+", label: "GitHub commits of active development", color: "#22c55e" },
 ];
 
@@ -59,9 +59,9 @@ const PRODUCTS = [
     href: "/shield",
   },
   {
-    accent: "#f59e0b",
-    accentBg: "rgba(245,158,11,0.1)",
-    accentBorder: "rgba(245,158,11,0.25)",
+    accent: "#3B82F6",
+    accentBg: "rgba(59,130,246,0.1)",
+    accentBorder: "rgba(59,130,246,0.25)",
     icon: "🪪",
     badge: "Early Development",
     title: "DecaFlow Institutional",
@@ -71,9 +71,9 @@ const PRODUCTS = [
     href: "/institutional",
   },
   {
-    accent: "#8b5cf6",
-    accentBg: "rgba(139,92,246,0.1)",
-    accentBorder: "rgba(139,92,246,0.25)",
+    accent: "#3B82F6",
+    accentBg: "rgba(59,130,246,0.1)",
+    accentBorder: "rgba(59,130,246,0.25)",
     icon: "🔍",
     badge: "New · API",
     title: "DecaFlow Verify API",
@@ -96,7 +96,7 @@ const HOW_IT_WORKS = [
     desc: "Our SDK, API, and UI components are built for fast integration. Compliance and Verify APIs connect with a single npm install.",
   },
   {
-    step: "03", accent: "#8b5cf6",
+    step: "03", accent: "#3B82F6",
     title: "Get protected instantly",
     desc: "From the first transaction, your users are protected from MEV, your compliance engine is running, and your contracts are documented and secured.",
   },
@@ -139,7 +139,7 @@ export default function Landing() {
   };
 
   const levelColor = (l: string) =>
-    l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#f59e0b" : "#ef4444";
+    l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#3B82F6" : "#ef4444";
 
   return (
     <div style={{ background: "#0A0E27", color: "#fff", minHeight: "100vh", fontFamily: "Inter, system-ui, sans-serif", overflowX: "hidden" }}>
@@ -438,7 +438,7 @@ export default function Landing() {
           </div>
           <div style={{ background: "#0D1117", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "16px", overflow: "hidden" }}>
             <div style={{ padding: "0.7rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", gap: "0.4rem" }}>
-              {["#ef4444","#f59e0b","#22c55e"].map((c,i) => <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />)}
+              {["#ef4444","#3B82F6","#22c55e"].map((c,i) => <div key={i} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />)}
               <span style={{ marginLeft: "0.5rem", color: "rgba(255,255,255,0.35)", fontSize: "0.75rem" }}>swap-with-protection.ts</span>
             </div>
             <pre style={{ margin: 0, padding: "1.25rem", fontSize: "0.78rem", lineHeight: 1.75, color: "#e2e8f0", overflowX: "auto" }}>

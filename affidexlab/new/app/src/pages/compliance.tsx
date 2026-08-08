@@ -27,7 +27,7 @@ const USE_CASES = [
   { sector: "DeFi Protocols", icon: "🔗", problem: "Global regulators are increasingly applying AML obligations to DeFi protocols. MiCA in Europe is already in force.", solution: "Embed compliance screening into your protocol's frontend. Show users their wallet risk score before they interact." },
 ];
 
-const levelColor = (l: string) => l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#f59e0b" : "#ef4444";
+const levelColor = (l: string) => l === "LOW" ? "#22c55e" : l === "MEDIUM" ? "#3B82F6" : "#ef4444";
 
 export default function Compliance() {
   useEffect(() => { document.title = "Compliance & Transaction Monitoring | DecaFlow"; }, []);
@@ -40,10 +40,12 @@ export default function Compliance() {
   const [selectedPlan, setSelectedPlan] = useState("");
   const [formStep, setFormStep] = useState<"form"|"success">("form");
   const [formLoading, setFormLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"crypto"|"bank"|"">("");
+  const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState({ companyName:"", contactName:"", email:"", telegram:"", businessType:"", chains:[] as string[], monthlyTxVolume:"", plan:"", message:"" });
 
   const openForm = (plan: string) => { setSelectedPlan(plan); setFormData(p=>({...p,plan})); setFormStep("form"); setFormOpen(true); document.body.style.overflow="hidden"; };
-  const closeForm = () => { setFormOpen(false); document.body.style.overflow=""; };
+  const closeForm = () => { setFormOpen(false); setPaymentMethod(""); setFormError(""); document.body.style.overflow=""; };
   const toggleChain = (c: string) => setFormData(p=>({...p, chains: p.chains.includes(c)?p.chains.filter(x=>x!==c):[...p.chains,c]}));
 
   const runDemo = async () => {
@@ -62,9 +64,18 @@ export default function Compliance() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setFormLoading(true);
-    try { await fetch(`${API_BASE}/v1/compliance/enquiry`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...formData,source:"compliance-page"})}); } catch {}
-    setFormStep("success"); setFormLoading(false);
+    e.preventDefault(); setFormLoading(true); setFormError("");
+    const isPaid = selectedPlan !== "Enterprise";
+    if (isPaid && !paymentMethod) { setFormError("Choose NOWPayments crypto checkout or manual bank transfer."); setFormLoading(false); return; }
+    try {
+      const endpoint = !isPaid ? "/v1/compliance/enquiry" : paymentMethod === "crypto" ? "/v1/compliance/nowpayments/create-invoice" : "/v1/compliance/payment-request";
+      const res = await fetch(`${API_BASE}${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...formData,source:"compliance-page"})});
+      const data = await res.json().catch(() => ({}));
+      if (paymentMethod === "crypto" && data.success && data.url) { window.location.href = data.url; return; }
+      if (!res.ok || data.success === false) throw new Error(data.error || "Could not submit request.");
+      setFormStep("success");
+    } catch (err: any) { setFormError(err.message || "Could not submit request."); }
+    setFormLoading(false);
   };
 
   const NAV_LINKS = [
@@ -312,8 +323,16 @@ export default function Compliance() {
                     placeholder="Tell us about your compliance needs or any specific regulatory requirements..."
                     style={{width:"100%",padding:"0.7rem 0.875rem",borderRadius:"8px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.875rem",outline:"none",resize:"vertical",boxSizing:"border-box" as const,fontFamily:"inherit"}} />
                 </div>
+                {selectedPlan!=="Enterprise"&&<div style={{marginBottom:"1rem",background:"rgba(59,130,246,0.08)",border:"1px solid rgba(59,130,246,0.22)",borderRadius:"12px",padding:"1rem"}}>
+                  <div style={{fontWeight:700,marginBottom:"0.75rem"}}>Checkout method</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.75rem"}}>
+                    <button type="button" onClick={()=>setPaymentMethod("crypto")} style={{padding:"0.85rem",borderRadius:"10px",border:paymentMethod==="crypto"?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:paymentMethod==="crypto"?"rgba(59,130,246,0.18)":"rgba(255,255,255,0.04)",color:"#fff",fontWeight:700,cursor:"pointer"}}>NOWPayments Crypto</button>
+                    <button type="button" onClick={()=>setPaymentMethod("bank")} style={{padding:"0.85rem",borderRadius:"10px",border:paymentMethod==="bank"?"1px solid #3B82F6":"1px solid rgba(255,255,255,0.12)",background:paymentMethod==="bank"?"rgba(59,130,246,0.18)":"rgba(255,255,255,0.04)",color:"#fff",fontWeight:700,cursor:"pointer"}}>Bank Transfer (manual)</button>
+                  </div>
+                </div>}
+                {formError&&<p style={{color:"#fca5a5",fontSize:"0.85rem"}}>{formError}</p>}
                 <button type="submit" disabled={formLoading} style={{width:"100%",padding:"1rem",borderRadius:"10px",background:"#3B82F6",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:"1rem",opacity:formLoading?0.6:1}}>
-                  {formLoading?"Submitting...":`Submit Request — ${selectedPlan} Plan`}
+                  {formLoading?"Submitting...":selectedPlan==="Enterprise"?"Submit Request":paymentMethod==="bank"?"Request Bank Transfer Details":"Continue to NOWPayments"}
                 </button>
                 <p style={{textAlign:"center",color:"rgba(255,255,255,0.35)",fontSize:"0.72rem",marginTop:"0.75rem"}}>🔒 Your information is confidential and will only be used to process your request.</p>
               </form>
