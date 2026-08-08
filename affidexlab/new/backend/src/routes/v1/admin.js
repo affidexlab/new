@@ -1,6 +1,8 @@
 import express from 'express';
 import pool from '../../db/connection.js';
+import crypto from 'crypto';
 import { authorizeAdmin, createAdminKeyMaterial } from '../../services/adminAuth.js';
+import { createOrgApiKey, slugify, upsertOrgUser } from '../../services/orgAuth.js';
 
 const router = express.Router();
 
@@ -191,6 +193,76 @@ router.patch('/keys/:id', async (req, res) => {
   }
 });
 
+
+
+router.post('/test-access', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { email, name = 'Founder Test User', companyName = 'DecaFlow Founder Test Account' } = req.body || {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'valid email is required.' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const orgSlug = `${slugify(companyName)}-${crypto.randomBytes(3).toString('hex')}`;
+
+    const { rows: orgRows } = await pool.query(
+      `INSERT INTO organizations (name, slug, status, plan, billing_email)
+       VALUES ($1, $2, 'active', 'founder-test', $3)
+       RETURNING *`,
+      [companyName, orgSlug, normalizedEmail]
+    );
+    const user = await upsertOrgUser({ email: normalizedEmail, name });
+    await pool.query(
+      `INSERT INTO org_memberships (organization_id, user_id, role, invited_by)
+       VALUES ($1, $2, 'owner', $3)
+       ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'owner', status = 'active', updated_at = NOW()`,
+      [orgRows[0].id, user.id, req.admin?.name || 'founder-dashboard']
+    );
+    const orgKey = await createOrgApiKey({ organizationId: orgRows[0].id, name: 'Founder Test API Key', scopes: ['*'] });
+    const verifyKey = `df_verify_test_${crypto.randomBytes(24).toString('hex')}`;
+
+    await pool.query(
+      `INSERT INTO verify_enquiries (company_name, contact_name, email, use_case, chains, monthly_checks, plan, source, status, api_key_issued, api_key, notes)
+       VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'unlimited', 'Founder Test', 'founder-dashboard', 'converted', true, $4, 'Comped founder test account')`,
+      [companyName, name, normalizedEmail, verifyKey]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO compliance_enquiries (company_name, contact_name, email, business_type, chains, monthly_tx_volume, plan, message, source, status, notes)
+       VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'test', 'Founder Test', 'Comped founder test account', 'founder-dashboard', 'converted', 'No payment required')`,
+      [companyName, name, normalizedEmail]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO shield_customers (company_name, contact_name, email, plan, status, payment_gateway)
+       VALUES ($1, $2, $3, 'Founder Test', 'active', 'comped')`,
+      [companyName, name, normalizedEmail]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, gateway_order_id, status)
+       VALUES ($1, $2, $3, 'Founder Test', 'comped', $4, 'active')`,
+      [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO institutional_customers (company_name, contact_name, email, plan, asset_type, jurisdictions, message, payment_gateway, gateway_order_id, status)
+       VALUES ($1, $2, $3, 'Founder Test', 'internal test', 'Base, Arbitrum, Polygon, Avalanche', 'Comped founder test account', 'comped', $4, 'active')`,
+      [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO audit_enquiries (project_name, contact_name, email, github_repo, audit_package, description, source, status, notes)
+       VALUES ($1, $2, $3, 'internal-founder-test', 'Founder Test', 'Comped founder test audit access account', 'founder-dashboard', 'converted', 'No payment required')`,
+      [companyName, name, normalizedEmail]
+    ).catch(() => {});
+
+    return res.status(201).json({
+      success: true,
+      organization: orgRows[0],
+      user: { id: user.id, email: user.email, name: user.name },
+      orgApiKey: orgKey.apiKey,
+      verifyApiKey: verifyKey,
+      message: 'Founder test access created across Verify, Compliance, Shield, Agents, Institutional/RWA, and Audit without payment.'
+    });
+  } catch (err) {
+    console.error('❌ Founder test access error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create founder test access.' });
+  }
+});
 
 router.get('/customers', async (req, res) => {
   try {
