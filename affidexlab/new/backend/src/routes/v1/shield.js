@@ -2,19 +2,15 @@ import express from 'express';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 import pool from '../../db/connection.js';
+import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
 import { createShieldAlert } from '../../services/shieldActionEngine.js';
+import { runShieldSecurityScan } from '../../services/shieldSecurityScanner.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-const requireAdmin = (req, res) => {
-  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
-    res.status(401).json({ success: false, error: 'Unauthorized.' });
-    return false;
-  }
-  return true;
-};
+const requireAdmin = (req, res) => authorizeAdmin(req, res, 'shield:admin');
 
 // Fixed monthly prices in cents, standing in for the ranges shown on the pricing
 // page ($500-1,500 and $3,000-8,000). Stripe checkout needs one exact number —
@@ -83,7 +79,7 @@ router.post('/waitlist', async (req, res) => {
 
 router.get('/alerts', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { status = 'open', limit = 50, offset = 0 } = req.query;
     const { rows } = await pool.query(
       `SELECT * FROM shield_alerts WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
@@ -98,7 +94,7 @@ router.get('/alerts', async (req, res) => {
 
 router.patch('/alerts/:id', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { status } = req.body;
     if (!['open', 'acknowledged', 'resolved'].includes(status)) return res.status(400).json({ success: false, error: 'Invalid status.' });
     const { rows } = await pool.query(
@@ -115,7 +111,7 @@ router.patch('/alerts/:id', async (req, res) => {
 
 router.get('/incidents', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { status = 'triage', limit = 50, offset = 0 } = req.query;
     const { rows } = await pool.query(
       `SELECT * FROM shield_incidents WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
@@ -130,7 +126,7 @@ router.get('/incidents', async (req, res) => {
 
 router.patch('/incidents/:id', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { status, assignedTo, summary, nextSteps } = req.body;
     const { rows } = await pool.query(
       `UPDATE shield_incidents
@@ -153,7 +149,7 @@ router.patch('/incidents/:id', async (req, res) => {
 
 router.get('/action-rules', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { rows } = await pool.query(`SELECT * FROM shield_action_rules ORDER BY created_at DESC`);
     return res.json({ success: true, rules: rows });
   } catch (err) {
@@ -164,7 +160,7 @@ router.get('/action-rules', async (req, res) => {
 
 router.post('/action-rules', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { name, eventType, minSeverity = 'medium', chain = null, address = null, actionType = 'email' } = req.body;
     if (!name?.trim()) return res.status(400).json({ success: false, error: 'name is required.' });
     if (!eventType?.trim()) return res.status(400).json({ success: false, error: 'eventType is required.' });
@@ -184,7 +180,7 @@ router.post('/action-rules', async (req, res) => {
 
 router.patch('/action-rules/:id', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { enabled, minSeverity, actionType } = req.body;
     const { rows } = await pool.query(
       `UPDATE shield_action_rules
@@ -217,6 +213,17 @@ router.post('/events/onchain', async (req, res) => {
   } catch (err) {
     console.error('❌ Shield onchain event error:', err);
     return res.status(500).json({ success: false, error: 'Could not process on-chain event.' });
+  }
+});
+
+router.post('/scan/security', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const result = await runShieldSecurityScan(req.body || {});
+    return res.status(202).json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Shield security scan trigger error:', err);
+    return res.status(500).json({ success: false, error: 'Could not run Shield security scan.' });
   }
 });
 

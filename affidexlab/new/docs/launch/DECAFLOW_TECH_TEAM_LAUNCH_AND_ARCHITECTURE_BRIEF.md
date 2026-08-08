@@ -277,3 +277,89 @@ Recommended schedule:
 - Store the app key in `ALCHEMY_API_KEY`.
 - Send test webhooks and verify rows appear in `risk_graph_edges`.
 - Confirm bad signatures return 401.
+
+## Immediate hardening update — production DB, Shield scanner, and admin keys
+
+### Production DB ingestion runbook
+
+Run the ingestion jobs from the deployed backend environment so they use Render’s production `DATABASE_URL`, `DATABASE_CA_CERT`, Alchemy key, and the same network settings as the API.
+
+Preferred Render path:
+
+1. Open Render dashboard.
+2. Open the DecaFlow backend service.
+3. Make sure the latest `main` deploy is live.
+4. Open **Shell** if enabled, or create a **Render Job/Cron Job** using the same repo and environment group.
+5. Set the command working directory to `affidexlab/new/backend` if Render checks out the repo root.
+6. Run:
+
+```bash
+npm run ingest:ofac
+npm run ingest:sanctions
+npm run ingest:curated
+npm run risk:calibrate
+```
+
+If Render Shell is unavailable, create one-off Render Jobs with these commands:
+
+```bash
+cd affidexlab/new/backend && npm ci && npm run ingest:ofac
+cd affidexlab/new/backend && npm ci && npm run ingest:sanctions
+cd affidexlab/new/backend && npm ci && npm run ingest:curated
+cd affidexlab/new/backend && npm ci && npm run risk:calibrate
+```
+
+Local execution against production is possible but less safe. Only do it from a trusted machine, then export production `DATABASE_URL` and `DATABASE_CA_CERT` exactly as Render has them before running the same commands.
+
+### Shield security scanner now added
+
+Shield now includes `shieldSecurityScanner.js` plus `npm run shield:scan-security`. It watches active Shield contracts and DecaFlow dogfood contracts for:
+
+- Ownership transfer events.
+- Role grants and revocations.
+- Proxy implementation upgrades.
+- Proxy admin changes.
+- ERC-20 approval events.
+- ERC-721/ERC-1155 approval-for-all events.
+- Transfer events emitted by watched contracts.
+- Runtime bytecode hash changes.
+
+Run it manually through the admin endpoint:
+
+```bash
+curl -X POST https://decaflow-backend.onrender.com/v1/shield/scan/security \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $DECAFLOW_ADMIN_API_KEY" \
+  -d '{}'
+```
+
+Or schedule it as a Render Cron Job:
+
+```bash
+cd affidexlab/new/backend && npm ci && npm run shield:scan-security
+```
+
+Required RPC env vars:
+
+- `RPC_ARBITRUM`
+- `RPC_BASE`
+- `RPC_POLYGON`
+- `RPC_AVALANCHE`
+- Optional: `RPC_ETHEREUM`, `RPC_OPTIMISM`
+
+### Admin key upgrade
+
+Admin APIs now support hashed scoped admin keys, while the old `ADMIN_KEY` remains as a temporary fallback. Create a production admin key from Render Shell or a one-off job:
+
+```bash
+cd affidexlab/new/backend
+node src/scripts/create-admin-api-key.js "Launch Admin" "*"
+```
+
+The script prints the raw `df_admin_...` key once. Store it in a password manager. Use it as:
+
+```text
+Authorization: Bearer df_admin_...
+```
+
+After confirming the new key works, remove or rotate the legacy `ADMIN_KEY`. The database stores only the SHA-256 hash and logs admin attempts to `admin_audit_logs`.

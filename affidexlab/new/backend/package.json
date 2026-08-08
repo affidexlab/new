@@ -9,7 +9,13 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "start:sandbox": "ENVIRONMENT=sandbox node src/server.js",
-    "build": "node --check src/server.js"
+    "build": "node --check src/server.js",
+    "ingest:ofac": "node src/scripts/ingest-ofac-sdn-crypto.js",
+    "ingest:sanctions": "node src/scripts/ingest-public-sanctions-lists.js",
+    "ingest:curated": "node src/scripts/ingest-curated-risk-labels.js",
+    "risk:calibrate": "node src/scripts/calibrate-risk-scoring.js",
+    "shield:scan-security": "node src/scripts/run-shield-security-scan.js",
+    "admin:create-key": "node src/scripts/create-admin-api-key.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

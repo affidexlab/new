@@ -1,5 +1,6 @@
 import express from 'express';
 import pool from '../../db/connection.js';
+import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 
 const router = express.Router();
@@ -56,7 +57,7 @@ router.post('/enquiry', async (req, res) => {
 // GET /v1/audit/enquiries — admin only
 router.get('/enquiries', async (req, res) => {
   try {
-    if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
     const { status, limit=50, offset=0 } = req.query;
     const params = []; let where = '';
     if (status) { params.push(status); where = `WHERE status=$${params.length}`; }
@@ -74,7 +75,7 @@ router.get('/enquiries', async (req, res) => {
 // PATCH /v1/audit/enquiries/:id — admin only
 router.patch('/enquiries/:id', async (req, res) => {
   try {
-    if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
     const { status, notes } = req.body;
     const result = await pool.query(
       `UPDATE audit_enquiries SET status=COALESCE($1,status),notes=COALESCE($2,notes),updated_at=NOW() WHERE id=$3 RETURNING *`,

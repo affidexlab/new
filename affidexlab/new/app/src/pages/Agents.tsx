@@ -22,7 +22,7 @@ const PLANS = [
 
 const FAQS = [
   { q: "Do the agents freeze transactions automatically?", a: "No, and that's still true after Phase 3. What's new: the system can now notice you've made the same review decision consistently and ask if you want that specific pattern auto-resolved instead of queued — but it only ever asks, an explicit named person has to say yes, and even then it only speeds up a queue decision. It still cannot touch a real transaction. That capability lives nowhere in this system." },
-  { q: "Is the risk scoring behind this real?", a: "The scoring engine itself (our Verify API) is still a demo in its current public form — deterministic example outputs, not live risk analysis. The rules and review queue you're setting up are real, working infrastructure, ready for when real scoring is behind them. We're not pretending otherwise." },
+  { q: "Is the risk scoring behind this real?", a: "Authenticated Verify checks now use DecaFlow's internal risk engine when production ingestion is configured. Public demo widgets are still demonstrations, so customers should treat production API responses and analyst review history as the compliance record." },
   { q: "Does this replace the Compliance product?", a: "No — this sits on top of it. Compliance provides the data and the score; this provides the workflow layer that decides what happens with that score, ending in a human decision. Think of Compliance as the foundation and this as the layer above it." },
 ];
 

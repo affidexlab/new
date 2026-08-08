@@ -149,7 +149,7 @@ export default function Compliance() {
       <section style={{padding:"2rem 1.25rem",maxWidth:"700px",margin:"0 auto"}}>
         <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(59,130,246,0.25)",borderRadius:"20px",padding:"2rem 1.5rem"}}>
           <h2 style={{fontSize:"1.3rem",fontWeight:700,marginBottom:"0.4rem"}}>Try the Risk Scorer</h2>
-          <p style={{color:"rgba(255,255,255,0.5)",fontSize:"0.875rem",marginBottom:"1.5rem"}}>Enter any wallet address to see a live compliance score.</p>
+          <p style={{color:"rgba(255,255,255,0.5)",fontSize:"0.875rem",marginBottom:"1.5rem"}}>Enter a wallet address to preview the compliance workflow. Production customers use authenticated API checks backed by DecaFlow's internal risk engine and live ingestion data.</p>
           <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
             <input type="text" placeholder="0x... wallet address" value={demoWallet} onChange={e=>setDemoWallet(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runDemo()}
               style={{flex:"1",padding:"0.875rem 1rem",borderRadius:"10px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.9rem",outline:"none",minWidth:"0",width:"100%",fontFamily:"monospace"}} />
@@ -169,7 +169,7 @@ export default function Compliance() {
                   <span style={{color:levelColor(demoResult.riskLevel)}}>{demoResult.riskLevel==="LOW"?"✓":"⚠"}</span>{f}
                 </div>
               ))}
-              <p style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.3)",marginTop:"0.75rem",marginBottom:0}}>* Demo output. Production API delivers live on-chain data.</p>
+              <p style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.3)",marginTop:"0.75rem",marginBottom:0}}>* Public demo preview. Production API checks use DecaFlow internal labels, graph ingestion, and case-review feedback.</p>
             </div>
           )}
         </div>
@@ -178,7 +178,7 @@ export default function Compliance() {
       {/* Features */}
       <section style={{padding:"5rem 1.25rem",maxWidth:"1100px",margin:"0 auto"}}>
         <h2 style={{fontSize:"clamp(1.5rem,4vw,2rem)",fontWeight:800,textAlign:"center",marginBottom:"0.75rem"}}>Everything you need to stay compliant</h2>
-        <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"3rem"}}>One platform. Full regulatory coverage.</p>
+        <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"3rem"}}>One platform for screening, review queues, evidence, and operational compliance workflows.</p>
         <div className="feature-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"1.25rem"}}>
           {FEATURES.map((f,i)=>(
             <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"16px",padding:"1.5rem"}}>

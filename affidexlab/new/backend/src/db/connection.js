@@ -274,6 +274,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/018_admin_keys_and_shield_scanner.sql');
+    console.log('✅ Admin keys / Shield scanner migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Admin keys / Shield scanner migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Admin keys / Shield scanner migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 

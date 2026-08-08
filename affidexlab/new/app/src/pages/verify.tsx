@@ -138,7 +138,7 @@ export default function Verify() {
       {/* Demo */}
       <section id="demo" style={{padding:"3rem 2rem",maxWidth:"900px",margin:"0 auto"}}>
         <h2 style={{fontSize:"clamp(1.4rem,3.5vw,1.75rem)",fontWeight:800,textAlign:"center",marginBottom:"0.5rem"}}>Try it now</h2>
-        <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"2rem",fontSize:"0.9rem"}}>Enter any wallet address and see a live demo response.</p>
+        <p style={{color:"rgba(255,255,255,0.5)",textAlign:"center",marginBottom:"2rem",fontSize:"0.9rem"}}>Enter a wallet address and preview the response shape. Authenticated production checks use DecaFlow's internal labels, graph ingestion, and case-review feedback.</p>
         <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(139,92,246,0.25)",borderRadius:"20px",padding:"2rem 1.5rem"}}>
           <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",marginBottom:"1rem"}}>
             <input type="text" placeholder="Enter wallet address (0x...)" value={demoAddress} onChange={e=>setDemoAddress(e.target.value)} onKeyDown={e=>e.key==="Enter"&&runDemo()}
@@ -187,7 +187,7 @@ export default function Verify() {
                   ))}
                 </div>
               )}
-              <p style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.3)",marginTop:"1rem",marginBottom:0}}>* Demo output. Production API delivers live on-chain data.</p>
+              <p style={{fontSize:"0.72rem",color:"rgba(255,255,255,0.3)",marginTop:"1rem",marginBottom:0}}>* Public demo preview. Production API checks use DecaFlow internal labels, graph ingestion, and case-review feedback.</p>
             </div>
           )}
         </div>

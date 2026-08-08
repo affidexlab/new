@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import pool from '../../db/connection.js';
+import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { screenWallet } from '../../services/riskIntelligenceService.js';
 
@@ -125,7 +126,7 @@ router.post('/check', async (req, res) => {
 // GET /v1/verify/enquiries — admin only
 router.get('/enquiries', async (req, res) => {
   try {
-    if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
     const { status, plan, limit=50, offset=0 } = req.query;
     const params = []; const conditions = [];
     if (status) { params.push(status); conditions.push(`status=$${params.length}`); }
@@ -146,7 +147,7 @@ router.get('/enquiries', async (req, res) => {
 // PATCH /v1/verify/enquiries/:id/issue-key — admin: manually issue API key for paid plans
 router.patch('/enquiries/:id/issue-key', async (req, res) => {
   try {
-    if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
     const enquiryResult = await pool.query(`SELECT * FROM verify_enquiries WHERE id=$1`, [req.params.id]);
     if (!enquiryResult.rows.length) return res.status(404).json({ success: false, error: 'Enquiry not found.' });
     const enquiry = enquiryResult.rows[0];
@@ -171,7 +172,7 @@ router.patch('/enquiries/:id/issue-key', async (req, res) => {
 // PATCH /v1/verify/enquiries/:id — admin: update status/notes
 router.patch('/enquiries/:id', async (req, res) => {
   try {
-    if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!(await authorizeAdmin(req, res, 'admin:read'))) return;
     const { status, notes } = req.body;
     const result = await pool.query(
       `UPDATE verify_enquiries SET status=COALESCE($1,status),notes=COALESCE($2,notes),updated_at=NOW() WHERE id=$3 RETURNING *`,

@@ -105,7 +105,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key', 'X-Alchemy-Signature', 'X-Alchemy-Webhook-Secret']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Partner-ID', 'X-Admin-Key', 'X-Admin-API-Key', 'X-Alchemy-Signature', 'X-Alchemy-Webhook-Secret']
 }));
 
 // Stripe needs the raw, unparsed request body to verify webhook signatures, so this
@@ -192,9 +192,9 @@ app.use('/v1/investor-metrics', investorMetricsRoutes);
 app.use('/v1/mev', mevRoutes); // MEV prediction and risk scoring
 app.use('/v1/analytics', analyticsRoutes); // Advanced analytics and user stats
 app.use('/v1/contact', contactRoutes);
-app.use('/v1/compliance', complianceRoutes); // Compliance enquiry + demo score
+app.use('/v1/compliance', complianceRoutes); // Compliance enquiries + public preview score
 app.use('/v1/audit', auditRoutes);           // Security audit enquiries
-app.use('/v1/verify', verifyRoutes);         // Verify API signups + demo + key issuance
+app.use('/v1/verify', verifyRoutes);         // Verify API signups + public preview + key issuance
 app.use('/v1/shield', shieldRoutes);         // Shield early-access waitlist
 app.use('/v1/institutional', institutionalRoutes);  // Institutional/RWA waitlist + payments
 app.use('/v1/agents', agentsRoutes);         // Compliance workflow rules + human review queue

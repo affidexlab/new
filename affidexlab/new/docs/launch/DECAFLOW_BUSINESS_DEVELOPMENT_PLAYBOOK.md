@@ -288,3 +288,17 @@ The first version earns trust by being precise. Overclaiming security products i
 - Confirm one inbox is responsible for pilot responses.
 - Confirm pricing ranges and pilot scope are approved.
 - Keep all outreach framed as beta/design-partner unless the prospect is only buying a limited pilot.
+
+## Immediate hardening update — 2026-08-08
+
+BD can now say Shield monitoring includes event-based security scanning for watched contracts, including owner changes, role changes, proxy upgrades, proxy admin changes, approvals, transfers, and code-hash changes. Phrase this carefully: DecaFlow monitors for these signals and creates alerts/incidents; it does not guarantee exploit prevention.
+
+Updated Shield pilot pitch:
+
+> Give DecaFlow 1–5 important contracts on one chain. We will monitor activity, admin/proxy changes, approval/transfer signals, code-hash changes, and incident workflow outcomes, then tune alerts with your team before expanding coverage.
+
+Updated compliance/risk pitch:
+
+> DecaFlow’s authenticated production checks use DecaFlow-owned risk labels, public sanctions ingestion, curated labels, Alchemy graph ingestion, scoring calibration, and analyst feedback. Public website demos are previews; production API checks are the compliance workflow surface.
+
+When a customer asks what they need to provide, ask for chain, contract address, label, admin/owner address if known, alert recipients, and the events they consider critical.

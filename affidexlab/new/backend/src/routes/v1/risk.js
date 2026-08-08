@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import express from 'express';
 import pool from '../../db/connection.js';
+import { authorizeAdmin } from '../../services/adminAuth.js';
 import { addRiskEdge, addRiskLabel, screenWalletInternal } from '../../services/internalRiskEngine.js';
 import { ingestAlchemyTransfers, ingestAlchemyWebhookActivity } from '../../services/alchemyGraphIngestionService.js';
 
@@ -34,17 +35,11 @@ function verifyAlchemyWebhook(req) {
   return true;
 }
 
-const requireAdmin = (req, res) => {
-  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
-    res.status(401).json({ success: false, error: 'Unauthorized.' });
-    return false;
-  }
-  return true;
-};
+const requireAdmin = (req, res) => authorizeAdmin(req, res, 'risk:admin');
 
 router.post('/labels', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const label = await addRiskLabel(req.body);
     return res.status(201).json({ success: true, label });
   } catch (err) {
@@ -55,7 +50,7 @@ router.post('/labels', async (req, res) => {
 
 router.get('/labels', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { chain, address, category, limit = 100, offset = 0 } = req.query;
     const params = [];
     const where = ['active = true'];
@@ -76,7 +71,7 @@ router.get('/labels', async (req, res) => {
 
 router.post('/edges', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const edge = await addRiskEdge(req.body);
     return res.status(201).json({ success: true, edge });
   } catch (err) {
@@ -87,7 +82,7 @@ router.post('/edges', async (req, res) => {
 
 router.post('/screen', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { address, chain, maxHops } = req.body;
     if (!address) return res.status(400).json({ success: false, error: 'address is required.' });
     const data = await screenWalletInternal({ address, chain, maxHops });
@@ -100,7 +95,7 @@ router.post('/screen', async (req, res) => {
 
 router.patch('/weights/:category', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { weight, enabled } = req.body;
     const { rows } = await pool.query(
       `INSERT INTO risk_category_weights (category, weight, enabled)
@@ -120,7 +115,7 @@ router.patch('/weights/:category', async (req, res) => {
 
 router.post('/ingest/alchemy-transfers', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const result = await ingestAlchemyTransfers(req.body);
     return res.status(202).json({ success: true, result });
   } catch (err) {
@@ -146,7 +141,7 @@ router.post('/webhooks/alchemy', async (req, res) => {
 
 router.post('/case-reviews', async (req, res) => {
   try {
-    if (!requireAdmin(req, res)) return;
+    if (!(await requireAdmin(req, res))) return;
     const { screeningId = null, walletAddress, chain = 'ethereum', analyst, decision, category = null, severity = 'high', notes = null } = req.body;
     if (!walletAddress) return res.status(400).json({ success: false, error: 'walletAddress is required.' });
     if (!analyst?.trim()) return res.status(400).json({ success: false, error: 'analyst is required.' });

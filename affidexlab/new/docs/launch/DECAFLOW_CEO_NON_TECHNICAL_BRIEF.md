@@ -177,3 +177,13 @@ Do not say:
 - Pick the first launch motion: Shield design partners, Verify API beta, or Compliance workflows. Trying to sell all products equally on day one will dilute the message.
 - Assign one owner for data operations: sanctions refresh, label review, graph backfills, and calibration.
 - Rotate the temporary GitHub token used during implementation.
+
+## Immediate hardening update — 2026-08-08
+
+The team has started moving DecaFlow from beta foundations toward stronger public operations. Three important pieces were added:
+
+1. **Production ingestion runbook.** The team now has exact commands for loading OFAC, public sanctions, curated labels, and calibration data into the production database from Render.
+2. **Shield security scanner.** Shield now has a scanner for ownership changes, role changes, proxy upgrades, proxy admin changes, approval events, transfer events, and code-hash changes on watched contracts.
+3. **Scoped admin keys.** Admin APIs now support hashed database-backed admin keys with scopes and audit logs, while the old single `ADMIN_KEY` remains only as a transition fallback.
+
+This improves launch readiness, but it does not remove the need for production operations. Leadership still needs to confirm the jobs actually ran in production, the Shield scanner is scheduled, and the first customer/pilot addresses are being monitored.
