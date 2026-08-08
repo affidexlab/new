@@ -24,6 +24,7 @@
 import { ethers } from 'ethers';
 import { sendEnquiryEmail } from '../utils/mailer.js';
 import pool from '../db/connection.js';
+import { evaluateShieldActions } from './shieldActionEngine.js';
 
 const RPC_URLS = {
   arbitrum: process.env.RPC_ARBITRUM,
@@ -135,6 +136,7 @@ async function alertShield({ severity, label, chain, address, alertType = 'monit
         ]
       );
     }
+    if (rows[0]) await evaluateShieldActions(rows[0]);
   } catch (err) {
     console.error('[shieldMonitor] Could not persist alert/incident:', err.code || '', err.message || String(err));
   }

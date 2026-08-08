@@ -25,6 +25,7 @@ import shieldWebhook from './routes/v1/shield-webhook.js';
 import institutionalRoutes from './routes/v1/institutional.js';
 import agentsRoutes from './routes/v1/agents.js';
 import partnersRoutes from './routes/v1/partners.js';
+import riskRoutes from './routes/v1/risk.js';
 
 dotenv.config();
 
@@ -194,6 +195,7 @@ app.use('/v1/shield', shieldRoutes);         // Shield early-access waitlist
 app.use('/v1/institutional', institutionalRoutes);  // Institutional/RWA waitlist + payments
 app.use('/v1/agents', agentsRoutes);         // Compliance workflow rules + human review queue
 app.use('/v1/partners', partnersRoutes);     // Partner dashboard + usage stats
+app.use('/v1/risk', riskRoutes);             // DecaFlow-owned risk intelligence graph/admin
 app.use('/api/socket', bridgeRoutes);
 
 app.use((err, req, res, next) => {

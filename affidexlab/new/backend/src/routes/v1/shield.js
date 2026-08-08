@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
+import { createShieldAlert } from '../../services/shieldActionEngine.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -147,6 +148,75 @@ router.patch('/incidents/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Shield incident update error:', err);
     return res.status(500).json({ success: false, error: 'Could not update incident.' });
+  }
+});
+
+router.get('/action-rules', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { rows } = await pool.query(`SELECT * FROM shield_action_rules ORDER BY created_at DESC`);
+    return res.json({ success: true, rules: rows });
+  } catch (err) {
+    console.error('❌ Shield action rules list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch action rules.' });
+  }
+});
+
+router.post('/action-rules', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { name, eventType, minSeverity = 'medium', chain = null, address = null, actionType = 'email' } = req.body;
+    if (!name?.trim()) return res.status(400).json({ success: false, error: 'name is required.' });
+    if (!eventType?.trim()) return res.status(400).json({ success: false, error: 'eventType is required.' });
+    if (!['email'].includes(actionType)) return res.status(400).json({ success: false, error: 'Only email actions are enabled for now.' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO shield_action_rules (name, event_type, min_severity, chain, address, action_type)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name, eventType, minSeverity, chain, address, actionType]
+    );
+    return res.status(201).json({ success: true, rule: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield action rule create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create action rule.' });
+  }
+});
+
+router.patch('/action-rules/:id', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { enabled, minSeverity, actionType } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE shield_action_rules
+       SET enabled = COALESCE($1, enabled),
+           min_severity = COALESCE($2, min_severity),
+           action_type = COALESCE($3, action_type),
+           updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [enabled ?? null, minSeverity || null, actionType || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Action rule not found.' });
+    return res.json({ success: true, rule: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield action rule update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update action rule.' });
+  }
+});
+
+router.get('/events/onchain', (_req, res) => res.status(200).send('ok'));
+
+router.post('/events/onchain', async (req, res) => {
+  try {
+    const secret = process.env.SHIELD_EVENT_WEBHOOK_SECRET;
+    if (secret && req.headers['x-shield-secret'] !== secret) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const { chain, address, label, eventType, severity = 'medium', message, txHash, metadata } = req.body;
+    if (!chain || !address || !eventType || !message) return res.status(400).json({ success: false, error: 'chain, address, eventType, and message are required.' });
+
+    const result = await createShieldAlert({ chain, address, label, severity, alertType: eventType, message, txHash, metadata });
+    return res.status(201).json({ success: true, ...result });
+  } catch (err) {
+    console.error('❌ Shield onchain event error:', err);
+    return res.status(500).json({ success: false, error: 'Could not process on-chain event.' });
   }
 });
 

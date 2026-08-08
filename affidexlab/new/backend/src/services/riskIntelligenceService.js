@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { screenWalletInternal } from './internalRiskEngine.js';
 
 const PROVIDER_TIMEOUT_MS = Number(process.env.RISK_PROVIDER_TIMEOUT_MS || 12000);
 
@@ -83,6 +84,10 @@ export async function screenWallet({ address, chain = 'ethereum', customerId = n
   const providerUrl = process.env.RISK_PROVIDER_URL;
   const apiKey = process.env.RISK_PROVIDER_API_KEY;
   const normalizedChain = normalizeChain(chain);
+
+  if (!provider || provider === 'internal' || provider === 'decaflow') {
+    return screenWalletInternal({ address, chain: normalizedChain });
+  }
 
   if (!providerUrl || !apiKey) {
     if (allowDemo || process.env.ALLOW_DEMO_RISK === 'true') return demoRisk(address, normalizedChain);

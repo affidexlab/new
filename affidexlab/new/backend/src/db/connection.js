@@ -246,6 +246,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/016_internal_risk_and_actions.sql');
+    console.log('✅ Internal risk/actions migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Internal risk/actions migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Internal risk/actions migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 
