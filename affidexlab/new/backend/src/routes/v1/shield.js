@@ -7,6 +7,13 @@ import { safeCompare } from '../../utils/security.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const requireAdmin = (req, res) => {
+  if (req.headers['x-admin-key'] !== process.env.ADMIN_KEY) {
+    res.status(401).json({ success: false, error: 'Unauthorized.' });
+    return false;
+  }
+  return true;
+};
 
 // Fixed monthly prices in cents, standing in for the ranges shown on the pricing
 // page ($500-1,500 and $3,000-8,000). Stripe checkout needs one exact number —
@@ -70,6 +77,76 @@ router.post('/waitlist', async (req, res) => {
   } catch (err) {
     console.error('❌ Shield waitlist error:', err);
     return res.status(500).json({ success: false, error: 'Failed to submit. Please try again or email us directly.' });
+  }
+});
+
+router.get('/alerts', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { status = 'open', limit = 50, offset = 0 } = req.query;
+    const { rows } = await pool.query(
+      `SELECT * FROM shield_alerts WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+      [status, Number(limit), Number(offset)]
+    );
+    return res.json({ success: true, alerts: rows });
+  } catch (err) {
+    console.error('❌ Shield alerts list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch alerts.' });
+  }
+});
+
+router.patch('/alerts/:id', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { status } = req.body;
+    if (!['open', 'acknowledged', 'resolved'].includes(status)) return res.status(400).json({ success: false, error: 'Invalid status.' });
+    const { rows } = await pool.query(
+      `UPDATE shield_alerts SET status = $1, resolved_at = CASE WHEN $1 = 'resolved' THEN NOW() ELSE resolved_at END WHERE id = $2 RETURNING *`,
+      [status, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Alert not found.' });
+    return res.json({ success: true, alert: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield alert update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update alert.' });
+  }
+});
+
+router.get('/incidents', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { status = 'triage', limit = 50, offset = 0 } = req.query;
+    const { rows } = await pool.query(
+      `SELECT * FROM shield_incidents WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+      [status, Number(limit), Number(offset)]
+    );
+    return res.json({ success: true, incidents: rows });
+  } catch (err) {
+    console.error('❌ Shield incidents list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch incidents.' });
+  }
+});
+
+router.patch('/incidents/:id', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { status, assignedTo, summary, nextSteps } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE shield_incidents
+       SET status = COALESCE($1, status),
+           assigned_to = COALESCE($2, assigned_to),
+           summary = COALESCE($3, summary),
+           next_steps = COALESCE($4, next_steps),
+           updated_at = NOW(),
+           closed_at = CASE WHEN $1 = 'closed' THEN NOW() ELSE closed_at END
+       WHERE id = $5 RETURNING *`,
+      [status || null, assignedTo || null, summary || null, nextSteps || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Incident not found.' });
+    return res.json({ success: true, incident: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield incident update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update incident.' });
   }
 });
 

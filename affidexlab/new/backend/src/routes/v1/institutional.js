@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
+import { createKycApplicant } from '../../services/kycProviderService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -333,5 +334,26 @@ router.get('/identity-proof', async (req, res) => {
   } catch (err) {
     console.error('❌ Institutional identity-proof error:', err);
     return res.status(500).json({ success: false, error: 'Could not fetch identity record.' });
+  }
+});
+
+router.post('/kyc/applicants', async (req, res) => {
+  try {
+    const { email, wallet, externalUserId, metadata } = req.body;
+    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email is required.' });
+    if (wallet && !ethers.isAddress(wallet)) return res.status(400).json({ success: false, error: 'wallet must be a valid address when provided.' });
+
+    const result = await createKycApplicant({ email, wallet, externalUserId, metadata });
+
+    await pool.query(
+      `INSERT INTO kyc_applications (email, wallet_address, provider, provider_applicant_id, status, review_url, raw_response)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [email, wallet || null, result.provider, result.applicantId || null, result.status, result.reviewUrl, result.raw]
+    );
+
+    return res.status(201).json({ success: true, applicant: result });
+  } catch (err) {
+    console.error('❌ Institutional KYC applicant error:', err);
+    return res.status(503).json({ success: false, error: err.message || 'Could not create KYC applicant.' });
   }
 });

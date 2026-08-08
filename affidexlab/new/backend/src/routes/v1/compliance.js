@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { screenWallet } from '../../services/riskIntelligenceService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -51,19 +52,10 @@ router.post('/enquiry', async (req, res) => {
 // POST /v1/compliance/demo-score — public demo
 router.post('/demo-score', async (req, res) => {
   try {
-    const { address } = req.body;
+    const { address, chain } = req.body;
     if (!address || typeof address !== 'string') return res.status(400).json({ success: false, error: 'Wallet address is required.' });
-    const clean = address.replace('0x','').toLowerCase();
-    const seed = (clean.charCodeAt(0)||65) + (clean.charCodeAt(1)||66);
-    const score = seed%3===0?12:seed%3===1?67:91;
-    const level = score<30?'LOW':score<70?'MEDIUM':'HIGH';
-    const recommendation = score<30?'APPROVE':score<70?'REVIEW':'REJECT';
-    const flags = score<30?['No sanctions matches found','No mixer activity detected','Clean transaction history']:
-      score<70?['Interaction with flagged DEX router','Moderate anonymity pattern detected']:
-      ['OFAC watchlist proximity detected','Mixer usage detected (Tornado Cash)','High-risk jurisdiction activity'];
-    return res.json({ success: true, data: { address, riskScore: score, riskLevel: level, recommendation, flags,
-      sanctionsMatch: score>85, mixerExposure: score>60?0.34:score>30?0.08:0,
-      checkedAt: new Date().toISOString(), note: 'Demo output. Production API delivers live on-chain data.' } });
+    const data = await screenWallet({ address: address.trim(), chain: chain || 'ethereum', purpose: 'compliance-demo', allowDemo: true });
+    return res.json({ success: true, data });
   } catch (err) {
     console.error('❌ Demo score error:', err);
     return res.status(500).json({ success: false, error: 'Demo score failed.' });

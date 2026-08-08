@@ -232,6 +232,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/015_live_integrations.sql');
+    console.log('✅ Live integrations migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Live integrations migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Live integrations migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 

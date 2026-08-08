@@ -101,7 +101,9 @@ async function checkContract(provider, contract) {
         label,
         chain,
         address,
+        alertType: 'native_balance_drop',
         message: `Balance dropped ${Math.abs(pctChange).toFixed(1)}% (${ethers.formatEther(-delta)} native token) since the last check.`,
+        metadata: { previousBalanceWei: prevBalance.toString(), currentBalanceWei: balance.toString(), pctChange },
       });
     }
   }
@@ -109,8 +111,34 @@ async function checkContract(provider, contract) {
   await saveLastBalance(chain, address, balance);
 }
 
-async function alertShield({ severity, label, chain, address, message }) {
+async function alertShield({ severity, label, chain, address, alertType = 'monitoring_alert', message, txHash = null, metadata = {} }) {
   console.log(`[SHIELD ${severity}] ${label} (${chain}:${address}) — ${message}`);
+  let alertId = null;
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO shield_alerts (chain, address, label, severity, alert_type, message, tx_hash, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [chain, address, label, severity, alertType, message, txHash, metadata]
+    );
+    alertId = rows[0]?.id || null;
+
+    if (severity === 'HIGH' || severity === 'CRITICAL') {
+      await pool.query(
+        `INSERT INTO shield_incidents (alert_id, title, severity, summary, next_steps)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          alertId,
+          `${severity} ${alertType.replace(/_/g, ' ')} on ${label}`,
+          severity,
+          message,
+          'Review contract activity, confirm whether movement was authorized, and contact the customer if not already explained.'
+        ]
+      );
+    }
+  } catch (err) {
+    console.error('[shieldMonitor] Could not persist alert/incident:', err.code || '', err.message || String(err));
+  }
+
   await sendEnquiryEmail({
     type: 'Shield',
     to: process.env.SHIELD_ALERT_EMAIL || process.env.NOTIFY_EMAIL || 'decaflowsolutions@gmail.com',
@@ -121,6 +149,7 @@ async function alertShield({ severity, label, chain, address, message }) {
       Chain: chain,
       Address: address,
       Detail: message,
+      'Alert ID': alertId || 'not persisted',
       Time: new Date().toUTCString(),
     },
   });

@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
+import { screenWallet } from '../../services/riskIntelligenceService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -83,26 +84,41 @@ router.post('/demo', async (req, res) => {
   try {
     const { address, chain } = req.body;
     if (!address || typeof address !== 'string' || address.trim().length < 4) return res.status(400).json({ success: false, error: 'Wallet address is required.' });
-    const clean = address.replace('0x','').toLowerCase();
-    const seed = (clean.charCodeAt(0)||65) + (clean.charCodeAt(1)||66);
-    const score = seed%3===0?8:seed%3===1?54:89;
-    const level = score<25?'LOW':score<60?'MEDIUM':score<85?'HIGH':'CRITICAL';
-    const recommendation = score<25?'APPROVE':score<60?'REVIEW':'REJECT';
-    const flags = score<25?[]:score<60?['Interaction with flagged exchange','Moderate transaction velocity']:
-      score<85?['Mixer exposure (Tornado Cash)','High-risk jurisdiction activity']:
-      ['OFAC SDN list proximity','Mixer exposure detected','Darknet market interaction'];
-    return res.json({ success: true, data: {
-      address: address.trim(), chain: chain||'ethereum', riskScore: score, riskLevel: level,
-      sanctionsMatch: score>85, sanctionsDetails: score>85?{ programme:'OFAC SDN', entity:'Demo Entity', list:'US-OFAC' }:null,
-      mixerExposure: score>60?0.34:score>30?0.08:0, darknetExposure: score>75?0.12:0,
-      jurisdictionRisk: score>60?'HIGH':score>30?'MEDIUM':'LOW',
-      hopsAnalysed: 5, recommendation, flags,
-      reportId: `rpt_${Math.random().toString(36).substr(2,9)}`,
-      checkedAt: new Date().toISOString(),
-      note: 'Demo output only. Production API delivers live on-chain data.' } });
+    const data = await screenWallet({ address: address.trim(), chain: chain || 'ethereum', purpose: 'verify-demo', allowDemo: true });
+    return res.json({ success: true, data });
   } catch (err) {
     console.error('❌ Verify demo error:', err);
     return res.status(500).json({ success: false, error: 'Demo check failed.' });
+  }
+});
+
+// POST /v1/verify/check — authenticated live wallet screening.
+router.post('/check', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'] || req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (!apiKey) return res.status(401).json({ success: false, error: 'x-api-key header is required.' });
+
+    const keyResult = await pool.query(
+      `SELECT id, email, plan FROM verify_enquiries WHERE api_key = $1 AND api_key_issued = TRUE LIMIT 1`,
+      [apiKey]
+    );
+    if (!keyResult.rows.length) return res.status(401).json({ success: false, error: 'Invalid API key.' });
+
+    const { address, chain = 'ethereum' } = req.body;
+    if (!address || typeof address !== 'string' || address.trim().length < 4) return res.status(400).json({ success: false, error: 'Wallet address is required.' });
+
+    const data = await screenWallet({ address: address.trim(), chain, customerId: keyResult.rows[0].email, purpose: 'verify-api' });
+
+    await pool.query(
+      `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
+       VALUES ('verify', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [apiKey, data.address, data.chain, data.provider, data.riskScore, data.riskLevel, data.recommendation, data.sanctionsMatch, data.mixerExposure, data.darknetExposure, data.reportId, data.raw || data]
+    );
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error('❌ Verify check error:', err);
+    return res.status(503).json({ success: false, error: err.message || 'Live screening failed.' });
   }
 });
 
