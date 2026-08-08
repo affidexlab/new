@@ -212,3 +212,79 @@ Call-to-action:
 > Join as a design partner.
 
 This is strong because it sells the direction honestly while letting DecaFlow build data depth with real customers.
+
+## Launch readiness re-review — 2026-08-08
+
+### What BD can sell now
+
+BD can sell DecaFlow as a public beta / design-partner program for proprietary wallet-risk intelligence, compliance workflows, and contract monitoring. That is a strong position because customers get direct influence over coverage and workflow design while DecaFlow grows its internal graph.
+
+The best first customers are teams that already feel the pain but do not require a mature ten-year intelligence dataset on day one: early-stage exchanges, wallets, RWA pilots, DeFi protocols, treasury teams, audit/security teams, and Web3 companies that need screening plus a human review process.
+
+### What BD must not oversell
+
+Do not claim DecaFlow already has complete global coverage. The correct claim is that DecaFlow owns the engine and is building coverage through sanctions ingestion, curated labels, graph ingestion, Alchemy activity feeds, analyst review, and pilot/customer data.
+
+Do not sell RWA as “ready to issue securities tomorrow.” Sell RWA as a technical/legal design engagement that prepares issuer workflows, compliance rules, identity gating, and chain deployment plans for counsel-reviewed production use.
+
+### Best first sales motion
+
+Lead with one of these offers:
+
+1. **Shield pilot:** “Give us 1–5 contracts and one chain. We’ll monitor activity, create alerts/incidents, and tune the alert workflow with your team.”
+2. **Verify pilot:** “Give us wallet-screening cases and expected outcomes. We’ll run them through DecaFlow’s internal risk engine, show evidence, and tune rules.”
+3. **Compliance workflow pilot:** “Give us your review process. We’ll configure rules, queue decisions, and build the audit trail around your analysts.”
+
+### Required onboarding information from a customer
+
+For Shield:
+
+- Chain.
+- Contract address.
+- Contract label.
+- What the contract does.
+- Admin/owner address if known.
+- Treasury/vault address if separate.
+- Alert email recipients.
+- What events should be treated as critical.
+
+For Verify/Compliance:
+
+- Chains to screen.
+- Monthly volume.
+- API or dashboard preference.
+- Example clean wallets.
+- Example risky wallets.
+- Required decision categories: approve, review, reject, block, escalate.
+- Who reviews false positives.
+
+For RWA:
+
+- Asset type.
+- Jurisdictions.
+- Investor type.
+- Counsel status.
+- KYC/accreditation provider status.
+- Target chains: Base, Arbitrum, Polygon, Avalanche.
+- Safe/multisig addresses, once created.
+
+### Public announcement wording
+
+Use:
+
+> DecaFlow is opening its public beta for Web3 teams that need wallet-risk intelligence, compliance workflows, and continuous contract monitoring. We are onboarding design partners across Verify, Compliance, and Shield while expanding DecaFlow’s proprietary risk graph.
+
+Avoid:
+
+> DecaFlow is fully complete and detects everything.
+
+The first version earns trust by being precise. Overclaiming security products is how a company turns one bug into a brand problem.
+
+### BD checklist before outreach blast
+
+- Confirm the production backend deploy includes the latest risk and Alchemy webhook changes.
+- Confirm Alchemy signed test events are arriving.
+- Confirm demo pages do not contradict the new internal-risk-engine status.
+- Confirm one inbox is responsible for pilot responses.
+- Confirm pricing ranges and pilot scope are approved.
+- Keep all outreach framed as beta/design-partner unless the prospect is only buying a limited pilot.

@@ -219,3 +219,61 @@ npm test
 ## Launch rule
 
 Do not claim the risk engine is complete just because the code exists. Claim that DecaFlow owns its risk engine and is actively building its proprietary graph. The moat is the dataset, labels, analyst feedback loop, and calibration over time.
+
+## Launch readiness re-review — 2026-08-08
+
+### Current launch position
+
+DecaFlow is ready to present publicly as a controlled public beta / design-partner launch. It is not yet ready to present as a fully mature, fully automated, enterprise risk-intelligence network because the proprietary data graph still needs live ingestion runs, scheduled refreshes, production monitoring jobs, and customer/pilot data expansion.
+
+The core backend foundation is now real: Verify can call the internal DecaFlow risk engine through authenticated `/v1/verify/check`, risk labels and graph edges have admin ingestion paths, Alchemy webhook ingestion is implemented with signing-key verification, case review feeds back into labels, Shield has alert/incident/action-rule APIs, Agents has human-approved workflow automation, and the smart-contract regression suite passes.
+
+### Evidence from this re-review
+
+- Backend syntax check passed with `npm run build`.
+- Frontend production build passed with `npm run build`; Vite emitted large-chunk and browser-polyfill warnings, but no build failure.
+- Smart-contract tests passed with `53 passing`.
+- Live repo is on `main` after the Alchemy multi-signing-key update.
+- `ALCHEMY_WEBHOOK_SIGNING_KEYS` is now supported as comma-separated keys for multiple Alchemy webhooks.
+
+### Must be done before claiming “100% public launch”
+
+1. **Run the production data ingestion jobs.** The scripts exist, but production data is not in the database until the deployed backend runs `ingest-ofac-sdn-crypto.js`, `ingest-public-sanctions-lists.js`, `ingest-curated-risk-labels.js`, and targeted Alchemy backfills. Code without populated data still produces sparse scores.
+2. **Schedule recurring ingestion.** Add Render Cron jobs or another scheduler for sanctions refresh, curated-label refresh, graph backfills, and Shield monitoring. Manual one-off ingestion is not enough for a public security product.
+3. **Confirm production env vars after deploy.** Required backend values include `DATABASE_URL`, `DATABASE_CA_CERT` or trusted CA behavior, `ADMIN_KEY`, `RISK_PROVIDER=internal`, `ALLOW_DEMO_RISK=false`, `ALCHEMY_API_KEY`, `ALCHEMY_WEBHOOK_SIGNING_KEYS`, `SHIELD_EVENT_WEBHOOK_SECRET`, SMTP mailer values, and payment provider values if payments are public.
+4. **Run a real webhook test from Alchemy.** The webhook should return 200, write rows into `risk_graph_edges`, and reject a tampered request with a bad signature.
+5. **Fix public frontend copy that still says risk scoring is demo-only.** The Agents page still contains an FAQ saying public scoring is deterministic demo output. That is now misleading for the authenticated internal-risk path and should be updated before marketing traffic is sent there.
+6. **Decide what to do with public demo endpoints.** `/v1/verify/demo`, `/v1/compliance/demo-score`, and the landing-page mini wallet demo are still acceptable as demos if clearly labeled, but they must not be marketed as live compliance decisions.
+7. **Persist Shield waitlist submissions.** The Shield waitlist currently emails requests but does not persist them to a dedicated waitlist table. That is acceptable for private beta, but fragile for a public campaign.
+8. **Deepen Shield watchers.** Current Shield coverage includes alerts/incidents/action rules and monitored on-chain events, but a full security SaaS still needs ownership/admin-change detection, proxy implementation monitoring, ABI-aware privileged function detection, ERC approval/transfer anomaly detection, and vulnerability scanning workflow.
+9. **Protect admin surfaces.** Several admin APIs rely on `X-Admin-Key`. For beta this can work if the key is strong and private, but public launch should move to authenticated org/admin accounts with role-based access and audit logs.
+10. **RWA remains pre-production.** Contracts pass tests, but real securities use still requires counsel-approved rules, Safe/multisig addresses on Base/Arbitrum/Polygon/Avalanche, KYC/accreditation provider integration, final deployment scripts, production identity/risk oracle operators, and a fresh post-configuration security re-review.
+
+### Recommended production cron jobs
+
+Run these from `backend` after the latest deploy:
+
+```bash
+node src/scripts/ingest-ofac-sdn-crypto.js
+node src/scripts/ingest-public-sanctions-lists.js
+node src/scripts/ingest-curated-risk-labels.js
+node src/scripts/calibrate-risk-scoring.js
+```
+
+Recommended schedule:
+
+- OFAC + public sanctions: every 6–12 hours.
+- Curated labels: every deploy or every hour if the JSON is managed through internal review tooling.
+- Calibration: after every label/weight change and before major sales demos.
+- Alchemy backfills: per onboarded address/contract, then periodically for gaps.
+- Shield monitor: every 5–15 minutes until event-driven watchers replace polling.
+
+### Alchemy production checklist
+
+- Create one Address Activity webhook per chain.
+- Add the chain-specific DecaFlow router address and any customer/pilot addresses for that chain.
+- Point every webhook to `/v1/risk/webhooks/alchemy`.
+- Store all webhook signing keys in `ALCHEMY_WEBHOOK_SIGNING_KEYS`, comma-separated, no spaces.
+- Store the app key in `ALCHEMY_API_KEY`.
+- Send test webhooks and verify rows appear in `risk_graph_edges`.
+- Confirm bad signatures return 401.
