@@ -32,15 +32,27 @@ function getStripe() {
 }
 
 // POST /v1/shield/waitlist — public early-access signup.
-// Note: intentionally not persisted to Postgres yet (no shield_waitlist table exists).
-// Add one (see shieldMonitor.js comments for a starting schema) before relying on this
-// for anything beyond email notification.
 router.post('/waitlist', async (req, res) => {
   try {
     const { companyName, contactName, email, chains, contractCount, message, source } = req.body;
     if (!companyName?.trim()) return res.status(400).json({ success: false, error: 'Company name is required.' });
     if (!contactName?.trim()) return res.status(400).json({ success: false, error: 'Contact name is required.' });
     if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+
+    const { rows } = await pool.query(
+      `INSERT INTO shield_waitlist (company_name, contact_name, email, chains, contract_count, message, source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        companyName.trim(),
+        contactName.trim(),
+        email.trim().toLowerCase(),
+        JSON.stringify(Array.isArray(chains) ? chains : []),
+        contractCount ? String(contractCount) : null,
+        message?.trim() || null,
+        source || 'shield-page'
+      ]
+    );
 
     await sendEnquiryEmail({
       type: 'Shield',
@@ -70,10 +82,32 @@ router.post('/waitlist', async (req, res) => {
       isConfirmation: true,
     });
 
-    return res.status(201).json({ success: true, message: "You're on the Shield early-access list. We'll be in touch." });
+    return res.status(201).json({ success: true, waitlistId: rows[0].id, message: "You're on the Shield early-access list. We'll be in touch." });
   } catch (err) {
     console.error('❌ Shield waitlist error:', err);
     return res.status(500).json({ success: false, error: 'Failed to submit. Please try again or email us directly.' });
+  }
+});
+
+router.get('/waitlist', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { status, limit = 100, offset = 0 } = req.query;
+    const params = [];
+    let where = '';
+    if (status) {
+      params.push(status);
+      where = `WHERE status = $${params.length}`;
+    }
+    params.push(Number(limit), Number(offset));
+    const { rows } = await pool.query(
+      `SELECT * FROM shield_waitlist ${where} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+    return res.json({ success: true, waitlist: rows });
+  } catch (err) {
+    console.error('❌ Shield waitlist list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch Shield waitlist.' });
   }
 });
 

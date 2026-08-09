@@ -116,7 +116,12 @@ router.post('/demo-score', async (req, res) => {
     const { address, chain } = req.body;
     if (!address || typeof address !== 'string') return res.status(400).json({ success: false, error: 'Wallet address is required.' });
     const data = await screenWallet({ address: address.trim(), chain: chain || 'ethereum', purpose: 'compliance-demo', allowDemo: true });
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      demo: true,
+      notice: 'Public preview only. Authenticated Verify/Compliance API checks are the production compliance record.',
+      data
+    });
   } catch (err) {
     console.error('❌ Demo score error:', err);
     return res.status(500).json({ success: false, error: 'Demo score failed.' });

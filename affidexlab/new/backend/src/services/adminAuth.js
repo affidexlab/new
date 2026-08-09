@@ -37,7 +37,7 @@ export async function authorizeAdmin(req, res, scope = null) {
     return false;
   }
 
-  if (process.env.ADMIN_KEY && safeCompare(key, process.env.ADMIN_KEY)) {
+  if (process.env.ADMIN_KEY && process.env.ALLOW_LEGACY_ADMIN_KEY === 'true' && safeCompare(key, process.env.ADMIN_KEY)) {
     await auditAdminRequest(req, { name: 'legacy-admin-key' }, true, scope);
     return true;
   }

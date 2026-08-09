@@ -146,7 +146,12 @@ router.post('/demo', async (req, res) => {
     const { address, chain } = req.body;
     if (!address || typeof address !== 'string' || address.trim().length < 4) return res.status(400).json({ success: false, error: 'Wallet address is required.' });
     const data = await screenWallet({ address: address.trim(), chain: chain || 'ethereum', purpose: 'verify-demo', allowDemo: true });
-    return res.json({ success: true, data });
+    return res.json({
+      success: true,
+      demo: true,
+      notice: 'Public preview only. Use /v1/verify/check with an authenticated API key for production compliance decisions.',
+      data
+    });
   } catch (err) {
     console.error('❌ Verify demo error:', err);
     return res.status(500).json({ success: false, error: 'Demo check failed.' });

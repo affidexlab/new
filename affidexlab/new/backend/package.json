@@ -15,6 +15,7 @@
     "ingest:public-feeds": "node src/scripts/ingest-public-risk-feeds.js",
     "ingest:curated": "node src/scripts/ingest-curated-risk-labels.js",
     "risk:calibrate": "node src/scripts/calibrate-risk-scoring.js",
+    "risk:backfill-graph": "node src/scripts/run-risk-graph-backfill.js",
     "shield:scan-security": "node src/scripts/run-shield-security-scan.js",
     "admin:create-key": "node src/scripts/create-admin-api-key.js",
     "org:create": "node src/scripts/create-organization.js"

@@ -41,7 +41,8 @@ export default function Agents() {
   const [formData, setFormData] = useState({ companyName: "", contactName: "", email: "", message: "", plan: "" });
   const [formError, setFormError] = useState("");
 
-  // Live rule-builder demo — real requests to the real backend.
+  // Authenticated workflow console state. Production rule APIs require an org
+  // session or scoped org API key; public email-only access is disabled.
   const [ruleEmail, setRuleEmail] = useState("");
   const [rules, setRules] = useState<any[]>([]);
   const [newRule, setNewRule] = useState({ name: "", operator: ">", threshold: "80" });

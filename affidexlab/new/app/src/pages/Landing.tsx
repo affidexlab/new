@@ -251,7 +251,7 @@ export default function Landing() {
           border: "1px solid rgba(59,130,246,0.2)", padding: "1.5rem",
         }}>
           <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", marginBottom: "0.75rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Try the Verify API — Instant Wallet Risk Check
+            Public Verify Preview — Not a Compliance Decision
           </p>
           <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
             <input
@@ -306,6 +306,9 @@ export default function Landing() {
               </div>
             </div>
           )}
+          <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", marginTop: "0.85rem", marginBottom: 0 }}>
+            This public widget is a preview. Production compliance decisions require authenticated Verify/Compliance API checks with DecaFlow internal labels, graph ingestion, and case-review evidence.
+          </p>
         </div>
       </section>
 

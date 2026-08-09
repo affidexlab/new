@@ -16,6 +16,7 @@ on:
           - sanctions
           - public-feeds
           - curated
+          - graph-backfill
           - calibrate
 
 jobs:
@@ -37,6 +38,10 @@ jobs:
       UK_HMT_CONSOLIDATED_SANCTIONS_URL: ${{ secrets.UK_HMT_CONSOLIDATED_SANCTIONS_URL }}
       ALLOW_PARTIAL_PUBLIC_RISK_INGESTION: 'false'
       DECAFLOW_PUBLIC_RISK_FEED_URLS: ${{ secrets.DECAFLOW_PUBLIC_RISK_FEED_URLS }}
+      RISK_GRAPH_BACKFILL_TARGETS: ${{ secrets.RISK_GRAPH_BACKFILL_TARGETS }}
+      RISK_GRAPH_BACKFILL_FROM_BLOCK: ${{ secrets.RISK_GRAPH_BACKFILL_FROM_BLOCK }}
+      RISK_GRAPH_BACKFILL_TO_BLOCK: ${{ secrets.RISK_GRAPH_BACKFILL_TO_BLOCK }}
+      RISK_GRAPH_BACKFILL_MAX_PAGES: ${{ secrets.RISK_GRAPH_BACKFILL_MAX_PAGES }}
 
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +68,10 @@ jobs:
       - name: Run curated label ingestion
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'curated' }}
         run: npm run ingest:curated
+
+      - name: Run targeted graph backfill
+        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'graph-backfill' }}
+        run: npm run risk:backfill-graph
 
       - name: Run risk calibration check
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'calibrate' }}
