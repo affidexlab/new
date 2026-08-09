@@ -325,3 +325,50 @@ For bank transfer, do not tell customers the website gives instant bank details.
 The founder console can now pause or reopen customer intake for each product. If BD is running a campaign, confirm the relevant product is marked as accepting customers in `/founder-control` before outreach. If a product is paused or internal-only, the public page will block new customer intake.
 
 Brand guidance for outreach and screenshots: use DecaFlow dark-blue/blue as the visual identity. Avoid pitching with purple/orange-heavy visuals; risk/severity colors are fine only when they communicate an actual risk state.
+
+## Risk coverage and enterprise-auth update — 2026-08-09
+
+BD can now make a stronger risk-intelligence claim than before because DecaFlow added live public scam/phishing feed ingestion on top of sanctions, curated labels, graph ingestion, calibration, and analyst feedback.
+
+Updated compliance/risk pitch:
+
+> DecaFlow runs its own internal wallet-risk engine. It combines sanctions labels, public scam/phishing feeds, curated incident labels, graph exposure, calibration cases, and analyst review feedback into approve/review/reject decisions for compliance workflows.
+
+Use this proof point in calls when appropriate:
+
+> The latest production ingestion run loaded thousands of public scam/phishing labels into DecaFlow’s own risk database, including ScamSniffer and MyEtherWallet darklist sources, and calibration passed against known sanctioned, mixer, and exploit-linked wallets.
+
+Do not say:
+
+- “We already match Chainalysis/TRM coverage.”
+- “We have fully comprehensive darknet and mixer coverage across every chain.”
+- “No false positives or missed risks.”
+
+Say this instead:
+
+> DecaFlow owns the engine and is rapidly expanding the dataset. Early customers help shape coverage by bringing real wallets, contracts, incidents, and expected decisions into the feedback loop.
+
+### Updated Agents positioning
+
+Agents is now better positioned for enterprise customers because production rule workflows require organization sessions or scoped API keys. That means BD should stop describing it as an open public rule-builder and describe it as an authenticated compliance workflow layer.
+
+Updated Agents pitch:
+
+> DecaFlow Agents turns wallet-risk checks into accountable workflows. Teams define rules, route flagged cases into review queues, record decisions, and can later approve specific repeated patterns for automation under named human ownership.
+
+When asked about autonomy, answer:
+
+> Agents does not blindly freeze or move anything. It supports human-approved workflow automation with role-scoped organization access and auditability.
+
+### What to ask pilots for now
+
+For Verify/Compliance pilots, ask for:
+
+- 20–100 known wallet examples: clean, sanctioned, scam, phishing, mixer, exploit-linked, high-risk exchange, and false-positive examples.
+- The expected decision for each wallet: approve, review, or reject.
+- Any public evidence links they rely on: explorer labels, incident reports, court filings, takedown notices, tweets from reputable researchers, or postmortems.
+- Their rule preferences: what score should auto-review, what should reject, and what must always go to a human.
+
+For Shield pilots, keep asking for watched contract addresses, chains, labels, admin/owner addresses, alert recipients, and critical events. If they also want counterparty risk, ask for important treasury/customer wallets so DecaFlow can graph and score interactions.
+
+The best commercial motion remains design-partner selling. The message is stronger now because the product has real ingestion and enterprise controls, but the honest wedge is still: “help us tune DecaFlow’s proprietary risk graph against your real cases,” not “we already have every risky wallet in the world.”

@@ -207,3 +207,25 @@ The most important business change is that Compliance, Audit, and Verify now fol
 Public product availability is also now controllable from the founder console. A product can be marked active, beta, pre-production, paused, internal-only, or not accepting customers, and those settings affect the public pages. This gives leadership a practical launch-control switch for each product line.
 
 The public pages also received brand harmonization. DecaFlow should use a dark-blue/blue system as the core identity; red/yellow/green should be reserved for risk/status communication, not broad product branding.
+
+## Risk and enterprise hardening update — 2026-08-09
+
+DecaFlow has now expanded its own risk-intelligence dataset beyond the first sanctions and curated-label foundation. The platform ingests public scam/phishing feeds into DecaFlow’s database, records ingestion history, and exposes coverage reporting so leadership can see how many labels exist by category, source, and chain.
+
+The latest verified production run added 2,530 ScamSniffer labels and 652 MyEtherWallet darklist labels. Calibration also passed for known sanctioned, mixer, and exploit-linked wallets, and the live backend flagged a ScamSniffer-listed wallet through DecaFlow’s own internal scoring engine.
+
+This is a major step, but it is still not enough to claim Chainalysis/TRM-level market coverage. Those companies have years of proprietary investigations, exchange partnerships, law-enforcement feedback, ransomware/darknet datasets, and analyst operations. DecaFlow now has the system needed to build that moat, but the moat grows through continuous research and case review, not through one code deploy.
+
+Agents and customer accounts were also hardened. Customers now have organization-session and scoped API-key controls for member management, key management, rules, review queues, evaluation, and automation approval. The public Agents page no longer presents unauthenticated rule-building as the production model; production workflows require authenticated org access or scoped service keys.
+
+Leadership’s updated position should be:
+
+> DecaFlow has a real DecaFlow-owned risk engine and is expanding coverage through sanctions, scam/phishing feeds, curated intelligence, graph ingestion, calibration, and analyst feedback. We can onboard customers into controlled production/beta workflows now, while we continue scaling dataset coverage toward the largest market incumbents.
+
+Leadership should still avoid:
+
+- “We are already as broad as Chainalysis/TRM.”
+- “Fully comprehensive darknet/mixer/scam coverage is finished.”
+- “Agents can operate without accountable human or org-level controls.”
+
+The next CEO-level operating requirement is to assign a risk-intelligence owner who adds new public and internally verified sources every week, reviews false positives, tags new incidents, and uses customer pilot cases to improve DecaFlow’s proprietary graph.

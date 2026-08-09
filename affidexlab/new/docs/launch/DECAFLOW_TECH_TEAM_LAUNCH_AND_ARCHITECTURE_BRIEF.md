@@ -45,6 +45,7 @@ Core routes:
 - `POST /v1/risk/ingest/alchemy-transfers` — batch graph ingestion via Alchemy API.
 - `POST /v1/risk/webhooks/alchemy` — Alchemy webhook ingestion.
 - `POST /v1/risk/case-reviews` — analyst feedback that can create confirmed-risk labels.
+- `GET /v1/risk/coverage` — admin coverage summary across categories, sources, chains, and ingestion runs.
 
 ### Sanctions and curated label ingestion
 
@@ -53,6 +54,7 @@ Scripts:
 - `node src/scripts/ingest-ofac-sdn-crypto.js` fetches OFAC SDN XML and extracts digital currency addresses into `risk_address_labels`.
 - `node src/scripts/ingest-public-sanctions-lists.js` scans the UN consolidated list, EU consolidated financial sanctions list, and UK OFSI/HMT consolidated list for digital-asset addresses and stores confirmed matches as sanctions labels. The source URLs are configurable through environment variables because government download endpoints do change.
 - `node src/scripts/ingest-curated-risk-labels.js` ingests DecaFlow’s curated seed labels from `src/data/curatedRiskLabels.json`.
+- `node src/scripts/ingest-public-risk-feeds.js` ingests public scam/phishing feeds into DecaFlow-owned labels. The first production feeds are ScamSniffer’s address blacklist and MyEtherWallet’s address darklist; optional additional comma-separated feed URLs can be added through `DECAFLOW_PUBLIC_RISK_FEED_URLS`.
 - `node src/scripts/calibrate-risk-scoring.js` runs known calibration wallets against the DecaFlow internal engine; adding `--apply` raises likely category weights when the expected decision is not met.
 
 The current curated seed list includes public Tornado Cash/mixer labels and exploit-linked seed placeholders. The public sanctions script adds UN/EU/UK/HMT coverage where those lists publish crypto addresses, while OFAC remains the strongest structured crypto-address source today. This is still the first internal dataset, so the team must keep growing it with public enforcement releases, exploit postmortems, court filings, chain explorer tags, and analyst investigations.
@@ -242,7 +244,7 @@ The core backend foundation is now real: Verify can call the internal DecaFlow r
 2. **Schedule recurring ingestion.** Add Render Cron jobs or another scheduler for sanctions refresh, curated-label refresh, graph backfills, and Shield monitoring. Manual one-off ingestion is not enough for a public security product.
 3. **Confirm production env vars after deploy.** Required backend values include `DATABASE_URL`, `DATABASE_CA_CERT` or trusted CA behavior, `ADMIN_KEY`, `RISK_PROVIDER=internal`, `ALLOW_DEMO_RISK=false`, `ALCHEMY_API_KEY`, `ALCHEMY_WEBHOOK_SIGNING_KEYS`, `SHIELD_EVENT_WEBHOOK_SECRET`, SMTP mailer values, and payment provider values if payments are public.
 4. **Run a real webhook test from Alchemy.** The webhook should return 200, write rows into `risk_graph_edges`, and reject a tampered request with a bad signature.
-5. **Fix public frontend copy that still says risk scoring is demo-only.** The Agents page still contains an FAQ saying public scoring is deterministic demo output. That is now misleading for the authenticated internal-risk path and should be updated before marketing traffic is sent there.
+5. **Keep public copy aligned with authenticated production behavior.** The Agents page has been updated to describe authenticated org/API-key workflows instead of an unauthenticated public rule-builder. Any future public demo widget should stay clearly labeled as a preview, while authenticated Verify/Compliance checks remain the production compliance surface.
 6. **Decide what to do with public demo endpoints.** `/v1/verify/demo`, `/v1/compliance/demo-score`, and the landing-page mini wallet demo are still acceptable as demos if clearly labeled, but they must not be marketed as live compliance decisions.
 7. **Persist Shield waitlist submissions.** The Shield waitlist currently emails requests but does not persist them to a dedicated waitlist table. That is acceptable for private beta, but fragile for a public campaign.
 8. **Deepen Shield watchers.** Current Shield coverage includes alerts/incidents/action rules and monitored on-chain events, but a full security SaaS still needs ownership/admin-change detection, proxy implementation monitoring, ABI-aware privileged function detection, ERC approval/transfer anomaly detection, and vulnerability scanning workflow.
@@ -368,7 +370,7 @@ After confirming the new key works, remove or rotate the legacy `ADMIN_KEY`. The
 
 Render Shell is not required. The repo now includes GitHub Actions workflows that run production operations against the production database using GitHub encrypted secrets:
 
-- `.github/workflows/production-risk-ingestion.yml` runs OFAC, public sanctions, curated labels, and calibration every 6 hours, and can also be triggered manually from the GitHub Actions tab.
+- `.github/workflows/production-risk-ingestion.yml` runs OFAC, public sanctions, public scam/phishing feeds, curated labels, and calibration every 6 hours, and can also be triggered manually from the GitHub Actions tab.
 - `.github/workflows/shield-monitor.yml` runs the Shield balance monitor plus the Shield security scanner every 15 minutes.
 
 Required GitHub repository secrets:
@@ -401,7 +403,7 @@ How to run manually:
 2. Go to **Actions**.
 3. Open **Production Risk Ingestion**.
 4. Click **Run workflow**.
-5. Choose `all`, `ofac`, `sanctions`, `curated`, or `calibrate`.
+5. Choose `all`, `ofac`, `sanctions`, `public-feeds`, `curated`, or `calibrate`.
 6. Run it and check logs.
 
 This is the best free/low-friction replacement for Render Shell because it uses the same production DB secrets, creates logs, supports scheduling, and avoids exposing production database credentials on a personal laptop.
@@ -475,4 +477,59 @@ The public-facing affected pages were harmonized toward DecaFlow’s dark-blue/b
 
 ### Operational requirement
 
-Before public promotion, confirm Render and Vercel have deployed at least commit `c7e4bb6010ccd134d3d03b968f257f017282b3ba`, because that is the commit containing Compliance/Audit/Verify NOWPayments checkout and color harmonization.
+Before public promotion, confirm Render and Vercel have deployed at least commit `e1c85be98a094ea8777093191039209bc58041db`, because that includes the latest risk-feed expansion, org hardening, Agents public-copy update, Shield scanner range fix, Compliance/Audit/Verify NOWPayments checkout, and color harmonization.
+
+## Risk coverage and org hardening update — 2026-08-09
+
+### Risk intelligence coverage expansion
+
+The internal engine has moved beyond OFAC/public sanctions/curated seeds and now has a production public-feed ingestion layer:
+
+- `publicRiskFeedIngestion.js` fetches and normalizes public scam/phishing address lists.
+- `npm run ingest:public-feeds` runs the public-feed loader.
+- `.github/workflows/production-risk-ingestion.yml` now supports the `public-feeds` job and includes it in the scheduled `all` run.
+- `risk_ingestion_runs` records feed status, label count, byte count, errors, and timestamps.
+- `riskCoverageService.js` summarizes current label coverage by category, source, chain, and recent ingestion run.
+- `GET /v1/risk/coverage` exposes that coverage summary to admins/founder-console integrations.
+
+The verified production run on commit `a48176342ab5bc98445c1c6fa2df35778005ec93` loaded:
+
+- ScamSniffer address blacklist: 2,530 labels.
+- MyEtherWallet address darklist: 652 labels.
+
+Calibration also passed after this update for known sanctioned, mixer, and exploit-linked wallets. A live backend check against a ScamSniffer-listed wallet returned `provider: decaflow-internal`, a direct scam flag, and `recommendation: REVIEW`.
+
+This is still not a claim of Chainalysis/TRM parity. The system now has the ingestion architecture, coverage accounting, and first broader public feeds, but parity requires a continuously operated DecaFlow data program: exploit reports, court filings, takedown notices, chain explorer tags, customer cases, analyst reviews, darknet/ransomware reports, and verified internal investigations.
+
+### Organization and Agents hardening
+
+The org/auth layer now has self-service endpoints for customer organizations, not only founder/admin workflows:
+
+- `GET /v1/orgs/me`
+- `GET /v1/orgs/me/members`
+- `POST /v1/orgs/me/members`
+- `PATCH /v1/orgs/me/members/:membershipId`
+- `GET /v1/orgs/me/api-keys`
+- `POST /v1/orgs/me/api-keys`
+- `PATCH /v1/orgs/me/api-keys/:keyId`
+
+Humans authenticate through org sessions. Machine integrations use org API keys with explicit scopes such as `verify:check`, `agents:rules`, `agents:evaluate`, and `agents:review`.
+
+Agents workflow endpoints were hardened so production rule creation, rule listing, evaluation, suggestions, review queue access, decisions, and automation opt-in require either:
+
+1. an authenticated org session with an allowed role, or
+2. a scoped org API key.
+
+Unauthenticated email-only Agents access is now disabled unless `ALLOW_PUBLIC_AGENT_RULES=true` is deliberately set for a sandbox. The public Agents page was updated to describe the authenticated workflow console instead of advertising an unauthenticated live rule-builder demo.
+
+### Current production readiness interpretation
+
+The technical team can now treat Verify, Compliance, Shield, Audit, and Agents as materially stronger beta/public-launch surfaces, provided production deployment is confirmed at or beyond `e1c85be98a094ea8777093191039209bc58041db`. The correct engineering claim is:
+
+> DecaFlow operates an internal risk engine with sanctions, public scam/phishing feeds, curated labels, graph ingestion, case feedback, calibration, and coverage reporting.
+
+The incorrect claim is:
+
+> DecaFlow has already achieved fully comprehensive Chainalysis/TRM-equivalent coverage.
+
+That second statement becomes defensible only after the coverage dashboard shows large, diverse, continuously refreshed datasets across sanctions, mixers, scam/phishing, darknet/ransomware, exploit/stolen-fund, high-risk-service, and customer-verified case categories.
