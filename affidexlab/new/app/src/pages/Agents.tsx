@@ -185,55 +185,24 @@ export default function Agents() {
         </div>
       </section>
 
-      {/* Live rule builder */}
+      {/* Authenticated workflow console */}
       <section style={{ padding: "2rem 1.25rem 5rem", maxWidth: "700px", margin: "0 auto" }}>
-        <h2 style={{ textAlign: "center", fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>Try the rule builder</h2>
-        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginBottom: "2rem" }}>Real requests to the real backend — not a mockup.</p>
+        <h2 style={{ textAlign: "center", fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>Authenticated workflow console</h2>
+        <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginBottom: "2rem" }}>Rule creation, review queues, suggestions, and automation opt-in now require an organization session or scoped API key.</p>
         <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "1.5rem" }}>
-          <input value={ruleEmail} onChange={e => { setRuleEmail(e.target.value); loadRules(e.target.value); loadSuggestions(e.target.value); }} placeholder="your@email.com — rules are scoped to this"
-            style={{ width: "100%", padding: "0.7rem 0.9rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.85rem", marginBottom: "1rem", boxSizing: "border-box" }} />
-
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
-            <input value={newRule.name} onChange={e => setNewRule(p => ({ ...p, name: e.target.value }))} placeholder="Rule name" style={{ flex: 2, padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem" }} />
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem", alignSelf: "center" }}>risk score</span>
-            <select value={newRule.operator} onChange={e => setNewRule(p => ({ ...p, operator: e.target.value }))} style={{ padding: "0.6rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem" }}>
-              {[">", ">=", "<", "<=", "=="].map(o => <option key={o} value={o} style={{ background: "#1f2937" }}>{o}</option>)}
-            </select>
-            <input value={newRule.threshold} onChange={e => setNewRule(p => ({ ...p, threshold: e.target.value }))} type="number" style={{ width: "70px", padding: "0.6rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem" }} />
-          </div>
-          {ruleBuilderError && <p style={{ color: "#fca5a5", fontSize: "0.78rem", marginBottom: "0.75rem" }}>{ruleBuilderError}</p>}
-          <button onClick={createRule} disabled={ruleBuilderLoading} style={{ background: "#3B82F6", color: "#fff", border: "none", padding: "0.6rem 1.2rem", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", opacity: ruleBuilderLoading ? 0.6 : 1 }}>{ruleBuilderLoading ? "Creating..." : "+ Add rule"}</button>
-
-          {rules.length > 0 && (
-            <div style={{ marginTop: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {rules.map(r => (
-                <div key={r.id} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", borderRadius: "8px", fontSize: "0.82rem" }}>
-                  <span>{r.name} {r.auto_decision && <span style={{ color: "#86efac", fontSize: "0.72rem" }}>· auto-{r.auto_decision}</span>}</span>
-                  <span style={{ color: "#a5b4fc", fontFamily: "monospace" }}>riskScore {r.operator} {r.threshold} → flag</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {suggestions.length > 0 && (
-          <div style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.25)", borderRadius: "16px", padding: "1.5rem", marginTop: "1.25rem" }}>
-            <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.5rem", color: "#a5b4fc" }}>🔎 Pattern detected — Phase 3</h3>
-            <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.5)", marginBottom: "1rem" }}>Based on your own past decisions, not a guess. Nothing changes until you say so.</p>
-            <input value={reviewerName} onChange={e => setReviewerName(e.target.value)} placeholder="Your name (required to enable automation)"
-              style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: "0.82rem", marginBottom: "1rem", boxSizing: "border-box" }} />
-            {suggestions.map(s => (
-              <div key={s.ruleId} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "10px", padding: "1rem", marginBottom: "0.75rem" }}>
-                <p style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>{s.message}</p>
-                <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginBottom: "0.75rem" }}>{s.totalDecisions} past decisions, {s.consistencyPct}% consistent.</p>
-                <button onClick={() => enableAuto(s.ruleId, s.suggestedAction)} disabled={enablingId === s.ruleId}
-                  style={{ background: "#3B82F6", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", opacity: enablingId === s.ruleId ? 0.6 : 1 }}>
-                  {enablingId === s.ruleId ? "Enabling..." : `Yes, auto-${s.suggestedAction} future matches`}
-                </button>
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {[
+              ["Organization login", "Magic-link sessions are required for humans before members, rules, review queues, or API keys can be managed."],
+              ["Scoped service keys", "Machine access uses org API keys with scopes such as verify:check, agents:rules, agents:evaluate, and agents:review."],
+              ["Human-approved automation", "Pattern suggestions can still auto-resolve repeated decisions, but only after an owner/admin explicitly enables that rule."],
+            ].map(([title, desc]) => (
+              <div key={title} style={{ padding: "0.9rem 1rem", background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}>
+                <div style={{ fontWeight: 700, marginBottom: "0.25rem" }}>{title}</div>
+                <div style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.84rem", lineHeight: 1.6 }}>{desc}</div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </section>
 
       <section style={{ padding: "2rem 2rem 5rem", maxWidth: "1100px", margin: "0 auto" }}>
