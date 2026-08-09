@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 import { API_BASE } from "../lib/apiBase";
+import ProductNav from "../components/ProductNav";
 
 const FEATURES = [
   { icon: "🔍", title: "Real-Time Transaction Monitoring", desc: "Every on-chain transaction is scored the moment it hits the mempool. Suspicious patterns flagged before settlement — not after." },
@@ -104,42 +105,13 @@ export default function Compliance() {
         }
       `}</style>
 
-      {/* Nav */}
-      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1rem 1.5rem",borderBottom:"1px solid rgba(255,255,255,0.08)",position:"sticky",top:0,background:"rgba(10,14,39,0.97)",backdropFilter:"blur(12px)",zIndex:100}}>
-        <a href="/" style={{textDecoration:"none",display:"flex",alignItems:"center",gap:"0.5rem"}}>
-          <img src="/logo.png" alt="DecaFlow" style={{width:36,height:36,objectFit:"contain"}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}} />
-          <span style={{fontSize:"1.25rem",fontWeight:800,color:"#fff",letterSpacing:"-0.025em"}}>Deca<span style={{color:"#3B82F6"}}>Flow</span></span>
-        </a>
-
-        {/* Desktop nav */}
-        <div className="desktop-nav" style={{gap:"1.5rem",alignItems:"center"}}>
-          {NAV_LINKS.map(({label,href,active})=>(
-            <a key={label} href={href} style={{color:active?"#3B82F6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:active?600:400}}>{label}</a>
-          ))}
-          <button onClick={()=>openForm("Business")} style={{background:"#3B82F6",color:"#fff",padding:"0.5rem 1.25rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.875rem",fontWeight:600}}>Get Started</button>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button className="mobile-btn" onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:"#fff",fontSize:"1.5rem",cursor:"pointer",padding:"0.25rem"}}>
-          {menuOpen ? "✕" : "☰"}
-        </button>
-      </nav>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div style={{position:"fixed",inset:0,background:"rgba(10,14,39,0.98)",zIndex:99,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"2rem"}}>
-          {NAV_LINKS.map(({label,href})=>(
-            <a key={label} href={href} onClick={()=>setMenuOpen(false)} style={{color:"#fff",textDecoration:"none",fontSize:"1.5rem",fontWeight:700}}>{label}</a>
-          ))}
-          <button onClick={()=>{setMenuOpen(false);openForm("Business");}} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Get Started</button>
-        </div>
-      )}
+      <ProductNav active="Compliance" ctaLabel="Get Started" onCta={() => openForm("Business")} />
 
       {/* Hero */}
       <section className="hero-section" style={{padding:"6rem 2rem 4rem",maxWidth:"1100px",margin:"0 auto",textAlign:"center"}}>
         <div style={{display:"inline-block",background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:"100px",padding:"0.4rem 1rem",fontSize:"0.78rem",color:"#93C5FD",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:"1.5rem"}}>Compliance Infrastructure</div>
         <h1 style={{fontSize:"clamp(1.8rem,5vw,3.6rem)",fontWeight:800,lineHeight:1.1,letterSpacing:"-0.03em",marginBottom:"1.5rem"}}>
-          On-Chain AML Compliance{" "}<span style={{background:"linear-gradient(135deg,#3B82F6,#818CF8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Built for Africa's Crypto Economy</span>
+          On-Chain AML Compliance{" "}<span style={{background:"linear-gradient(135deg,#3B82F6,#818CF8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Built for Global Crypto Markets</span>
         </h1>
         <p style={{fontSize:"1.05rem",color:"rgba(255,255,255,0.65)",maxWidth:"660px",margin:"0 auto 2.5rem",lineHeight:1.7}}>Real-time transaction monitoring, sanctions screening, and AML risk scoring for crypto exchanges, fintechs, and DeFi protocols. Built to global standards, MiCA compatible.</p>
         <div style={{display:"flex",gap:"1rem",justifyContent:"center",flexWrap:"wrap"}}>

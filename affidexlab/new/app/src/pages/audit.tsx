@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 import { API_BASE } from "../lib/apiBase";
+import ProductNav from "../components/ProductNav";
 
 const AUDIT_SCOPE = [
   { icon: "🔐", title: "Reentrancy Vulnerabilities", desc: "Detect cross-function, cross-contract, and read-only reentrancy patterns before they cost your users everything." },
@@ -97,27 +98,7 @@ export default function Audit() {
         }
       `}</style>
 
-      {/* Nav */}
-      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1rem 1.5rem",borderBottom:"1px solid rgba(255,255,255,0.08)",position:"sticky",top:0,background:"rgba(10,14,39,0.97)",backdropFilter:"blur(12px)",zIndex:100}}>
-        <a href="/" style={{textDecoration:"none",display:"flex",alignItems:"center",gap:"0.5rem"}}>
-          <img src="/logo.png" alt="DecaFlow" style={{width:36,height:36,objectFit:"contain"}} onError={e=>{(e.target as HTMLImageElement).style.display="none"}}/>
-          <span style={{fontSize:"1.25rem",fontWeight:800,color:"#fff",letterSpacing:"-0.025em"}}>Deca<span style={{color:"#3B82F6"}}>Flow</span></span>
-        </a>
-        <div className="desk-nav" style={{gap:"1.5rem",alignItems:"center"}}>
-          {NAV_LINKS.map(({label,href,active})=>(
-            <a key={label} href={href} style={{color:active?"#3B82F6":"rgba(255,255,255,0.6)",textDecoration:"none",fontSize:"0.9rem",fontWeight:active?600:400}}>{label}</a>
-          ))}
-          <button onClick={()=>openForm("Protocol Audit")} style={{background:"#3B82F6",color:"#fff",padding:"0.5rem 1.25rem",borderRadius:"8px",border:"none",cursor:"pointer",fontSize:"0.875rem",fontWeight:600}}>Request Audit</button>
-        </div>
-        <button className="mob-btn" onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:"#fff",fontSize:"1.5rem",cursor:"pointer",padding:"0.25rem"}}>{menuOpen?"✕":"☰"}</button>
-      </nav>
-
-      {menuOpen&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(10,14,39,0.98)",zIndex:99,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"2rem"}}>
-          {NAV_LINKS.map(({label,href})=>(<a key={label} href={href} onClick={()=>setMenuOpen(false)} style={{color:"#fff",textDecoration:"none",fontSize:"1.5rem",fontWeight:700}}>{label}</a>))}
-          <button onClick={()=>{setMenuOpen(false);openForm("Protocol Audit");}} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 2.5rem",borderRadius:"12px",border:"none",cursor:"pointer",fontSize:"1rem",fontWeight:700}}>Request Audit</button>
-        </div>
-      )}
+      <ProductNav active="Security Audit" ctaLabel="Request Audit" onCta={() => openForm("Protocol Audit")} />
 
       {/* Hero */}
       <section style={{padding:"5rem 2rem 3rem",maxWidth:"1100px",margin:"0 auto",textAlign:"center"}}>

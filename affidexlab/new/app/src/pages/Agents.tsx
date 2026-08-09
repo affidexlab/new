@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 import { API_BASE } from "../lib/apiBase";
+import ProductNav from "../components/ProductNav";
 
 const FEATURES = [
   { icon: "⚙️", title: "Configurable Workflow Rules", desc: "Set conditions like \"if risk score > 80, flag for review\" — no code, applied automatically to every check that runs through your account." },
@@ -147,17 +148,7 @@ export default function Agents() {
         }
       `}</style>
 
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.1rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)", position: "sticky", top: 0, background: "rgba(10,14,39,0.97)", backdropFilter: "blur(14px)", zIndex: 200 }}>
-        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.025em" }}>Deca<span style={{ color: "#3B82F6" }}>Flow</span></span>
-        </a>
-        <div className="desktop-nav" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-          {NAV_LINKS.map(l => <a key={l.label} href={l.href} style={{ color: l.label === "Autopilot" ? "#fff" : "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 }}>{l.label}</a>)}
-          <a href="#" onClick={(e) => { e.preventDefault(); openForm("Growth"); }} style={{ background: "#3B82F6", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Get Started</a>
-        </div>
-        <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-btn" style={{ display: "none", background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer" }}>{menuOpen ? "✕" : "☰"}</button>
-      </nav>
-      {menuOpen && <div style={{ position: "fixed", inset: 0, background: "rgba(10,14,39,0.98)", zIndex: 199, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2rem" }}>{NAV_LINKS.map(l => <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} style={{ color: "#fff", textDecoration: "none", fontSize: "1.5rem", fontWeight: 700 }}>{l.label}</a>)}</div>}
+      <ProductNav active="Autopilot" ctaLabel="Get Started" onCta={() => openForm("Growth")} />
 
       <section className="hero-section" style={{ padding: "7rem 2rem 4rem", maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
         {checkoutStatus === "success" && <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "12px", padding: "0.9rem 1.25rem", marginBottom: "2rem", color: "#86efac", fontSize: "0.9rem" }}>✅ Payment received — confirmation on its way to your email.</div>}
