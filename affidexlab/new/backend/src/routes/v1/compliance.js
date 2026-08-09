@@ -4,6 +4,7 @@ import { authorizeAdmin } from '../../services/adminAuth.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { screenWallet } from '../../services/riskIntelligenceService.js';
 import { createNowPaymentsInvoice, verifyNowPaymentsSignature } from '../../services/nowpaymentsService.js';
+import { provisionCustomerAccess } from '../../services/autoProvisioningService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -60,10 +61,19 @@ router.post('/nowpayments/callback', async (req, res) => {
     if (!match) return res.status(200).send('ok');
     const status = payment_status === 'finished' ? 'converted' : ['failed','expired','refunded'].includes(payment_status) ? payment_status : 'pending_payment';
     await pool.query(`UPDATE compliance_enquiries SET status = $1, payment_status = $2, gateway_order_id = COALESCE($3, gateway_order_id), updated_at = NOW() WHERE id = $4`, [status, payment_status, payment_id ? String(payment_id) : null, match[1]]);
-    return res.status(200).send('ok');
+    res.status(200).send('ok');
+
+    if (payment_status === 'finished') {
+      const { rows } = await pool.query(`SELECT * FROM compliance_enquiries WHERE id = $1`, [match[1]]);
+      if (rows[0]) {
+        provisionCustomerAccess({ email: rows[0].email, name: rows[0].contact_name, companyName: rows[0].company_name, product: 'compliance', planLabel: rows[0].plan })
+          .catch(err => console.error('Compliance auto-provisioning failed:', err));
+      }
+    }
+    return undefined;
   } catch (err) {
     console.error('❌ Compliance NOWPayments callback error:', err);
-    return res.status(500).send('error');
+    if (!res.headersSent) return res.status(500).send('error');
   }
 });
 

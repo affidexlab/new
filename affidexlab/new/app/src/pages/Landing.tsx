@@ -169,6 +169,9 @@ export default function Landing() {
               {l.label}
             </a>
           ))}
+          <a href="/login" style={{ color: "rgba(255,255,255,0.85)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 600, border: "1px solid rgba(255,255,255,0.2)", padding: "0.45rem 1.1rem", borderRadius: "8px" }}>
+            Sign in
+          </a>
           <a href="/compliance" style={{ background: "#3B82F6", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>
             Get Started
           </a>
@@ -187,6 +190,7 @@ export default function Landing() {
           {NAV_LINKS.map((l) => (
             <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} style={{ color: "#fff", textDecoration: "none", fontSize: "1.5rem", fontWeight: 700 }}>{l.label}</a>
           ))}
+          <a href="/login" onClick={() => setMenuOpen(false)} style={{ color: "#fff", textDecoration: "none", fontSize: "1.5rem", fontWeight: 700 }}>Sign in</a>
           <a href="/compliance" onClick={() => setMenuOpen(false)} style={{ background: "#3B82F6", color: "#fff", padding: "0.875rem 2.5rem", borderRadius: "12px", textDecoration: "none", fontSize: "1rem", fontWeight: 700 }}>
             Get Started
           </a>

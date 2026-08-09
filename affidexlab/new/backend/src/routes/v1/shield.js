@@ -8,6 +8,7 @@ import { safeCompare } from '../../utils/security.js';
 import { createShieldAlert } from '../../services/shieldActionEngine.js';
 import { runShieldSecurityScan } from '../../services/shieldSecurityScanner.js';
 import { runShieldVulnerabilityScan } from '../../services/shieldVulnerabilityScanner.js';
+import { provisionCustomerAccess } from '../../services/autoProvisioningService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -640,6 +641,9 @@ router.post('/nowpayments/callback', async (req, res) => {
         },
         isConfirmation: true,
       }).catch(err => console.error('Shield confirmation email failed:', err));
+
+      provisionCustomerAccess({ email: customer.email, name: customer.contact_name, companyName: customer.company_name, product: 'shield', planLabel: customer.plan })
+        .catch(err => console.error('Shield auto-provisioning failed:', err));
     } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
       await pool.query(`UPDATE shield_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
       res.status(200).send('ok');

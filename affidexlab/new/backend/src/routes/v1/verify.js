@@ -6,6 +6,7 @@ import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { screenWallet } from '../../services/riskIntelligenceService.js';
 import { findOrgApiKey } from '../../services/orgApiKeyAuth.js';
 import { createNowPaymentsInvoice, verifyNowPaymentsSignature } from '../../services/nowpaymentsService.js';
+import { provisionCustomerAccess } from '../../services/autoProvisioningService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -61,12 +62,36 @@ router.post('/nowpayments/callback', async (req, res) => {
     const { order_id, payment_status, payment_id } = req.body;
     const match = /^verify-(\d+)$/.exec(order_id || '');
     if (!match) return res.status(200).send('ok');
-    const status = payment_status === 'finished' ? 'paid_pending_key' : ['failed','expired','refunded'].includes(payment_status) ? payment_status : 'pending_payment';
+    const status = payment_status === 'finished' ? 'converted' : ['failed','expired','refunded'].includes(payment_status) ? payment_status : 'pending_payment';
     await pool.query(`UPDATE verify_enquiries SET status = $1, payment_status = $2, gateway_order_id = COALESCE($3, gateway_order_id), updated_at = NOW() WHERE id = $4`, [status, payment_status, payment_id ? String(payment_id) : null, match[1]]);
-    return res.status(200).send('ok');
+    res.status(200).send('ok');
+
+    if (payment_status === 'finished') {
+      const { rows } = await pool.query(`SELECT * FROM verify_enquiries WHERE id = $1`, [match[1]]);
+      const enquiry = rows[0];
+      if (enquiry) {
+        if (!enquiry.api_key_issued) {
+          const newApiKey = generateApiKey();
+          await pool.query(`UPDATE verify_enquiries SET api_key_issued = TRUE, api_key = $1, updated_at = NOW() WHERE id = $2`, [newApiKey, enquiry.id]).catch(() => {});
+          sendEnquiryEmail({
+            type: 'Verify API Key', to: enquiry.email, subject: 'Your DecaFlow Verify API key is ready',
+            fields: {
+              'Dear': enquiry.contact_name || 'there',
+              'Your API Key': newApiKey,
+              'Endpoint': 'POST https://decaflow-backend.onrender.com/v1/verify/check',
+              'Docs': 'https://docs.decaflow.xyz/verify',
+            },
+            isApiKey: true,
+          }).catch(err => console.error('Verify auto key email failed:', err));
+        }
+        provisionCustomerAccess({ email: enquiry.email, name: enquiry.contact_name, companyName: enquiry.company_name, product: 'verify', planLabel: enquiry.plan })
+          .catch(err => console.error('Verify auto-provisioning failed:', err));
+      }
+    }
+    return undefined;
   } catch (err) {
     console.error('❌ Verify NOWPayments callback error:', err);
-    return res.status(500).send('error');
+    if (!res.headersSent) return res.status(500).send('error');
   }
 });
 

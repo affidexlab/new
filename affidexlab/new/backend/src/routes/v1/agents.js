@@ -5,6 +5,7 @@ import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
 import { authenticateOrgSession } from '../../services/orgAuth.js';
 import { findOrgApiKey } from '../../services/orgApiKeyAuth.js';
+import { provisionCustomerAccess } from '../../services/autoProvisioningService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -472,6 +473,9 @@ router.post('/nowpayments/callback', async (req, res) => {
         subject: `[DecaFlow] Agents payment confirmed — ${order_id}`,
         fields: { Company: customer.company_name, Email: customer.email, Plan: customer.plan, 'Order ID': order_id, Amount: `${pay_amount} ${pay_currency}` },
       }).catch(err => console.error('Agents payment notify failed:', err));
+
+      provisionCustomerAccess({ email: customer.email, name: customer.contact_name, companyName: customer.company_name, product: 'agents', planLabel: customer.plan })
+        .catch(err => console.error('Agents auto-provisioning failed:', err));
     } else if (['failed', 'expired', 'refunded'].includes(payment_status)) {
       await pool.query(`UPDATE agents_customers SET status = $1, updated_at = NOW() WHERE id = $2`, [payment_status, dbId]);
       res.status(200).send('ok');
