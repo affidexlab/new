@@ -381,16 +381,20 @@ The best commercial motion remains design-partner selling. The message is strong
 
 ### Step-by-step per product (what the customer actually does)
 
-- **Verify API**: pay → receive API key → call `POST /v1/verify/check` from their backend → get approve/review/reject with evidence. Demo on the site is clearly a preview; the API is the product.
+- **Verify API**: pay → receive API key and login link → run screenings from `/account` or call `POST /v1/verify/check` from their backend → get approve/review/reject with evidence. Demo on the site is clearly a preview; the authenticated dashboard/API is the product.
 - **Compliance**: pay → onboarding call → their team screens wallets and records decisions with a full evidence trail.
-- **Shield**: pay → send us chains, contract addresses, alert emails, and contract ABIs → monitoring live in 15-minute cycles with alerts, incidents, playbooks, and ABI-aware privileged-function findings.
-- **Autopilot**: pay → org account and scoped API key → set rules → review queue → approve automation for proven patterns only.
-- **Institutional/RWA**: issuer engagement → org API key with attestation/check scopes → they record ZK-KYC attestations, run investor checks before every mint/transfer, and deploy DecaFlow's pre-audited templates with their own multisig and counsel.
+- **Shield**: pay → add watched contracts from `/account` or send DecaFlow the chains, contract addresses, alert emails, and contract ABIs → monitoring live in 15-minute cycles with alerts, incidents, playbooks, and ABI-aware privileged-function findings.
+- **Autopilot**: pay → org account and scoped API key → create rules from `/account` or API → review queue → approve/reject queue items → approve automation for proven patterns only.
+- **Institutional/RWA**: issuer engagement → org API key with attestation/check scopes → they record ZK-KYC attestations from `/account` or API, run investor checks before every mint/transfer, and deploy DecaFlow's pre-audited templates with their own multisig and counsel.
 - **Audit**: pay a package → scoping call → report → upsell Shield ("the audit is a snapshot; Shield is the watchtower").
 
 ### Customer login story (use in demos)
 
-Every customer gets passwordless login at decaflow.xyz/login: email link → account page → team, API keys, all products in one place. Buying another product uses the same account email, so access accumulates under one organization.
+Every customer gets passwordless login at decaflow.xyz/login: email link → account page → team, API keys, and interactive dashboards for the products they bought. Buying another product uses the same account email, so access accumulates under one organization.
+
+The account page is not meant to look empty. A paid customer can take real actions from it: run Verify screenings, add Shield watched contracts, create Autopilot rules, approve/reject Autopilot review items, record Institutional/RWA identity attestations, and run investor eligibility checks. Compliance and Audit customers see their engagement status there, while delivery still involves the operator/team follow-up described below.
+
+Founder test accounts created from founder-control are special preview accounts. New founder test accounts unlock all dashboards and include sample data at creation — a Shield watched contract, Autopilot rules and queue items, Verify screenings, and Institutional attestation/checks — so demos look like a customer with real usage. Old founder test accounts made before the seeded-dashboard change may still look sparse; recreate them or use the new forms to populate them.
 
 ### What BD owns operationally
 

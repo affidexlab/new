@@ -234,16 +234,20 @@ The next CEO-level operating requirement is to assign a risk-intelligence owner 
 
 ### The product line, in plain language
 
-1. **Verify API** — a company sends us a wallet address; we answer approve, review, or reject, with reasons. Sold as monthly API plans.
+1. **Verify API** — a company sends us a wallet address through the API or their account dashboard; we answer approve, review, or reject, with reasons. Sold as monthly API plans.
 2. **Compliance** — the workflow around those answers: who reviewed what, what was decided, and the evidence trail. Sold as monthly plans with onboarding.
-3. **Shield** — a watchtower for deployed smart contracts. It checks every 15 minutes for ownership changes, upgrades, suspicious approvals/transfers, code changes, and exposed privileged functions, then opens alerts and incidents with step-by-step response playbooks. Sold per monitored contract.
-4. **Autopilot** (new name for "Agents") — agentic compliance workflows. Customers set rules; flagged wallets go to a human review queue; after a team shows a consistent pattern, Autopilot asks permission to handle that pattern automatically. Automation is earned and approved, never assumed.
-5. **Institutional/RWA** — the compliance suite RWA issuers build on: ZK-KYC identity attestations, automated accredited-investor checks, and pre-audited smart contract templates. DecaFlow sells the rails; issuers own their offering and their counsel.
+3. **Shield** — a watchtower for deployed smart contracts. Customers can add watched contracts from their dashboard, and Shield checks every 15 minutes for ownership changes, upgrades, suspicious approvals/transfers, code changes, and exposed privileged functions, then opens alerts and incidents with step-by-step response playbooks. Sold per monitored contract.
+4. **Autopilot** (new name for "Agents") — agentic compliance workflows. Customers set rules from their dashboard; flagged wallets go to a human review queue; named users approve or reject items; after a team shows a consistent pattern, Autopilot asks permission to handle that pattern automatically. Automation is earned and approved, never assumed.
+5. **Institutional/RWA** — the compliance suite RWA issuers build on: ZK-KYC identity attestations, automated accredited-investor checks, and pre-audited smart contract templates. Issuers can record attestations and run checks from their dashboard. DecaFlow sells the rails; issuers own their offering and their counsel.
 6. **Audit** — paid one-time security reviews, and the natural entry point into Shield.
 
 ### Customer experience
 
-Customers log in at decaflow.xyz/login with an email link — no passwords. Their account page shows their team, their API keys, and every product. Crypto payments run through NOWPayments and confirmation emails go out automatically when payment is confirmed; bank transfers stay manual by design.
+Customers log in at decaflow.xyz/login with an email link — no passwords. Their account page shows their team, their API keys, and interactive dashboards for the products they have paid for. Crypto payments run through NOWPayments and confirmation emails go out automatically when payment is confirmed; bank transfers stay manual by design.
+
+The account page is now a working product surface. Verify customers can run wallet screenings from the page. Shield customers can add watched contracts. Autopilot customers can create rules and approve or reject review-queue items. Institutional/RWA issuer customers can record identity attestations and run investor checks. Compliance and Audit customers can see the status of their engagements.
+
+Founder-created test accounts are the only exception to paid-product gating. New founder test accounts are automatically unlocked for all product dashboards and seeded with realistic preview data: Shield contract monitoring, Autopilot rules and pending queue items, Verify screenings, and Institutional attestation/check records. This gives the founder a true paid-customer preview without taking a payment. Older test accounts created before this seeding change will still look sparse unless recreated or populated through the dashboard forms.
 
 ### Who should man each product
 

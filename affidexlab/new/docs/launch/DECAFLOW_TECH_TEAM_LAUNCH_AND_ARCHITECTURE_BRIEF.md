@@ -561,12 +561,22 @@ The Agents product is publicly branded **DecaFlow Autopilot (Agentic Compliance)
 
 ### Customer portal
 
-Customers log in at `/login` with an email magic link (no passwords). After login, `/account` shows their organization, team members, and self-service API keys (create/revoke), plus links to every product. Sessions last 30 days. Backend: `/v1/org-auth/magic-link/request`, `/v1/org-auth/magic-link/verify`, `/v1/orgs/me*`.
+Customers log in at `/login` with an email magic link (no passwords). After login, `/account` shows their organization, team members, self-service API keys (create/revoke), and product dashboards for every paid product. This is now an interactive product surface, not a static table page. Sessions last 30 days. Backend: `/v1/org-auth/magic-link/request`, `/v1/org-auth/magic-link/verify`, `/v1/orgs/me*`, `/v1/orgs/me/product-actions/*`.
+
+The `/account` product dashboards currently support these customer actions:
+
+- **Verify API:** customers can run a live wallet screening from the dashboard. The form calls the DecaFlow internal risk engine, shows score, level, recommendation, flags, sanctions/exposure evidence, and writes the result into the customer's screening history.
+- **Shield:** customers can add a watched contract from the dashboard by entering chain, address, and label. The contract then joins the Shield monitoring/scanner cycle, and alerts/incidents for the customer's own contracts appear below it.
+- **Autopilot:** customers can create rules in the dashboard and approve or reject review-queue items. Decisions are recorded with the logged-in customer email so the automation audit trail has a named human.
+- **Institutional/RWA:** issuer customers can record identity attestations and run investor eligibility checks from the dashboard. The result shows approve/review/reject, risk score, and reasons before a mint/transfer workflow proceeds.
+- **Compliance and Audit:** customers see their paid engagement status and plan history, while operator follow-up still happens through Compliance Ops/Audit delivery.
+
+Founder test accounts created after commit `1bb42021705cbfd25b34eeaf6dd2c1cf40862c7d` are seeded at creation with realistic preview data: a Shield watched contract, Autopilot rules and pending review items, Verify screenings, and Institutional attestation/check records. This seeding is only for founder-created `founder-test` accounts so the founder can preview the paid customer experience without taking a live payment. Existing test accounts created before that commit stay sparse unless they are recreated or populated through the new interactive dashboard forms.
 
 ### Per-product step-by-step and operator runbook
 
 **Verify API** — wallet screening.
-Customer flow: 1) buy/receive a plan (NOWPayments checkout or founder-issued), 2) get an org or Verify API key, 3) call `POST /v1/verify/check` with `x-api-key` and `{address, chain}`, 4) receive score/level/recommendation/flags/exposures, 5) every check is recorded in `risk_screenings`.
+Customer flow: 1) buy/receive a plan (NOWPayments checkout or founder-issued), 2) get an org or Verify API key, 3) either call `POST /v1/verify/check` with `x-api-key` and `{address, chain}` or use the `/account` Verify dashboard form, 4) receive score/level/recommendation/flags/exposures, 5) every check is recorded in `risk_screenings` and appears in the dashboard history.
 Operator runbook (Risk Intelligence Owner): daily — check Production Risk Ingestion run is green in GitHub Actions; weekly — review `GET /v1/risk/coverage` label counts, add curated labels from incident reports via `POST /v1/risk/labels`, process case reviews with `POST /v1/risk/case-reviews`; monthly — run calibration and expand `riskCalibrationCases.json`.
 
 **Compliance** — screening workflow product.
@@ -574,15 +584,15 @@ Customer flow: 1) checkout (crypto or bank), 2) team contact and onboarding, 3) 
 Operator runbook (Compliance Ops): monitor `compliance_enquiries` in the founder console; respond to paid enquiries within 24h; send bank details for manual transfers; record decisions through case reviews so labels improve.
 
 **Shield** — continuous security monitoring.
-Customer flow: 1) checkout or waitlist, 2) provide chain, contract addresses, labels, alert emails, and contract ABIs, 3) DecaFlow registers contracts in `shield_contracts` and uploads ABIs via `POST /v1/shield/contracts/:chain/:address/abi`, 4) scanning runs every 15 minutes.
+Customer flow: 1) checkout or waitlist, 2) provide chain, contract addresses, labels, alert emails, and contract ABIs, 3) DecaFlow registers contracts in `shield_contracts` or the customer adds a contract directly from `/account`, 4) DecaFlow uploads ABIs via `POST /v1/shield/contracts/:chain/:address/abi` where needed, 5) scanning runs every 15 minutes and dashboard alerts/incidents show only that customer's contracts.
 Operator runbook (Security Operator): daily — review open alerts (`GET /v1/shield/alerts`), incidents, and vulnerability findings (`GET /v1/shield/vulnerability-findings`); triage incidents using their playbook steps; update statuses; weekly — tune `POST /v1/shield/anomaly-thresholds` per customer and confirm the Shield Monitor workflow is green.
 
 **Autopilot (Agents)** — agentic compliance workflows.
-Customer flow: 1) checkout, 2) org account + scoped API key issued, 3) define rules (`POST /v1/agents/rules`), 4) evaluations route flagged wallets into the review queue, 5) named humans decide; after ≥5 consistent decisions at ≥90%, Autopilot suggests automation the customer must explicitly enable.
+Customer flow: 1) checkout, 2) org account + scoped API key issued, 3) define rules through `POST /v1/agents/rules` or the `/account` Autopilot dashboard, 4) evaluations route flagged wallets into the review queue, 5) named humans approve/reject queue items in the dashboard or API; after ≥5 consistent decisions at ≥90%, Autopilot suggests automation the customer must explicitly enable.
 Operator runbook (Compliance Ops): monitor review queues for stuck items; verify automation enablements have named owners; never enable auto-decisions on a customer's behalf.
 
 **Institutional/RWA** — compliance suite for issuers.
-Customer flow: 1) issuer signs up (Issuer/Scale plan), 2) DecaFlow issues an org API key with `institutional:attest`/`institutional:check` scopes, 3) issuer records ZK-KYC attestations (`POST /v1/institutional/identity/attestations`), 4) issuer runs investor checks before mint/transfer (`POST /v1/institutional/compliance/check-investor`), 5) issuer deploys the pre-audited templates (catalog at `GET /v1/institutional/templates`) with their own Safe/multisig and counsel.
+Customer flow: 1) issuer signs up (Issuer/Scale plan), 2) DecaFlow issues an org API key with `institutional:attest`/`institutional:check` scopes, 3) issuer records ZK-KYC attestations through `POST /v1/institutional/identity/attestations` or the `/account` Institutional dashboard, 4) issuer runs investor checks before mint/transfer through `POST /v1/institutional/compliance/check-investor` or the dashboard, 5) issuer deploys the pre-audited templates (catalog at `GET /v1/institutional/templates`) with their own Safe/multisig and counsel.
 Operator runbook (Institutional Lead): review each issuer's engagement before granting attestation scopes; keep `APPROVED_IDENTITY_REGISTRIES` current per deployed registry; coordinate the final pre-deployment re-review per engagement.
 
 **Audit** — manual security review engagements.
