@@ -7,6 +7,8 @@ import { checkInvestorEligibility, upsertIdentityAttestation } from '../../servi
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const DEFAULT_CUSTOMER_API_KEY_TTL_DAYS = 90;
+const defaultCustomerApiKeyExpiry = () => new Date(Date.now() + DEFAULT_CUSTOMER_API_KEY_TTL_DAYS * 24 * 60 * 60 * 1000);
 
 router.post('/', async (req, res) => {
   try {
@@ -319,8 +321,9 @@ router.post('/me/api-keys', async (req, res) => {
     const { name, scopes = ['verify:check', 'agents:evaluate'], expiresAt = null } = req.body || {};
     if (!name?.trim()) return res.status(400).json({ success: false, error: 'name is required.' });
     const normalizedScopes = Array.isArray(scopes) ? scopes.map(String).filter(Boolean) : String(scopes).split(',').map(s => s.trim()).filter(Boolean);
-    const result = await createOrgApiKey({ organizationId: principal.organization_id, name: name.trim(), scopes: normalizedScopes, expiresAt });
-    return res.status(201).json({ success: true, ...result, warning: 'Store apiKey now. It is not stored in plaintext and cannot be shown again.' });
+    const effectiveExpiresAt = expiresAt || defaultCustomerApiKeyExpiry();
+    const result = await createOrgApiKey({ organizationId: principal.organization_id, name: name.trim(), scopes: normalizedScopes, expiresAt: effectiveExpiresAt });
+    return res.status(201).json({ success: true, ...result, expiresAt: result.record.expires_at, warning: 'Store apiKey now. It is not stored in plaintext and cannot be shown again.' });
   } catch (err) {
     console.error('❌ Org self API key create error:', err);
     return res.status(500).json({ success: false, error: 'Could not create API key.' });

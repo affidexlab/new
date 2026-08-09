@@ -19,6 +19,8 @@ const PRODUCT_LABELS = {
   institutional: 'Institutional / RWA',
   audit: 'Security Audit',
 };
+const DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS = 90;
+const defaultAutoIssuedApiKeyExpiry = () => new Date(Date.now() + DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS * 24 * 60 * 60 * 1000);
 
 async function findExistingOrg(email) {
   const { rows } = await pool.query(
@@ -73,6 +75,7 @@ export async function provisionCustomerAccess({ email, name = null, companyName 
         organizationId,
         name: `${PRODUCT_LABELS[product] || product} — auto-issued`,
         scopes,
+        expiresAt: defaultAutoIssuedApiKeyExpiry(),
       });
       apiKey = keyResult.apiKey;
     }
@@ -94,6 +97,7 @@ export async function provisionCustomerAccess({ email, name = null, companyName 
     };
     if (apiKey) {
       fields['Your API Key'] = apiKey;
+      fields['API key expires'] = `${DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS} days from issue. Create a replacement in your account before expiry.`;
       fields['Keep it safe'] = 'This key is shown once. You can create or revoke keys anytime from your account page.';
     }
     const emailed = await sendEnquiryEmail({

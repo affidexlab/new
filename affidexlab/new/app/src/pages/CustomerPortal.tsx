@@ -17,6 +17,7 @@ const input: React.CSSProperties = { width: "100%", padding: "0.75rem 1rem", bor
 const btn: React.CSSProperties = { background: "#3B82F6", color: "#fff", padding: "0.7rem 1.4rem", borderRadius: "9px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" };
 
 const short = (a: string) => (a && a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-4)}` : a || "—");
+const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "No expiry";
 
 function DashSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -60,6 +61,7 @@ export default function CustomerPortal() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState("");
+  const [createdKeyExpiresAt, setCreatedKeyExpiresAt] = useState("");
   const [error, setError] = useState("");
   const [screenWalletAddr, setScreenWalletAddr] = useState("");
   const [screenResult, setScreenResult] = useState<any>(null);
@@ -151,7 +153,7 @@ export default function CustomerPortal() {
         method: "POST", headers: authHeaders(session), body: JSON.stringify({ name: newKeyName.trim() }),
       });
       const data = await res.json();
-      if (data.success) { setCreatedKey(data.apiKey); setNewKeyName(""); loadAccount(session); }
+      if (data.success) { setCreatedKey(data.apiKey); setCreatedKeyExpiresAt(data.expiresAt || data.record?.expires_at || ""); setNewKeyName(""); loadAccount(session); }
       else setError(data.error || "Could not create API key.");
     } catch { setError("Could not reach the server."); }
   };
@@ -358,18 +360,20 @@ export default function CustomerPortal() {
             <div style={card}>
               <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem" }}>API keys</h2>
               {createdKey && (
-                <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "10px", padding: "0.9rem 1rem", marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "0.8rem", color: "#86efac", marginBottom: "0.4rem" }}>Copy this key now — it will not be shown again:</div>
-                  <code style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{createdKey}</code>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem" }}>
-                <input style={input} placeholder="New key name (e.g. Production Backend)" value={newKeyName} onChange={e => setNewKeyName(e.target.value)} />
-                <button style={btn} onClick={createKey}>Create</button>
-              </div>
-              {keys.map(k => (
-                <div key={k.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", borderRadius: "9px", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
-                  <span>{k.name} <span style={{ color: k.active ? "#86efac" : "#fca5a5", fontSize: "0.75rem" }}>· {k.active ? "active" : "revoked"}</span></span>
+	                <div style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: "10px", padding: "0.9rem 1rem", marginBottom: "1rem" }}>
+	                  <div style={{ fontSize: "0.8rem", color: "#86efac", marginBottom: "0.4rem" }}>Copy this key now — it will not be shown again:</div>
+	                  <code style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{createdKey}</code>
+	                  <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", marginTop: "0.45rem" }}>Expires: {formatDate(createdKeyExpiresAt)}. Create a replacement before then to keep integrations running.</div>
+	                </div>
+	              )}
+	              <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem" }}>
+	                <input style={input} placeholder="New key name (e.g. Production Backend)" value={newKeyName} onChange={e => setNewKeyName(e.target.value)} />
+	                <button style={btn} onClick={createKey}>Create</button>
+	              </div>
+	              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.78rem", marginTop: "-0.4rem" }}>Customer-created keys expire after 90 days. Revoke leaked keys immediately and create a replacement before expiry.</p>
+	              {keys.map(k => (
+	                <div key={k.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", borderRadius: "9px", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
+	                  <span>{k.name} <span style={{ color: k.active ? "#86efac" : "#fca5a5", fontSize: "0.75rem" }}>· {k.active ? "active" : "revoked"} · expires {formatDate(k.expires_at)}</span></span>
                   <button onClick={() => toggleKey(k.id, !k.active)} style={{ ...btn, padding: "0.35rem 0.9rem", fontSize: "0.78rem", background: k.active ? "rgba(239,68,68,0.15)" : "rgba(34,197,94,0.15)", color: k.active ? "#fca5a5" : "#86efac" }}>
                     {k.active ? "Revoke" : "Reactivate"}
                   </button>
