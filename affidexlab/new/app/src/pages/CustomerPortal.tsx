@@ -16,6 +16,37 @@ const card: React.CSSProperties = { background: "rgba(255,255,255,0.03)", border
 const input: React.CSSProperties = { width: "100%", padding: "0.75rem 1rem", borderRadius: "9px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", fontSize: "0.9rem", outline: "none", boxSizing: "border-box" };
 const btn: React.CSSProperties = { background: "#3B82F6", color: "#fff", padding: "0.7rem 1.4rem", borderRadius: "9px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "0.9rem" };
 
+const short = (a: string) => (a && a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-4)}` : a || "—");
+
+function DashSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "1rem", marginTop: "1rem" }}>
+      <h3 style={{ fontSize: "0.92rem", fontWeight: 700, marginBottom: "0.7rem", color: "#93C5FD" }}>{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.6)", margin: "0 0 0.6rem" }}><strong style={{ color: "#fff" }}>{label}:</strong> {value}</p>;
+}
+
+function MiniTable({ headers, rows, empty }: { headers: string[]; rows: string[][]; empty: string }) {
+  if (!rows.length) return <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", margin: "0 0 0.6rem" }}>{empty}</p>;
+  return (
+    <div style={{ overflowX: "auto", marginBottom: "0.75rem" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+        <thead><tr>{headers.map(h => <th key={h} style={{ textAlign: "left", padding: "0.35rem 0.6rem", color: "rgba(255,255,255,0.45)", fontWeight: 600, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>{h}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>{r.map((cell, j) => <td key={j} style={{ padding: "0.4rem 0.6rem", borderBottom: "1px solid rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.75)" }}>{cell}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function CustomerPortal() {
   useEffect(() => { document.title = "Customer Portal | DecaFlow"; }, []);
 
@@ -26,6 +57,7 @@ export default function CustomerPortal() {
   const [account, setAccount] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [keys, setKeys] = useState<any[]>([]);
+  const [dashboard, setDashboard] = useState<any>(null);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState("");
   const [error, setError] = useState("");
@@ -46,6 +78,8 @@ export default function CustomerPortal() {
       const kData = await kRes.json();
       if (mData.success) setMembers(mData.members);
       if (kData.success) setKeys(kData.keys);
+      fetch(`${API_BASE}/v1/orgs/me/dashboard`, { headers: authHeaders(token) })
+        .then(r => r.json()).then(d => { if (d.success) setDashboard(d); }).catch(() => {});
     } catch { setError("Could not load your account. Try again."); }
   };
 
@@ -154,6 +188,84 @@ export default function CustomerPortal() {
                 To activate an additional paid product, open its page and complete checkout with this same account email — access is linked by email and organization.
               </p>
             </div>
+
+            {dashboard && (
+              <div style={card}>
+                <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.35rem" }}>Product dashboards</h2>
+                {dashboard.isFounderTest && (
+                  <p style={{ color: "#93C5FD", fontSize: "0.78rem", marginBottom: "1rem" }}>Founder test account — all product dashboards unlocked for preview.</p>
+                )}
+
+                {dashboard.products.verify?.access && (
+                  <DashSection title="Verify API">
+                    <Stat label="Plans" value={dashboard.products.verify.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+                    <MiniTable
+                      headers={["Wallet", "Score", "Level", "Recommendation"]}
+                      rows={dashboard.products.verify.recentScreenings.map((s: any) => [short(s.wallet_address), String(s.risk_score), s.risk_level, s.recommendation])}
+                      empty="No screenings yet — call POST /v1/verify/check with your API key."
+                    />
+                  </DashSection>
+                )}
+
+                {dashboard.products.shield?.access && (
+                  <DashSection title="Shield Monitoring">
+                    <Stat label="Watched contracts" value={dashboard.products.shield.contracts.length ? dashboard.products.shield.contracts.map((c: any) => `${c.chain}:${short(c.address)}`).join(", ") : "Monitoring configured by DecaFlow"} />
+                    <MiniTable
+                      headers={["Severity", "Type", "Message"]}
+                      rows={dashboard.products.shield.recentAlerts.map((a: any) => [a.severity, a.alert_type, String(a.message || "").slice(0, 70)])}
+                      empty="No alerts — quiet is good."
+                    />
+                    <MiniTable
+                      headers={["Incident", "Severity", "Status"]}
+                      rows={dashboard.products.shield.recentIncidents.map((i: any) => [String(i.title || "").slice(0, 60), i.severity, i.status])}
+                      empty="No incidents."
+                    />
+                  </DashSection>
+                )}
+
+                {dashboard.products.agents?.access && (
+                  <DashSection title="Autopilot (Agentic Compliance)">
+                    <MiniTable
+                      headers={["Rule", "Condition", "Auto"]}
+                      rows={dashboard.products.agents.rules.map((r: any) => [r.name, `riskScore ${r.operator} ${r.threshold}`, r.auto_decision ? `auto-${r.auto_decision}` : "manual"])}
+                      empty="No rules yet — create them via the API with your scoped key."
+                    />
+                    <MiniTable
+                      headers={["Wallet", "Score", "Status"]}
+                      rows={dashboard.products.agents.reviewQueue.map((q: any) => [short(q.wallet_address), String(q.risk_score), q.status])}
+                      empty="Review queue is empty."
+                    />
+                  </DashSection>
+                )}
+
+                {dashboard.products.institutional?.access && (
+                  <DashSection title="Institutional / RWA">
+                    <MiniTable
+                      headers={["Wallet", "KYC", "Jurisdiction", "Accredited"]}
+                      rows={dashboard.products.institutional.attestations.map((a: any) => [short(a.wallet_address), a.kyc_status, a.jurisdiction_eligible ? "eligible" : "no", a.accredited_investor ? "yes" : "no"])}
+                      empty="No identity attestations yet."
+                    />
+                    <MiniTable
+                      headers={["Wallet", "Decision", "Score"]}
+                      rows={dashboard.products.institutional.investorChecks.map((c: any) => [short(c.wallet_address), c.decision, String(c.risk_score)])}
+                      empty="No investor checks yet."
+                    />
+                  </DashSection>
+                )}
+
+                {dashboard.products.compliance?.access && (
+                  <DashSection title="Compliance">
+                    <Stat label="Engagements" value={dashboard.products.compliance.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+                  </DashSection>
+                )}
+
+                {dashboard.products.audit?.access && (
+                  <DashSection title="Security Audit">
+                    <Stat label="Engagements" value={dashboard.products.audit.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+                  </DashSection>
+                )}
+              </div>
+            )}
 
             <div style={card}>
               <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem" }}>API keys</h2>

@@ -55,6 +55,85 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// GET /v1/orgs/me/dashboard — per-product customer dashboard data.
+// Founder test orgs (plan 'founder-test') see every product unlocked;
+// everyone else sees only products with an active/converted customer record.
+router.get('/me/dashboard', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res);
+    if (!principal) return;
+    const email = principal.email;
+    const { rows: orgRows } = await pool.query(`SELECT plan, billing_email FROM organizations WHERE id = $1`, [principal.organization_id]);
+    const isFounderTest = orgRows[0]?.plan === 'founder-test';
+    const emails = Array.from(new Set([email, orgRows[0]?.billing_email].filter(Boolean)));
+
+    const one = async (query, params) => { try { const { rows } = await pool.query(query, params); return rows; } catch { return []; } };
+
+    const [verifyRows, shieldCustomers, agentsRows, instRows, complianceRows, auditRows] = await Promise.all([
+      one(`SELECT id, plan, status, api_key_issued, api_key, created_at FROM verify_enquiries WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+      one(`SELECT id, plan, status, created_at FROM shield_customers WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+      one(`SELECT id, plan, status, created_at FROM agents_customers WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+      one(`SELECT id, plan, status, created_at FROM institutional_customers WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+      one(`SELECT id, plan, status, created_at FROM compliance_enquiries WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+      one(`SELECT id, audit_package AS plan, status, created_at FROM audit_enquiries WHERE email = ANY($1) ORDER BY created_at DESC LIMIT 3`, [emails]),
+    ]);
+
+    const activeStates = ['active', 'converted', 'paid_queued', 'paid_ready_to_scope', 'paid_pending_key'];
+    const hasAccess = (rows) => isFounderTest || rows.some(r => activeStates.includes(r.status));
+
+    const shieldCustomerIds = shieldCustomers.map(c => c.id);
+    const contracts = shieldCustomerIds.length
+      ? await one(`SELECT chain, address, label, status FROM shield_contracts WHERE customer_id = ANY($1) LIMIT 20`, [shieldCustomerIds])
+      : [];
+    const contractAddresses = contracts.map(c => String(c.address || '').toLowerCase());
+    let alerts = [];
+    let incidents = [];
+    if (isFounderTest) {
+      alerts = await one(`SELECT chain, address, severity, alert_type, message, created_at FROM shield_alerts ORDER BY created_at DESC LIMIT 8`, []);
+      incidents = await one(`SELECT title, severity, status, created_at FROM shield_incidents ORDER BY created_at DESC LIMIT 6`, []);
+    } else if (contractAddresses.length) {
+      alerts = await one(`SELECT chain, address, severity, alert_type, message, created_at FROM shield_alerts WHERE lower(address) = ANY($1) ORDER BY created_at DESC LIMIT 8`, [contractAddresses]);
+      incidents = await one(
+        `SELECT i.title, i.severity, i.status, i.created_at FROM shield_incidents i
+         JOIN shield_alerts a ON a.id = i.alert_id
+         WHERE lower(a.address) = ANY($1) ORDER BY i.created_at DESC LIMIT 6`,
+        [contractAddresses]
+      );
+    }
+
+    const [rules, queue] = await Promise.all([
+      one(`SELECT id, name, operator, threshold, enabled, auto_decision FROM compliance_workflow_rules WHERE account_email = ANY($1) ORDER BY created_at DESC LIMIT 10`, [emails]),
+      one(`SELECT id, wallet_address, risk_score, risk_level, status, created_at FROM compliance_review_queue WHERE account_email = ANY($1) ORDER BY created_at DESC LIMIT 10`, [emails]),
+    ]);
+
+    const [attestations, checks] = await Promise.all([
+      one(`SELECT chain, wallet_address, kyc_status, jurisdiction_eligible, accredited_investor, created_at FROM institutional_identity_attestations WHERE organization_id = $1 ORDER BY created_at DESC LIMIT 10`, [principal.organization_id]),
+      one(`SELECT chain, wallet_address, decision, risk_score, created_at FROM institutional_investor_checks WHERE organization_id = $1 ORDER BY created_at DESC LIMIT 10`, [principal.organization_id]),
+    ]);
+
+    const verifyKeys = verifyRows.filter(r => r.api_key_issued && r.api_key).map(r => r.api_key);
+    const screenings = verifyKeys.length
+      ? await one(`SELECT wallet_address, chain, risk_score, risk_level, recommendation, created_at FROM risk_screenings WHERE api_key = ANY($1) ORDER BY created_at DESC LIMIT 10`, [verifyKeys])
+      : [];
+
+    return res.json({
+      success: true,
+      isFounderTest,
+      products: {
+        verify: { access: hasAccess(verifyRows), records: verifyRows.map(({ api_key, ...r }) => ({ ...r, apiKeyIssued: r.api_key_issued })), recentScreenings: screenings },
+        shield: { access: hasAccess(shieldCustomers), records: shieldCustomers, contracts, recentAlerts: alerts, recentIncidents: incidents },
+        agents: { access: hasAccess(agentsRows), records: agentsRows, rules, reviewQueue: queue },
+        institutional: { access: hasAccess(instRows), records: instRows, attestations, investorChecks: checks },
+        compliance: { access: hasAccess(complianceRows), records: complianceRows },
+        audit: { access: hasAccess(auditRows), records: auditRows },
+      },
+    });
+  } catch (err) {
+    console.error('❌ Org dashboard error:', err);
+    return res.status(500).json({ success: false, error: 'Could not load product dashboards.' });
+  }
+});
+
 router.get('/me/members', async (req, res) => {
   try {
     const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst', 'viewer', 'billing']);
