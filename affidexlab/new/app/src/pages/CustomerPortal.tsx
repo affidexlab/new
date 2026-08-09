@@ -58,6 +58,7 @@ export default function CustomerPortal() {
   const [account, setAccount] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [keys, setKeys] = useState<any[]>([]);
+  const [keyPolicy, setKeyPolicy] = useState<any>(null);
   const [dashboard, setDashboard] = useState<any>(null);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState("");
@@ -105,7 +106,7 @@ export default function CustomerPortal() {
       const mData = await mRes.json();
       const kData = await kRes.json();
       if (mData.success) setMembers(mData.members);
-      if (kData.success) setKeys(kData.keys);
+      if (kData.success) { setKeys(kData.keys); setKeyPolicy(kData.keyPolicy || null); }
       fetch(`${API_BASE}/v1/orgs/me/dashboard`, { headers: authHeaders(token) })
         .then(r => r.json()).then(d => { if (d.success) setDashboard(d); }).catch(() => {});
     } catch { setError("Could not load your account. Try again."); }
@@ -370,7 +371,10 @@ export default function CustomerPortal() {
 	                <input style={input} placeholder="New key name (e.g. Production Backend)" value={newKeyName} onChange={e => setNewKeyName(e.target.value)} />
 	                <button style={btn} onClick={createKey}>Create</button>
 	              </div>
-	              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.78rem", marginTop: "-0.4rem" }}>Customer-created keys expire after 90 days. Revoke leaked keys immediately and create a replacement before expiry.</p>
+	              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.78rem", marginTop: "-0.4rem" }}>
+	                {keyPolicy ? `Plan: ${keyPolicy.plan}. Active keys: ${keyPolicy.activeKeyCount}/${keyPolicy.limit === null ? "unlimited" : keyPolicy.limit}. ` : ""}
+	                Customer-created keys expire after 90 days. Revoke leaked keys immediately and create a replacement before expiry.
+	              </p>
 	              {keys.map(k => (
 	                <div key={k.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0.8rem", background: "rgba(255,255,255,0.03)", borderRadius: "9px", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
 	                  <span>{k.name} <span style={{ color: k.active ? "#86efac" : "#fca5a5", fontSize: "0.75rem" }}>· {k.active ? "active" : "revoked"} · expires {formatDate(k.expires_at)}</span></span>

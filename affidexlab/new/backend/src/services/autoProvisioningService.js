@@ -21,6 +21,14 @@ const PRODUCT_LABELS = {
 };
 const DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS = 90;
 const defaultAutoIssuedApiKeyExpiry = () => new Date(Date.now() + DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS * 24 * 60 * 60 * 1000);
+function apiKeyLimitForPlan(plan) {
+  const normalized = String(plan || '').trim().toLowerCase();
+  if (normalized.includes('enterprise')) return null;
+  if (normalized.includes('business')) return 5;
+  if (normalized.includes('growth') || normalized.includes('starter')) return 2;
+  if (normalized.includes('founder')) return 5;
+  return 1;
+}
 
 async function findExistingOrg(email) {
   const { rows } = await pool.query(
@@ -70,14 +78,26 @@ export async function provisionCustomerAccess({ email, name = null, companyName 
 
     const scopes = PRODUCT_SCOPES[product] || [];
     let apiKey = null;
+    let keyLimitReached = false;
     if (scopes.length) {
-      const keyResult = await createOrgApiKey({
-        organizationId,
-        name: `${PRODUCT_LABELS[product] || product} — auto-issued`,
-        scopes,
-        expiresAt: defaultAutoIssuedApiKeyExpiry(),
-      });
-      apiKey = keyResult.apiKey;
+      const limit = apiKeyLimitForPlan(planLabel);
+      const { rows: countRows } = await pool.query(
+        `SELECT COUNT(*)::int AS count
+         FROM org_api_keys
+         WHERE organization_id = $1 AND active = true AND (expires_at IS NULL OR expires_at > NOW())`,
+        [organizationId]
+      );
+      if (limit === null || Number(countRows[0]?.count || 0) < limit) {
+        const keyResult = await createOrgApiKey({
+          organizationId,
+          name: `${PRODUCT_LABELS[product] || product} — auto-issued`,
+          scopes,
+          expiresAt: defaultAutoIssuedApiKeyExpiry(),
+        });
+        apiKey = keyResult.apiKey;
+      } else {
+        keyLimitReached = true;
+      }
     }
 
     const loginToken = createToken('df_login');
@@ -99,6 +119,8 @@ export async function provisionCustomerAccess({ email, name = null, companyName 
       fields['Your API Key'] = apiKey;
       fields['API key expires'] = `${DEFAULT_AUTO_ISSUED_API_KEY_TTL_DAYS} days from issue. Create a replacement in your account before expiry.`;
       fields['Keep it safe'] = 'This key is shown once. You can create or revoke keys anytime from your account page.';
+    } else if (keyLimitReached) {
+      fields['API key'] = 'Your plan API-key limit is already reached. Use an existing key or revoke an old key in your account before creating a replacement.';
     }
     const emailed = await sendEnquiryEmail({
       type: 'Account Access',

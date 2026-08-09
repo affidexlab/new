@@ -9,6 +9,36 @@ const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const DEFAULT_CUSTOMER_API_KEY_TTL_DAYS = 90;
 const defaultCustomerApiKeyExpiry = () => new Date(Date.now() + DEFAULT_CUSTOMER_API_KEY_TTL_DAYS * 24 * 60 * 60 * 1000);
+const API_KEY_LIMITS_BY_PLAN = { growth: 2, starter: 2, business: 5, enterprise: null, 'founder test': 5, 'founder-test': 5 };
+
+function apiKeyLimitForPlan(plan) {
+  const normalized = String(plan || '').trim().toLowerCase();
+  if (normalized.includes('enterprise')) return null;
+  if (normalized.includes('business')) return 5;
+  if (normalized.includes('growth') || normalized.includes('starter')) return 2;
+  if (normalized.includes('founder')) return 5;
+  return API_KEY_LIMITS_BY_PLAN[normalized] ?? 1;
+}
+
+async function resolveOrgApiKeyPolicy(principal) {
+  const { rows: orgRows } = await pool.query(`SELECT plan, billing_email FROM organizations WHERE id = $1`, [principal.organization_id]);
+  const emails = Array.from(new Set([principal.email, orgRows[0]?.billing_email].filter(Boolean)));
+  const { rows: verifyRows } = await pool.query(
+    `SELECT plan FROM verify_enquiries
+     WHERE email = ANY($1) AND status IN ('active','converted','paid_queued','paid_ready_to_scope','paid_pending_key')
+     ORDER BY created_at DESC LIMIT 1`,
+    [emails]
+  ).catch(() => ({ rows: [] }));
+  const plan = verifyRows[0]?.plan || orgRows[0]?.plan || 'default';
+  const limit = apiKeyLimitForPlan(plan);
+  const { rows: countRows } = await pool.query(
+    `SELECT COUNT(*)::int AS count
+     FROM org_api_keys
+     WHERE organization_id = $1 AND active = true AND (expires_at IS NULL OR expires_at > NOW())`,
+    [principal.organization_id]
+  );
+  return { plan, limit, activeKeyCount: Number(countRows[0]?.count || 0) };
+}
 
 router.post('/', async (req, res) => {
   try {
@@ -302,12 +332,13 @@ router.get('/me/api-keys', async (req, res) => {
   try {
     const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
     if (!principal) return;
+    const keyPolicy = await resolveOrgApiKeyPolicy(principal);
     const { rows } = await pool.query(
       `SELECT id, organization_id, name, scopes, active, expires_at, last_used_at, created_at, updated_at
        FROM org_api_keys WHERE organization_id = $1 ORDER BY created_at DESC`,
       [principal.organization_id]
     );
-    return res.json({ success: true, keys: rows });
+    return res.json({ success: true, keys: rows, keyPolicy });
   } catch (err) {
     console.error('❌ Org self API keys error:', err);
     return res.status(500).json({ success: false, error: 'Could not fetch API keys.' });
@@ -320,6 +351,14 @@ router.post('/me/api-keys', async (req, res) => {
     if (!principal) return;
     const { name, scopes = ['verify:check', 'agents:evaluate'], expiresAt = null } = req.body || {};
     if (!name?.trim()) return res.status(400).json({ success: false, error: 'name is required.' });
+    const keyPolicy = await resolveOrgApiKeyPolicy(principal);
+    if (keyPolicy.limit !== null && keyPolicy.activeKeyCount >= keyPolicy.limit) {
+      return res.status(403).json({
+        success: false,
+        error: `Your ${keyPolicy.plan} plan allows ${keyPolicy.limit} active API key${keyPolicy.limit === 1 ? '' : 's'}. Revoke an old key before creating another one.`,
+        keyPolicy,
+      });
+    }
     const normalizedScopes = Array.isArray(scopes) ? scopes.map(String).filter(Boolean) : String(scopes).split(',').map(s => s.trim()).filter(Boolean);
     const effectiveExpiresAt = expiresAt || defaultCustomerApiKeyExpiry();
     const result = await createOrgApiKey({ organizationId: principal.organization_id, name: name.trim(), scopes: normalizedScopes, expiresAt: effectiveExpiresAt });
