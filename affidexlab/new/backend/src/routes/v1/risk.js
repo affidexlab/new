@@ -4,6 +4,7 @@ import pool from '../../db/connection.js';
 import { authorizeAdmin } from '../../services/adminAuth.js';
 import { addRiskEdge, addRiskLabel, screenWalletInternal } from '../../services/internalRiskEngine.js';
 import { ingestAlchemyTransfers, ingestAlchemyWebhookActivity } from '../../services/alchemyGraphIngestionService.js';
+import { getRiskCoverageSummary } from '../../services/riskCoverageService.js';
 
 const router = express.Router();
 function safeEqualHex(left, right) {
@@ -90,6 +91,17 @@ router.post('/screen', async (req, res) => {
   } catch (err) {
     console.error('❌ Internal risk screen error:', err);
     return res.status(500).json({ success: false, error: 'Could not screen wallet.' });
+  }
+});
+
+router.get('/coverage', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const coverage = await getRiskCoverageSummary();
+    return res.json({ success: true, coverage });
+  } catch (err) {
+    console.error('❌ Risk coverage error:', err);
+    return res.status(500).json({ success: false, error: 'Could not load risk coverage.' });
   }
 });
 

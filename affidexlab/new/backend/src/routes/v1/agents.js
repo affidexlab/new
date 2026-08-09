@@ -3,10 +3,47 @@ import crypto from 'crypto';
 import pool from '../../db/connection.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
+import { authenticateOrgSession } from '../../services/orgAuth.js';
+import { findOrgApiKey } from '../../services/orgApiKeyAuth.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const VALID_OPERATORS = ['>', '>=', '<', '<=', '=='];
+
+function bearerOrApiKey(req) {
+  return req.headers['x-api-key'] || req.headers.authorization?.replace(/^Bearer\s+/i, '') || '';
+}
+
+async function resolveAgentsAccess(req, res, scope = 'agents:rules', roles = ['owner', 'admin', 'analyst']) {
+  const token = bearerOrApiKey(req);
+  if (!token && process.env.ALLOW_PUBLIC_AGENT_RULES === 'true') {
+    const email = req.body?.email || req.query?.email;
+    if (!email || !isValidEmail(email)) {
+      res.status(400).json({ success: false, error: 'A valid account email is required.' });
+      return null;
+    }
+    return { email: email.trim().toLowerCase(), organizationId: null, actor: email.trim().toLowerCase(), publicDemo: true };
+  }
+
+  const orgKey = await findOrgApiKey(token, scope);
+  if (orgKey) {
+    return {
+      email: orgKey.billing_email,
+      organizationId: orgKey.organization_id,
+      actor: `api-key:${orgKey.name}`,
+      apiKeyId: orgKey.id,
+    };
+  }
+
+  const principal = await authenticateOrgSession(req, res, roles);
+  if (!principal) return null;
+  return {
+    email: principal.email,
+    organizationId: principal.organization_id,
+    actor: principal.email,
+    role: principal.role,
+  };
+}
 
 /**
  * Phase 2 of the roadmap's own "Agent-Ready Infrastructure" plan (see
@@ -24,17 +61,18 @@ const VALID_OPERATORS = ['>', '>=', '<', '<=', '=='];
 
 router.post('/rules', async (req, res) => {
   try {
-    const { email, name, conditionField, operator, threshold, action } = req.body;
-    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin', 'analyst']);
+    if (!access) return;
+    const { name, conditionField, operator, threshold, action } = req.body;
     if (!name?.trim()) return res.status(400).json({ success: false, error: 'Rule name is required.' });
     if (!VALID_OPERATORS.includes(operator)) return res.status(400).json({ success: false, error: `Operator must be one of ${VALID_OPERATORS.join(', ')}.` });
     if (typeof threshold !== 'number') return res.status(400).json({ success: false, error: 'Threshold must be a number.' });
     if (!['flag_for_review', 'notify_only'].includes(action)) return res.status(400).json({ success: false, error: 'Action must be flag_for_review or notify_only — no other action exists yet.' });
 
     const { rows } = await pool.query(
-      `INSERT INTO compliance_workflow_rules (account_email, name, condition_field, operator, threshold, action)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [email, name, conditionField || 'riskScore', operator, threshold, action]
+      `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [access.email, access.organizationId, name, conditionField || 'riskScore', operator, threshold, action, access.actor]
     );
     return res.status(201).json({ success: true, rule: rows[0] });
   } catch (err) {
@@ -45,9 +83,9 @@ router.post('/rules', async (req, res) => {
 
 router.get('/rules', async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
-    const { rows } = await pool.query(`SELECT * FROM compliance_workflow_rules WHERE account_email = $1 ORDER BY created_at DESC`, [email]);
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin', 'analyst', 'viewer']);
+    if (!access) return;
+    const { rows } = await pool.query(`SELECT * FROM compliance_workflow_rules WHERE account_email = $1 ORDER BY created_at DESC`, [access.email]);
     return res.status(200).json({ success: true, rules: rows });
   } catch (err) {
     console.error('❌ Agents rules list error:', err);
@@ -57,8 +95,10 @@ router.get('/rules', async (req, res) => {
 
 router.patch('/rules/:id', async (req, res) => {
   try {
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin', 'analyst']);
+    if (!access) return;
     const { enabled } = req.body;
-    const { rows } = await pool.query(`UPDATE compliance_workflow_rules SET enabled = $1 WHERE id = $2 RETURNING *`, [!!enabled, req.params.id]);
+    const { rows } = await pool.query(`UPDATE compliance_workflow_rules SET enabled = $1, updated_at = NOW() WHERE id = $2 AND account_email = $3 RETURNING *`, [!!enabled, req.params.id, access.email]);
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Rule not found.' });
     return res.status(200).json({ success: true, rule: rows[0] });
   } catch (err) {
@@ -69,7 +109,9 @@ router.patch('/rules/:id', async (req, res) => {
 
 router.delete('/rules/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM compliance_workflow_rules WHERE id = $1`, [req.params.id]);
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin']);
+    if (!access) return;
+    await pool.query(`DELETE FROM compliance_workflow_rules WHERE id = $1 AND account_email = $2`, [req.params.id, access.email]);
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('❌ Agents rule delete error:', err);
@@ -96,11 +138,12 @@ function ruleMatches(rule, value) {
  */
 router.post('/evaluate', async (req, res) => {
   try {
-    const { email, walletAddress, chain, riskScore, riskLevel } = req.body;
-    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
+    const access = await resolveAgentsAccess(req, res, 'agents:evaluate', ['owner', 'admin', 'analyst']);
+    if (!access) return;
+    const { walletAddress, chain, riskScore, riskLevel } = req.body;
     if (typeof riskScore !== 'number') return res.status(400).json({ success: false, error: 'riskScore (number) is required.' });
 
-    const { rows: rules } = await pool.query(`SELECT * FROM compliance_workflow_rules WHERE account_email = $1 AND enabled = true`, [email]);
+    const { rows: rules } = await pool.query(`SELECT * FROM compliance_workflow_rules WHERE account_email = $1 AND enabled = true`, [access.email]);
     const matched = rules.filter(r => r.condition_field === 'riskScore' && ruleMatches(r, riskScore));
 
     const queued = [];
@@ -114,14 +157,14 @@ router.post('/evaluate', async (req, res) => {
           const { rows } = await pool.query(
             `INSERT INTO compliance_review_queue (account_email, rule_id, wallet_address, chain, risk_score, risk_level, status, reviewed_by, reviewed_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *`,
-            [email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null, rule.auto_decision, `agent:pattern-match (enabled by ${rule.auto_enabled_by})`]
+            [access.email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null, rule.auto_decision, `agent:pattern-match (enabled by ${rule.auto_enabled_by})`]
           );
           autoResolved.push(rows[0]);
         } else {
           const { rows } = await pool.query(
             `INSERT INTO compliance_review_queue (account_email, rule_id, wallet_address, chain, risk_score, risk_level, status)
              VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
-            [email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null]
+            [access.email, rule.id, walletAddress || null, chain || null, riskScore, riskLevel || null]
           );
           queued.push(rows[0]);
         }
@@ -131,7 +174,7 @@ router.post('/evaluate', async (req, res) => {
     if (matched.length > 0) {
       sendEnquiryEmail({
         type: 'Agents',
-        to: email,
+        to: access.email,
         subject: `[DecaFlow] ${matched.length} rule(s) triggered — wallet flagged for your review`,
         fields: {
           Wallet: walletAddress || '—',
@@ -165,15 +208,15 @@ router.post('/evaluate', async (req, res) => {
  */
 router.get('/suggestions', async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
+    const access = await resolveAgentsAccess(req, res, 'agents:review', ['owner', 'admin', 'analyst']);
+    if (!access) return;
 
     const { rows } = await pool.query(
       `SELECT rule_id, status, COUNT(*) as cnt
        FROM compliance_review_queue
        WHERE account_email = $1 AND status IN ('approved','rejected') AND rule_id IS NOT NULL
        GROUP BY rule_id, status`,
-      [email]
+      [access.email]
     );
 
     const byRule = {};
@@ -218,13 +261,15 @@ router.get('/suggestions', async (req, res) => {
 /// automated without a named person calling this endpoint on purpose.
 router.post('/rules/:id/enable-auto', async (req, res) => {
   try {
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin']);
+    if (!access) return;
     const { decision, enabledBy } = req.body;
     if (!['approved', 'rejected'].includes(decision)) return res.status(400).json({ success: false, error: 'decision must be approved or rejected.' });
     if (!enabledBy?.trim()) return res.status(400).json({ success: false, error: 'enabledBy is required — automation needs an accountable owner too, not just decisions.' });
 
     const { rows } = await pool.query(
-      `UPDATE compliance_workflow_rules SET auto_decision = $1, auto_enabled_at = NOW(), auto_enabled_by = $2 WHERE id = $3 RETURNING *`,
-      [decision, enabledBy, req.params.id]
+      `UPDATE compliance_workflow_rules SET auto_decision = $1, auto_enabled_at = NOW(), auto_enabled_by = $2, updated_at = NOW() WHERE id = $3 AND account_email = $4 RETURNING *`,
+      [decision, enabledBy, req.params.id, access.email]
     );
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Rule not found.' });
     return res.status(200).json({ success: true, rule: rows[0] });
@@ -237,9 +282,11 @@ router.post('/rules/:id/enable-auto', async (req, res) => {
 /// Just as easy to turn back off as it was to turn on.
 router.post('/rules/:id/disable-auto', async (req, res) => {
   try {
+    const access = await resolveAgentsAccess(req, res, 'agents:rules', ['owner', 'admin']);
+    if (!access) return;
     const { rows } = await pool.query(
-      `UPDATE compliance_workflow_rules SET auto_decision = NULL, auto_enabled_at = NULL, auto_enabled_by = NULL WHERE id = $1 RETURNING *`,
-      [req.params.id]
+      `UPDATE compliance_workflow_rules SET auto_decision = NULL, auto_enabled_at = NULL, auto_enabled_by = NULL, updated_at = NOW() WHERE id = $1 AND account_email = $2 RETURNING *`,
+      [req.params.id, access.email]
     );
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Rule not found.' });
     return res.status(200).json({ success: true, rule: rows[0] });
@@ -251,11 +298,12 @@ router.post('/rules/:id/disable-auto', async (req, res) => {
 
 router.get('/review-queue', async (req, res) => {
   try {
-    const { email, status } = req.query;
-    if (!email || !isValidEmail(email)) return res.status(400).json({ success: false, error: 'A valid account email is required.' });
+    const access = await resolveAgentsAccess(req, res, 'agents:review', ['owner', 'admin', 'analyst', 'viewer']);
+    if (!access) return;
+    const { status } = req.query;
     const { rows } = await pool.query(
       `SELECT * FROM compliance_review_queue WHERE account_email = $1 AND status = $2 ORDER BY created_at DESC`,
-      [email, status || 'pending']
+      [access.email, status || 'pending']
     );
     return res.status(200).json({ success: true, items: rows });
   } catch (err) {
@@ -268,13 +316,15 @@ router.get('/review-queue', async (req, res) => {
 /// item gets recorded — deliberately requires a person (reviewedBy) every time.
 router.post('/review-queue/:id/decide', async (req, res) => {
   try {
+    const access = await resolveAgentsAccess(req, res, 'agents:review', ['owner', 'admin', 'analyst']);
+    if (!access) return;
     const { decision, reviewedBy } = req.body;
     if (!['approved', 'rejected'].includes(decision)) return res.status(400).json({ success: false, error: 'decision must be approved or rejected.' });
     if (!reviewedBy?.trim()) return res.status(400).json({ success: false, error: 'reviewedBy is required — every decision needs an accountable human.' });
 
     const { rows } = await pool.query(
-      `UPDATE compliance_review_queue SET status = $1, reviewed_by = $2, reviewed_at = NOW() WHERE id = $3 RETURNING *`,
-      [decision, reviewedBy, req.params.id]
+      `UPDATE compliance_review_queue SET status = $1, reviewed_by = $2, reviewed_at = NOW() WHERE id = $3 AND account_email = $4 RETURNING *`,
+      [decision, reviewedBy, req.params.id, access.email]
     );
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Queue item not found.' });
     return res.status(200).json({ success: true, item: rows[0] });

@@ -14,6 +14,7 @@ on:
           - all
           - ofac
           - sanctions
+          - public-feeds
           - curated
           - calibrate
 
@@ -34,6 +35,8 @@ jobs:
       UN_CONSOLIDATED_SANCTIONS_URL: ${{ secrets.UN_CONSOLIDATED_SANCTIONS_URL }}
       EU_CONSOLIDATED_SANCTIONS_URL: ${{ secrets.EU_CONSOLIDATED_SANCTIONS_URL }}
       UK_HMT_CONSOLIDATED_SANCTIONS_URL: ${{ secrets.UK_HMT_CONSOLIDATED_SANCTIONS_URL }}
+      ALLOW_PARTIAL_PUBLIC_RISK_INGESTION: 'false'
+      DECAFLOW_PUBLIC_RISK_FEED_URLS: ${{ secrets.DECAFLOW_PUBLIC_RISK_FEED_URLS }}
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +55,10 @@ jobs:
       - name: Run public sanctions ingestion
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'sanctions' }}
         run: npm run ingest:sanctions
+
+      - name: Run public scam and phishing feed ingestion
+        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'public-feeds' }}
+        run: npm run ingest:public-feeds
 
       - name: Run curated label ingestion
         if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'curated' }}

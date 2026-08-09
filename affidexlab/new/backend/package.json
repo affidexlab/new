@@ -12,6 +12,7 @@
     "build": "node --check src/server.js",
     "ingest:ofac": "node src/scripts/ingest-ofac-sdn-crypto.js",
     "ingest:sanctions": "node src/scripts/ingest-public-sanctions-lists.js",
+    "ingest:public-feeds": "node src/scripts/ingest-public-risk-feeds.js",
     "ingest:curated": "node src/scripts/ingest-curated-risk-labels.js",
     "risk:calibrate": "node src/scripts/calibrate-risk-scoring.js",
     "shield:scan-security": "node src/scripts/run-shield-security-scan.js",
