@@ -2,6 +2,8 @@ import express from 'express';
 import pool from '../../db/connection.js';
 import { authorizeAdmin } from '../../services/adminAuth.js';
 import { authenticateOrgSession, createOrgApiKey, slugify, upsertOrgUser, ORG_ROLES } from '../../services/orgAuth.js';
+import { screenWallet } from '../../services/riskIntelligenceService.js';
+import { checkInvestorEligibility, upsertIdentityAttestation } from '../../services/institutionalComplianceService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -112,9 +114,8 @@ router.get('/me/dashboard', async (req, res) => {
     ]);
 
     const verifyKeys = verifyRows.filter(r => r.api_key_issued && r.api_key).map(r => r.api_key);
-    const screenings = verifyKeys.length
-      ? await one(`SELECT wallet_address, chain, risk_score, risk_level, recommendation, created_at FROM risk_screenings WHERE api_key = ANY($1) ORDER BY created_at DESC LIMIT 10`, [verifyKeys])
-      : [];
+    const screeningKeys = [...verifyKeys, `org-session:${principal.organization_id}`];
+    const screenings = await one(`SELECT wallet_address, chain, risk_score, risk_level, recommendation, created_at FROM risk_screenings WHERE api_key = ANY($1) ORDER BY created_at DESC LIMIT 10`, [screeningKeys]);
 
     return res.json({
       success: true,
@@ -131,6 +132,107 @@ router.get('/me/dashboard', async (req, res) => {
   } catch (err) {
     console.error('❌ Org dashboard error:', err);
     return res.status(500).json({ success: false, error: 'Could not load product dashboards.' });
+  }
+});
+
+// POST /v1/orgs/me/verify/screen — run a live wallet screening from the dashboard.
+router.post('/me/verify/screen', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
+    if (!principal) return;
+    const { address, chain = 'ethereum' } = req.body || {};
+    if (!address || String(address).trim().length < 4) return res.status(400).json({ success: false, error: 'Wallet address is required.' });
+    const data = await screenWallet({ address: String(address).trim(), chain, customerId: `org:${principal.organization_id}`, purpose: 'dashboard-screen' });
+    await pool.query(
+      `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
+       VALUES ('verify', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [`org-session:${principal.organization_id}`, data.address, data.chain, data.provider, data.riskScore, data.riskLevel, data.recommendation, data.sanctionsMatch, data.mixerExposure, data.darknetExposure, data.reportId, data.raw || data]
+    ).catch(() => {});
+    return res.json({ success: true, data });
+  } catch (err) {
+    console.error('❌ Dashboard screening error:', err);
+    return res.status(503).json({ success: false, error: err.message || 'Screening failed.' });
+  }
+});
+
+// POST /v1/orgs/me/shield/contracts — add a contract to Shield monitoring.
+router.post('/me/shield/contracts', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin']);
+    if (!principal) return;
+    const { chain, address, label = null } = req.body || {};
+    if (!chain?.trim() || !address?.trim()) return res.status(400).json({ success: false, error: 'chain and address are required.' });
+
+    const existing = await pool.query(
+      `SELECT id FROM shield_customers WHERE email = $1 AND status = 'active' ORDER BY created_at ASC LIMIT 1`,
+      [principal.email]
+    );
+    let customerId = existing.rows[0]?.id;
+    if (!customerId) {
+      const { rows: orgRows } = await pool.query(`SELECT plan, name FROM organizations WHERE id = $1`, [principal.organization_id]);
+      if (orgRows[0]?.plan !== 'founder-test') return res.status(403).json({ success: false, error: 'No active Shield subscription on this account.' });
+      const created = await pool.query(
+        `INSERT INTO shield_customers (company_name, contact_name, email, plan, status, payment_gateway)
+         VALUES ($1, $2, $3, 'Founder Test', 'active', 'comped') RETURNING id`,
+        [orgRows[0].name, principal.name || principal.email, principal.email]
+      );
+      customerId = created.rows[0].id;
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO shield_contracts (customer_id, chain, address, label, status)
+       VALUES ($1, $2, $3, $4, 'active') RETURNING *`,
+      [customerId, String(chain).toLowerCase().trim(), String(address).toLowerCase().trim(), label]
+    );
+    return res.status(201).json({ success: true, contract: rows[0] });
+  } catch (err) {
+    console.error('❌ Dashboard shield contract error:', err);
+    return res.status(500).json({ success: false, error: 'Could not add contract.' });
+  }
+});
+
+// POST /v1/orgs/me/institutional/attestations — record a ZK-KYC attestation from the dashboard.
+router.post('/me/institutional/attestations', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
+    if (!principal) return;
+    const { chain = 'ethereum', walletAddress, jurisdictionEligible = true, accreditedInvestor = false, jurisdiction = null } = req.body || {};
+    if (!walletAddress || String(walletAddress).trim().length < 4) return res.status(400).json({ success: false, error: 'walletAddress is required.' });
+    const attestation = await upsertIdentityAttestation({
+      chain,
+      walletAddress: String(walletAddress).trim(),
+      organizationId: principal.organization_id,
+      kycStatus: 'approved',
+      jurisdictionEligible,
+      accreditedInvestor,
+      jurisdiction,
+      evidence: { recordedVia: 'customer-dashboard', by: principal.email, at: new Date().toISOString() },
+      attestedBy: principal.email,
+    });
+    return res.status(201).json({ success: true, attestation });
+  } catch (err) {
+    console.error('❌ Dashboard attestation error:', err);
+    return res.status(500).json({ success: false, error: 'Could not record attestation.' });
+  }
+});
+
+// POST /v1/orgs/me/institutional/check-investor — run an investor eligibility check from the dashboard.
+router.post('/me/institutional/check-investor', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
+    if (!principal) return;
+    const { chain = 'ethereum', walletAddress, requireAccreditation = true } = req.body || {};
+    if (!walletAddress || String(walletAddress).trim().length < 4) return res.status(400).json({ success: false, error: 'walletAddress is required.' });
+    const result = await checkInvestorEligibility({
+      chain,
+      walletAddress: String(walletAddress).trim(),
+      organizationId: principal.organization_id,
+      requireAccreditation: requireAccreditation !== false,
+      requestedBy: principal.email,
+    });
+    return res.json({ success: true, decision: result.decision, reasons: result.reasons, risk: result.risk });
+  } catch (err) {
+    console.error('❌ Dashboard investor check error:', err);
+    return res.status(500).json({ success: false, error: 'Could not run investor check.' });
   }
 });
 

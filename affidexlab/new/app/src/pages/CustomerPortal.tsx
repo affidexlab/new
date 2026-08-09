@@ -61,8 +61,34 @@ export default function CustomerPortal() {
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState("");
   const [error, setError] = useState("");
+  const [screenWalletAddr, setScreenWalletAddr] = useState("");
+  const [screenResult, setScreenResult] = useState<any>(null);
+  const [newRule, setNewRule] = useState({ name: "", operator: ">", threshold: "80" });
+  const [newContract, setNewContract] = useState({ chain: "arbitrum", address: "", label: "" });
+  const [attWallet, setAttWallet] = useState("");
+  const [attAccredited, setAttAccredited] = useState(true);
+  const [checkWallet, setCheckWallet] = useState("");
+  const [checkResult, setCheckResult] = useState<any>(null);
+  const [busy, setBusy] = useState("");
 
   const authHeaders = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+  const reloadDashboard = (token: string) => {
+    fetch(`${API_BASE}/v1/orgs/me/dashboard`, { headers: authHeaders(token) })
+      .then(r => r.json()).then(d => { if (d.success) setDashboard(d); }).catch(() => {});
+  };
+
+  const act = async (label: string, path: string, body: any, after?: (data: any) => void) => {
+    if (!session) return;
+    setBusy(label); setError("");
+    try {
+      const res = await fetch(`${API_BASE}${path}`, { method: "POST", headers: authHeaders(session), body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!data.success) setError(data.error || `${label} failed.`);
+      else { after?.(data); reloadDashboard(session); }
+    } catch { setError("Could not reach the server."); }
+    setBusy("");
+  };
 
   const loadAccount = async (token: string) => {
     try {
@@ -199,21 +225,42 @@ export default function CustomerPortal() {
                 {dashboard.products.verify?.access && (
                   <DashSection title="Verify API">
                     <Stat label="Plans" value={dashboard.products.verify.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <input style={{ ...input, flex: 1, minWidth: "220px" }} placeholder="0x... wallet to screen" value={screenWalletAddr} onChange={e => setScreenWalletAddr(e.target.value)} />
+                      <button style={btn} disabled={busy === "screen"} onClick={() => act("screen", "/v1/orgs/me/verify/screen", { address: screenWalletAddr }, (d) => { setScreenResult(d.data); setScreenWalletAddr(""); })}>
+                        {busy === "screen" ? "Screening…" : "Run screening"}
+                      </button>
+                    </div>
+                    {screenResult && (
+                      <p style={{ fontSize: "0.83rem", color: screenResult.recommendation === "REJECT" ? "#fca5a5" : screenResult.recommendation === "REVIEW" ? "#fcd34d" : "#86efac", marginBottom: "0.75rem" }}>
+                        {short(screenResult.address)} — score {screenResult.riskScore}/100 · {screenResult.riskLevel} · {screenResult.recommendation}{screenResult.sanctionsMatch ? " · SANCTIONS MATCH" : ""}
+                      </p>
+                    )}
                     <MiniTable
                       headers={["Wallet", "Score", "Level", "Recommendation"]}
                       rows={dashboard.products.verify.recentScreenings.map((s: any) => [short(s.wallet_address), String(s.risk_score), s.risk_level, s.recommendation])}
-                      empty="No screenings yet — call POST /v1/verify/check with your API key."
+                      empty="No screenings yet — run your first one above."
                     />
                   </DashSection>
                 )}
 
                 {dashboard.products.shield?.access && (
                   <DashSection title="Shield Monitoring">
-                    <Stat label="Watched contracts" value={dashboard.products.shield.contracts.length ? dashboard.products.shield.contracts.map((c: any) => `${c.chain}:${short(c.address)}`).join(", ") : "Monitoring configured by DecaFlow"} />
+                    <Stat label="Watched contracts" value={dashboard.products.shield.contracts.length ? dashboard.products.shield.contracts.map((c: any) => `${c.chain}:${short(c.address)}`).join(", ") : "None yet — add your first contract below"} />
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <select style={{ ...input, width: "130px" }} value={newContract.chain} onChange={e => setNewContract(p => ({ ...p, chain: e.target.value }))}>
+                        {["ethereum", "arbitrum", "base", "polygon", "avalanche", "optimism"].map(c => <option key={c} value={c} style={{ background: "#1f2937" }}>{c}</option>)}
+                      </select>
+                      <input style={{ ...input, flex: 1, minWidth: "180px" }} placeholder="0x... contract address" value={newContract.address} onChange={e => setNewContract(p => ({ ...p, address: e.target.value }))} />
+                      <input style={{ ...input, width: "150px" }} placeholder="Label" value={newContract.label} onChange={e => setNewContract(p => ({ ...p, label: e.target.value }))} />
+                      <button style={btn} disabled={busy === "contract"} onClick={() => act("contract", "/v1/orgs/me/shield/contracts", newContract, () => setNewContract({ chain: "arbitrum", address: "", label: "" }))}>
+                        {busy === "contract" ? "Adding…" : "Watch contract"}
+                      </button>
+                    </div>
                     <MiniTable
                       headers={["Severity", "Type", "Message"]}
                       rows={dashboard.products.shield.recentAlerts.map((a: any) => [a.severity, a.alert_type, String(a.message || "").slice(0, 70)])}
-                      empty="No alerts — quiet is good."
+                      empty="No alerts yet — scans run every 15 minutes."
                     />
                     <MiniTable
                       headers={["Incident", "Severity", "Status"]}
@@ -225,30 +272,71 @@ export default function CustomerPortal() {
 
                 {dashboard.products.agents?.access && (
                   <DashSection title="Autopilot (Agentic Compliance)">
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <input style={{ ...input, flex: 2, minWidth: "170px" }} placeholder="Rule name" value={newRule.name} onChange={e => setNewRule(p => ({ ...p, name: e.target.value }))} />
+                      <span style={{ alignSelf: "center", fontSize: "0.8rem", color: "rgba(255,255,255,0.5)" }}>risk score</span>
+                      <select style={{ ...input, width: "70px" }} value={newRule.operator} onChange={e => setNewRule(p => ({ ...p, operator: e.target.value }))}>
+                        {[">", ">=", "<", "<=", "=="].map(o => <option key={o} value={o} style={{ background: "#1f2937" }}>{o}</option>)}
+                      </select>
+                      <input style={{ ...input, width: "75px" }} type="number" value={newRule.threshold} onChange={e => setNewRule(p => ({ ...p, threshold: e.target.value }))} />
+                      <button style={btn} disabled={busy === "rule"} onClick={() => act("rule", "/v1/agents/rules", { name: newRule.name, operator: newRule.operator, threshold: Number(newRule.threshold), action: "flag_for_review" }, () => setNewRule({ name: "", operator: ">", threshold: "80" }))}>
+                        {busy === "rule" ? "Adding…" : "+ Add rule"}
+                      </button>
+                    </div>
                     <MiniTable
                       headers={["Rule", "Condition", "Auto"]}
                       rows={dashboard.products.agents.rules.map((r: any) => [r.name, `riskScore ${r.operator} ${r.threshold}`, r.auto_decision ? `auto-${r.auto_decision}` : "manual"])}
-                      empty="No rules yet — create them via the API with your scoped key."
+                      empty="No rules yet — create your first rule above."
                     />
-                    <MiniTable
-                      headers={["Wallet", "Score", "Status"]}
-                      rows={dashboard.products.agents.reviewQueue.map((q: any) => [short(q.wallet_address), String(q.risk_score), q.status])}
-                      empty="Review queue is empty."
-                    />
+                    <h4 style={{ fontSize: "0.82rem", fontWeight: 700, margin: "0.6rem 0 0.4rem", color: "rgba(255,255,255,0.6)" }}>Review queue</h4>
+                    {dashboard.products.agents.reviewQueue.length === 0 && <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)" }}>Review queue is empty.</p>}
+                    {dashboard.products.agents.reviewQueue.map((q: any) => (
+                      <div key={q.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.7rem", background: "rgba(255,255,255,0.03)", borderRadius: "9px", marginBottom: "0.4rem", fontSize: "0.8rem", flexWrap: "wrap" }}>
+                        <span>{short(q.wallet_address)} · score {q.risk_score} ({q.risk_level}) · <span style={{ color: q.status === "pending" ? "#fcd34d" : "rgba(255,255,255,0.5)" }}>{q.status}</span></span>
+                        {q.status === "pending" && account && (
+                          <span style={{ display: "flex", gap: "0.4rem" }}>
+                            <button style={{ ...btn, padding: "0.3rem 0.8rem", fontSize: "0.75rem", background: "rgba(34,197,94,0.2)", color: "#86efac" }} disabled={busy === `q${q.id}`}
+                              onClick={() => act(`q${q.id}`, `/v1/agents/review-queue/${q.id}/decide`, { decision: "approved", reviewedBy: account.email })}>Approve</button>
+                            <button style={{ ...btn, padding: "0.3rem 0.8rem", fontSize: "0.75rem", background: "rgba(239,68,68,0.2)", color: "#fca5a5" }} disabled={busy === `q${q.id}`}
+                              onClick={() => act(`q${q.id}`, `/v1/agents/review-queue/${q.id}/decide`, { decision: "rejected", reviewedBy: account.email })}>Reject</button>
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </DashSection>
                 )}
 
                 {dashboard.products.institutional?.access && (
                   <DashSection title="Institutional / RWA">
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <input style={{ ...input, flex: 1, minWidth: "200px" }} placeholder="0x... investor wallet to attest" value={attWallet} onChange={e => setAttWallet(e.target.value)} />
+                      <label style={{ alignSelf: "center", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                        <input type="checkbox" checked={attAccredited} onChange={e => setAttAccredited(e.target.checked)} /> accredited
+                      </label>
+                      <button style={btn} disabled={busy === "attest"} onClick={() => act("attest", "/v1/orgs/me/institutional/attestations", { walletAddress: attWallet, accreditedInvestor: attAccredited, jurisdictionEligible: true }, () => setAttWallet(""))}>
+                        {busy === "attest" ? "Recording…" : "Record attestation"}
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <input style={{ ...input, flex: 1, minWidth: "200px" }} placeholder="0x... wallet to check eligibility" value={checkWallet} onChange={e => setCheckWallet(e.target.value)} />
+                      <button style={btn} disabled={busy === "check"} onClick={() => act("check", "/v1/orgs/me/institutional/check-investor", { walletAddress: checkWallet }, (d) => { setCheckResult(d); setCheckWallet(""); })}>
+                        {busy === "check" ? "Checking…" : "Check investor"}
+                      </button>
+                    </div>
+                    {checkResult && (
+                      <p style={{ fontSize: "0.83rem", color: checkResult.decision === "REJECT" ? "#fca5a5" : checkResult.decision === "REVIEW" ? "#fcd34d" : "#86efac", marginBottom: "0.75rem" }}>
+                        Decision: {checkResult.decision}{checkResult.reasons?.length ? ` — ${checkResult.reasons.join(" ")}` : ""}
+                      </p>
+                    )}
                     <MiniTable
                       headers={["Wallet", "KYC", "Jurisdiction", "Accredited"]}
                       rows={dashboard.products.institutional.attestations.map((a: any) => [short(a.wallet_address), a.kyc_status, a.jurisdiction_eligible ? "eligible" : "no", a.accredited_investor ? "yes" : "no"])}
-                      empty="No identity attestations yet."
+                      empty="No identity attestations yet — record your first one above."
                     />
                     <MiniTable
                       headers={["Wallet", "Decision", "Score"]}
                       rows={dashboard.products.institutional.investorChecks.map((c: any) => [short(c.wallet_address), c.decision, String(c.risk_score)])}
-                      empty="No investor checks yet."
+                      empty="No investor checks yet — run one above."
                     />
                   </DashSection>
                 )}

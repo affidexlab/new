@@ -261,11 +261,11 @@ router.post('/test-access', async (req, res) => {
        VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'test', 'Founder Test', 'Comped founder test account', 'founder-dashboard', 'converted', 'No payment required')`,
       [companyName, name, normalizedEmail]
     ).catch(() => {});
-    await pool.query(
+    const shieldCustomer = await pool.query(
       `INSERT INTO shield_customers (company_name, contact_name, email, plan, status, payment_gateway)
-       VALUES ($1, $2, $3, 'Founder Test', 'active', 'comped')`,
+       VALUES ($1, $2, $3, 'Founder Test', 'active', 'comped') RETURNING id`,
       [companyName, name, normalizedEmail]
-    ).catch(() => {});
+    ).catch(() => ({ rows: [] }));
     await pool.query(
       `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, gateway_order_id, status)
        VALUES ($1, $2, $3, 'Founder Test', 'comped', $4, 'active')`,
@@ -280,6 +280,53 @@ router.post('/test-access', async (req, res) => {
       `INSERT INTO audit_enquiries (project_name, contact_name, email, github_repo, audit_package, description, source, status, notes)
        VALUES ($1, $2, $3, 'internal-founder-test', 'Founder Test', 'Comped founder test audit access account', 'founder-dashboard', 'converted', 'No payment required')`,
       [companyName, name, normalizedEmail]
+    ).catch(() => {});
+
+    // Seed realistic sample data so the customer dashboard shows a working
+    // product experience instead of empty tables.
+    if (shieldCustomer.rows[0]) {
+      await pool.query(
+        `INSERT INTO shield_contracts (customer_id, chain, address, label, status)
+         VALUES ($1, 'arbitrum', '0xdbbdbdcf4b9fc8f85ae549078199ee3fb27cadb3', 'Sample watched contract', 'active')`,
+        [shieldCustomer.rows[0].id]
+      ).catch(() => {});
+    }
+    const sampleRule = await pool.query(
+      `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
+       VALUES ($1, $2, 'High-risk wallets need review', 'riskScore', '>', 70, 'flag_for_review', 'founder-test-seed')
+       RETURNING id`,
+      [normalizedEmail, orgRows[0].id]
+    ).catch(() => ({ rows: [] }));
+    await pool.query(
+      `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
+       VALUES ($1, $2, 'Critical wallets always flagged', 'riskScore', '>=', 90, 'flag_for_review', 'founder-test-seed')`,
+      [normalizedEmail, orgRows[0].id]
+    ).catch(() => {});
+    if (sampleRule.rows[0]) {
+      await pool.query(
+        `INSERT INTO compliance_review_queue (account_email, organization_id, rule_id, wallet_address, chain, risk_score, risk_level, status)
+         VALUES ($1, $2, $3, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 100, 'CRITICAL', 'pending'),
+                ($1, $2, $3, '0xd90e2f925da726b50c4ed8d0fb90ad053324f31b', 'ethereum', 85, 'HIGH', 'pending')`,
+        [normalizedEmail, orgRows[0].id, sampleRule.rows[0].id]
+      ).catch(() => {});
+    }
+    await pool.query(
+      `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
+       VALUES ('verify', $1, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 'decaflow-internal', 100, 'CRITICAL', 'REJECT', true, 0, 0, $2, '{"seed":true}'::jsonb),
+              ('verify', $1, '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', 'ethereum', 'decaflow-internal', 8, 'LOW', 'APPROVE', false, 0, 0, $3, '{"seed":true}'::jsonb)`,
+      [verifyKey, `df_seed_${crypto.randomBytes(6).toString('hex')}`, `df_seed_${crypto.randomBytes(6).toString('hex')}`]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO institutional_identity_attestations (chain, wallet_address, organization_id, kyc_status, jurisdiction_eligible, accredited_investor, jurisdiction, accreditation_basis, attested_by)
+       VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'approved', true, true, 'US', 'Sample accredited investor attestation', 'founder-test-seed')
+       ON CONFLICT (chain, lower(wallet_address)) DO NOTHING`,
+      [orgRows[0].id]
+    ).catch(() => {});
+    await pool.query(
+      `INSERT INTO institutional_investor_checks (chain, wallet_address, organization_id, decision, reasons, risk_score, risk_level, sanctions_match, requested_by)
+       VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'APPROVE', '[]'::jsonb, 8, 'LOW', false, 'founder-test-seed'),
+              ('ethereum', '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', $1, 'REJECT', '["Wallet has direct or near-hop sanctions exposure."]'::jsonb, 100, 'CRITICAL', true, 'founder-test-seed')`,
+      [orgRows[0].id]
     ).catch(() => {});
 
     return res.status(201).json({
