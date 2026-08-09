@@ -372,6 +372,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/025_institutional_compliance_suite.sql');
+    console.log('✅ Institutional compliance suite migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710', '42701'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Institutional compliance suite migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Institutional compliance suite migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 

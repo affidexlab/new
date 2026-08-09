@@ -2,12 +2,141 @@ import express from 'express';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
 import pool from '../../db/connection.js';
+import { authorizeAdmin } from '../../services/adminAuth.js';
+import { findOrgApiKey } from '../../services/orgApiKeyAuth.js';
+import {
+  checkInvestorEligibility,
+  computeEvidenceHash,
+  getIdentityAttestation,
+  listContractTemplates,
+  revokeIdentityAttestation,
+  upsertIdentityAttestation,
+} from '../../services/institutionalComplianceService.js';
 import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
 import { createKycApplicant } from '../../services/kycProviderService.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+async function authorizeIssuer(req, res, scope) {
+  const token = req.headers['x-api-key'] || req.headers.authorization?.replace(/^Bearer\s+/i, '') || '';
+  const orgKey = await findOrgApiKey(token, scope);
+  if (orgKey) {
+    req.issuer = { organizationId: orgKey.organization_id, name: orgKey.organization_name, principal: `org-key:${orgKey.name}` };
+    return true;
+  }
+  if (await authorizeAdmin(req, res, 'institutional:admin')) {
+    req.issuer = { organizationId: null, name: 'decaflow-admin', principal: req.admin?.name || 'admin' };
+    return true;
+  }
+  return false;
+}
+
+// ── DecaFlow Institutional compliance suite ──────────────────────────────
+// DecaFlow is the compliance layer: ZK-KYC identity attestations, automated
+// accredited-investor checks backed by the internal risk engine, and the
+// pre-audited RWA contract template catalog.
+
+router.get('/templates', async (_req, res) => {
+  try {
+    const templates = await listContractTemplates();
+    return res.json({ success: true, templates });
+  } catch (err) {
+    console.error('❌ Institutional templates error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch contract templates.' });
+  }
+});
+
+router.post('/identity/attestations', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:attest'))) return;
+    const { chain = 'ethereum', walletAddress, kycStatus = 'approved', jurisdictionEligible = false, accreditedInvestor = false, jurisdiction = null, accreditationBasis = null, evidence = null, expiresAt = null, metadata = {} } = req.body || {};
+    if (!walletAddress || !ethers.isAddress(walletAddress)) return res.status(400).json({ success: false, error: 'A valid walletAddress is required.' });
+    if (!['approved', 'pending', 'rejected'].includes(kycStatus)) return res.status(400).json({ success: false, error: 'kycStatus must be approved, pending, or rejected.' });
+
+    const attestation = await upsertIdentityAttestation({
+      chain,
+      walletAddress,
+      organizationId: req.issuer.organizationId,
+      kycStatus,
+      jurisdictionEligible,
+      accreditedInvestor,
+      jurisdiction,
+      accreditationBasis,
+      evidence,
+      attestedBy: req.issuer.principal,
+      expiresAt,
+      metadata,
+    });
+    return res.status(201).json({
+      success: true,
+      attestation,
+      onChain: {
+        evidenceHash: attestation.evidence_hash,
+        note: 'Use this evidence hash with IdentityRegistry.setIdentity for the on-chain commitment. Raw KYC evidence never goes on-chain.'
+      }
+    });
+  } catch (err) {
+    console.error('❌ Institutional attestation error:', err);
+    return res.status(500).json({ success: false, error: 'Could not record identity attestation.' });
+  }
+});
+
+router.get('/identity/attestations/:chain/:walletAddress', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:attest'))) return;
+    const attestation = await getIdentityAttestation({ chain: req.params.chain, walletAddress: req.params.walletAddress });
+    if (!attestation) return res.status(404).json({ success: false, error: 'No attestation found for this wallet.' });
+    return res.json({ success: true, attestation });
+  } catch (err) {
+    console.error('❌ Institutional attestation fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch attestation.' });
+  }
+});
+
+router.delete('/identity/attestations/:chain/:walletAddress', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:attest'))) return;
+    const attestation = await revokeIdentityAttestation({ chain: req.params.chain, walletAddress: req.params.walletAddress, revokedBy: req.issuer.principal });
+    if (!attestation) return res.status(404).json({ success: false, error: 'No attestation found for this wallet.' });
+    return res.json({ success: true, attestation });
+  } catch (err) {
+    console.error('❌ Institutional attestation revoke error:', err);
+    return res.status(500).json({ success: false, error: 'Could not revoke attestation.' });
+  }
+});
+
+router.post('/compliance/check-investor', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:check'))) return;
+    const { chain = 'ethereum', walletAddress, requireAccreditation = true } = req.body || {};
+    if (!walletAddress || !ethers.isAddress(walletAddress)) return res.status(400).json({ success: false, error: 'A valid walletAddress is required.' });
+    const result = await checkInvestorEligibility({
+      chain,
+      walletAddress,
+      organizationId: req.issuer.organizationId,
+      requireAccreditation: requireAccreditation !== false,
+      requestedBy: req.issuer.principal,
+    });
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('❌ Institutional investor check error:', err);
+    return res.status(500).json({ success: false, error: 'Could not run investor compliance check.' });
+  }
+});
+
+router.post('/identity/evidence-hash', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:attest'))) return;
+    const { evidence } = req.body || {};
+    if (evidence === undefined) return res.status(400).json({ success: false, error: 'evidence is required.' });
+    return res.json({ success: true, evidenceHash: computeEvidenceHash(evidence) });
+  } catch (err) {
+    console.error('❌ Institutional evidence hash error:', err);
+    return res.status(500).json({ success: false, error: 'Could not compute evidence hash.' });
+  }
+});
 
 const RPC_URLS = {
   arbitrum: process.env.RPC_ARBITRUM,

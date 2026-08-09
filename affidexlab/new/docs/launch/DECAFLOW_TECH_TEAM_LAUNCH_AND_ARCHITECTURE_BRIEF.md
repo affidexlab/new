@@ -533,3 +533,22 @@ The incorrect claim is:
 > DecaFlow has already achieved fully comprehensive Chainalysis/TRM-equivalent coverage.
 
 That second statement becomes defensible only after the coverage dashboard shows large, diverse, continuously refreshed datasets across sanctions, mixers, scam/phishing, darknet/ransomware, exploit/stolen-fund, high-risk-service, and customer-verified case categories.
+
+## DecaFlow Institutional compliance suite — 2026-08-09
+
+Per the strategic roadmap (Pivot 3), DecaFlow Institutional is the compliance layer for RWA issuers, not an RWA issuer itself. DecaFlow provides three pillars as a product:
+
+1. **On-chain identity verification (ZK-KYC).** DecaFlow issues identity attestations (`institutional_identity_attestations`): KYC status, jurisdiction eligibility, accreditation status, and an evidence hash that anchors the off-chain record. The evidence hash goes on-chain through `IdentityRegistry.setIdentity`; raw KYC evidence never does. `ZKIdentityGate.sol` provides privacy-preserving group-membership verification with proof-to-wallet binding.
+2. **Automated accredited-investor compliance checks.** `POST /v1/institutional/compliance/check-investor` combines the wallet's DecaFlow attestation (KYC approved, jurisdiction-eligible, accredited, unexpired, unrevoked) with a live DecaFlow internal risk screen (sanctions/mixer/scam/graph exposure) and returns APPROVE / REVIEW / REJECT with reasons. Every check is recorded in `institutional_investor_checks` as the issuer's compliance evidence trail.
+3. **Pre-audited smart contract templates.** `GET /v1/institutional/templates` serves the template catalog (`institutional_contract_templates`): IdentityRegistry, ComplianceRules, RiskOracle, RWAToken, and ZKIdentityGate — Guardian audit findings addressed, 53-test regression suite passing, with a final pre-deployment re-review required per issuer engagement.
+
+Issuer API surface (org API key scopes `institutional:attest` / `institutional:check`, or admin scope `institutional:admin`):
+
+- `POST /v1/institutional/identity/attestations` — record/update a wallet attestation; returns the evidence hash for the on-chain commitment.
+- `GET /v1/institutional/identity/attestations/:chain/:wallet` — attestation status.
+- `DELETE /v1/institutional/identity/attestations/:chain/:wallet` — revoke.
+- `POST /v1/institutional/compliance/check-investor` — automated accredited-investor eligibility decision.
+- `POST /v1/institutional/identity/evidence-hash` — compute an evidence hash without storing.
+- `GET /v1/institutional/templates` — public template catalog.
+
+Positioning note: DecaFlow sells this suite to issuers. Each issuer still owns its securities-law obligations for its own offering; DecaFlow provides the identity, compliance-check, and contract infrastructure they build on.
