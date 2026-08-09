@@ -219,7 +219,7 @@ export default function CustomerPortal() {
               <div style={card}>
                 <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "0.35rem" }}>Product dashboards</h2>
                 {dashboard.isFounderTest && (
-                  <p style={{ color: "#93C5FD", fontSize: "0.78rem", marginBottom: "1rem" }}>Founder test account — all product dashboards unlocked for preview.</p>
+                  <p style={{ color: "#93C5FD", fontSize: "0.78rem", marginBottom: "1rem" }}>Founder test account — showing the same product dashboards selected in founder-control, matching paid-user access for those products.</p>
                 )}
 
                 {dashboard.products.verify?.access && (

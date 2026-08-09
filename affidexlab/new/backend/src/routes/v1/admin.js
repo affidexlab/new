@@ -230,10 +230,22 @@ router.patch('/keys/:id', async (req, res) => {
 router.post('/test-access', async (req, res) => {
   try {
     if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
-    const { email, name = 'Founder Test User', companyName = 'DecaFlow Founder Test Account' } = req.body || {};
+    const { email, name = 'Founder Test User', companyName = 'DecaFlow Founder Test Account', products = null } = req.body || {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'valid email is required.' });
     const normalizedEmail = email.trim().toLowerCase();
     const orgSlug = `${slugify(companyName)}-${crypto.randomBytes(3).toString('hex')}`;
+    const allowedProducts = ['verify', 'compliance', 'shield', 'agents', 'institutional', 'audit'];
+    const requestedProducts = Array.isArray(products)
+      ? products.map(p => String(p).trim().toLowerCase()).filter(p => allowedProducts.includes(p))
+      : [];
+    const selectedProducts = requestedProducts.length ? Array.from(new Set(requestedProducts)) : allowedProducts;
+    const hasProduct = (product) => selectedProducts.includes(product);
+    const orgScopes = selectedProducts.includes('verify') || selectedProducts.includes('compliance')
+      ? ['verify:check', 'risk:screen']
+      : [];
+    if (selectedProducts.includes('shield')) orgScopes.push('shield:admin');
+    if (selectedProducts.includes('agents')) orgScopes.push('agents:rules', 'agents:evaluate', 'agents:review');
+    if (selectedProducts.includes('institutional')) orgScopes.push('institutional:attest', 'institutional:check');
 
     const { rows: orgRows } = await pool.query(
       `INSERT INTO organizations (name, slug, status, plan, billing_email)
@@ -248,42 +260,52 @@ router.post('/test-access', async (req, res) => {
        ON CONFLICT (organization_id, user_id) DO UPDATE SET role = 'owner', status = 'active', updated_at = NOW()`,
       [orgRows[0].id, user.id, req.admin?.name || 'founder-dashboard']
     );
-    const orgKey = await createOrgApiKey({ organizationId: orgRows[0].id, name: 'Founder Test API Key', scopes: ['*'] });
-    const verifyKey = `df_verify_test_${crypto.randomBytes(24).toString('hex')}`;
+    const orgKey = await createOrgApiKey({ organizationId: orgRows[0].id, name: 'Founder Test API Key', scopes: orgScopes.length ? orgScopes : ['org:read'] });
+    const verifyKey = hasProduct('verify') ? `df_verify_test_${crypto.randomBytes(24).toString('hex')}` : null;
 
-    await pool.query(
-      `INSERT INTO verify_enquiries (company_name, contact_name, email, use_case, chains, monthly_checks, plan, source, status, api_key_issued, api_key, notes)
-       VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'unlimited', 'Founder Test', 'founder-dashboard', 'converted', true, $4, 'Comped founder test account')`,
-      [companyName, name, normalizedEmail, verifyKey]
-    ).catch(() => {});
-    await pool.query(
-      `INSERT INTO compliance_enquiries (company_name, contact_name, email, business_type, chains, monthly_tx_volume, plan, message, source, status, notes)
-       VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'test', 'Founder Test', 'Comped founder test account', 'founder-dashboard', 'converted', 'No payment required')`,
-      [companyName, name, normalizedEmail]
-    ).catch(() => {});
-    const shieldCustomer = await pool.query(
+    if (hasProduct('verify')) {
+      await pool.query(
+        `INSERT INTO verify_enquiries (company_name, contact_name, email, use_case, chains, monthly_checks, plan, source, status, api_key_issued, api_key, notes)
+         VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'unlimited', 'Founder Test', 'founder-dashboard', 'converted', true, $4, 'Comped founder test account')`,
+        [companyName, name, normalizedEmail, verifyKey]
+      ).catch(() => {});
+    }
+    if (hasProduct('compliance')) {
+      await pool.query(
+        `INSERT INTO compliance_enquiries (company_name, contact_name, email, business_type, chains, monthly_tx_volume, plan, message, source, status, notes)
+         VALUES ($1, $2, $3, 'founder-test', ARRAY['base','arbitrum','polygon','avalanche'], 'test', 'Founder Test', 'Comped founder test account', 'founder-dashboard', 'converted', 'No payment required')`,
+        [companyName, name, normalizedEmail]
+      ).catch(() => {});
+    }
+    const shieldCustomer = hasProduct('shield') ? await pool.query(
       `INSERT INTO shield_customers (company_name, contact_name, email, plan, status, payment_gateway)
        VALUES ($1, $2, $3, 'Founder Test', 'active', 'comped') RETURNING id`,
       [companyName, name, normalizedEmail]
-    ).catch(() => ({ rows: [] }));
-    await pool.query(
-      `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, gateway_order_id, status)
-       VALUES ($1, $2, $3, 'Founder Test', 'comped', $4, 'active')`,
-      [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
-    ).catch(() => {});
-    await pool.query(
-      `INSERT INTO institutional_customers (company_name, contact_name, email, plan, asset_type, jurisdictions, message, payment_gateway, gateway_order_id, status)
-       VALUES ($1, $2, $3, 'Founder Test', 'internal test', 'Base, Arbitrum, Polygon, Avalanche', 'Comped founder test account', 'comped', $4, 'active')`,
-      [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
-    ).catch(() => {});
-    await pool.query(
-      `INSERT INTO audit_enquiries (project_name, contact_name, email, github_repo, audit_package, description, source, status, notes)
-       VALUES ($1, $2, $3, 'internal-founder-test', 'Founder Test', 'Comped founder test audit access account', 'founder-dashboard', 'converted', 'No payment required')`,
-      [companyName, name, normalizedEmail]
-    ).catch(() => {});
+    ).catch(() => ({ rows: [] })) : { rows: [] };
+    if (hasProduct('agents')) {
+      await pool.query(
+        `INSERT INTO agents_customers (company_name, contact_name, email, plan, payment_gateway, gateway_order_id, status)
+         VALUES ($1, $2, $3, 'Founder Test', 'comped', $4, 'active')`,
+        [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
+      ).catch(() => {});
+    }
+    if (hasProduct('institutional')) {
+      await pool.query(
+        `INSERT INTO institutional_customers (company_name, contact_name, email, plan, asset_type, jurisdictions, message, payment_gateway, gateway_order_id, status)
+         VALUES ($1, $2, $3, 'Founder Test', 'internal test', 'Base, Arbitrum, Polygon, Avalanche', 'Comped founder test account', 'comped', $4, 'active')`,
+        [companyName, name, normalizedEmail, `comped_${crypto.randomBytes(8).toString('hex')}`]
+      ).catch(() => {});
+    }
+    if (hasProduct('audit')) {
+      await pool.query(
+        `INSERT INTO audit_enquiries (project_name, contact_name, email, github_repo, audit_package, description, source, status, notes)
+         VALUES ($1, $2, $3, 'internal-founder-test', 'Founder Test', 'Comped founder test audit access account', 'founder-dashboard', 'converted', 'No payment required')`,
+        [companyName, name, normalizedEmail]
+      ).catch(() => {});
+    }
 
     // Seed realistic sample data so the customer dashboard shows a working
-    // product experience instead of empty tables.
+    // product experience instead of empty tables for the selected products.
     if (shieldCustomer.rows[0]) {
       await pool.query(
         `INSERT INTO shield_contracts (customer_id, chain, address, label, status)
@@ -291,43 +313,49 @@ router.post('/test-access', async (req, res) => {
         [shieldCustomer.rows[0].id]
       ).catch(() => {});
     }
-    const sampleRule = await pool.query(
-      `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
-       VALUES ($1, $2, 'High-risk wallets need review', 'riskScore', '>', 70, 'flag_for_review', 'founder-test-seed')
-       RETURNING id`,
-      [normalizedEmail, orgRows[0].id]
-    ).catch(() => ({ rows: [] }));
-    await pool.query(
-      `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
-       VALUES ($1, $2, 'Critical wallets always flagged', 'riskScore', '>=', 90, 'flag_for_review', 'founder-test-seed')`,
-      [normalizedEmail, orgRows[0].id]
-    ).catch(() => {});
-    if (sampleRule.rows[0]) {
+    if (hasProduct('agents')) {
+      const sampleRule = await pool.query(
+        `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
+         VALUES ($1, $2, 'High-risk wallets need review', 'riskScore', '>', 70, 'flag_for_review', 'founder-test-seed')
+         RETURNING id`,
+        [normalizedEmail, orgRows[0].id]
+      ).catch(() => ({ rows: [] }));
       await pool.query(
-        `INSERT INTO compliance_review_queue (account_email, organization_id, rule_id, wallet_address, chain, risk_score, risk_level, status)
-         VALUES ($1, $2, $3, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 100, 'CRITICAL', 'pending'),
-                ($1, $2, $3, '0xd90e2f925da726b50c4ed8d0fb90ad053324f31b', 'ethereum', 85, 'HIGH', 'pending')`,
-        [normalizedEmail, orgRows[0].id, sampleRule.rows[0].id]
+        `INSERT INTO compliance_workflow_rules (account_email, organization_id, name, condition_field, operator, threshold, action, created_by)
+         VALUES ($1, $2, 'Critical wallets always flagged', 'riskScore', '>=', 90, 'flag_for_review', 'founder-test-seed')`,
+        [normalizedEmail, orgRows[0].id]
+      ).catch(() => {});
+      if (sampleRule.rows[0]) {
+        await pool.query(
+          `INSERT INTO compliance_review_queue (account_email, organization_id, rule_id, wallet_address, chain, risk_score, risk_level, status)
+           VALUES ($1, $2, $3, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 100, 'CRITICAL', 'pending'),
+                  ($1, $2, $3, '0xd90e2f925da726b50c4ed8d0fb90ad053324f31b', 'ethereum', 85, 'HIGH', 'pending')`,
+          [normalizedEmail, orgRows[0].id, sampleRule.rows[0].id]
+        ).catch(() => {});
+      }
+    }
+    if (hasProduct('verify')) {
+      await pool.query(
+        `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
+         VALUES ('verify', $1, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 'decaflow-internal', 100, 'CRITICAL', 'REJECT', true, 0, 0, $2, '{"seed":true}'::jsonb),
+                ('verify', $1, '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', 'ethereum', 'decaflow-internal', 8, 'LOW', 'APPROVE', false, 0, 0, $3, '{"seed":true}'::jsonb)`,
+        [verifyKey, `df_seed_${crypto.randomBytes(6).toString('hex')}`, `df_seed_${crypto.randomBytes(6).toString('hex')}`]
       ).catch(() => {});
     }
-    await pool.query(
-      `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
-       VALUES ('verify', $1, '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', 'ethereum', 'decaflow-internal', 100, 'CRITICAL', 'REJECT', true, 0, 0, $2, '{"seed":true}'::jsonb),
-              ('verify', $1, '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', 'ethereum', 'decaflow-internal', 8, 'LOW', 'APPROVE', false, 0, 0, $3, '{"seed":true}'::jsonb)`,
-      [verifyKey, `df_seed_${crypto.randomBytes(6).toString('hex')}`, `df_seed_${crypto.randomBytes(6).toString('hex')}`]
-    ).catch(() => {});
-    await pool.query(
-      `INSERT INTO institutional_identity_attestations (chain, wallet_address, organization_id, kyc_status, jurisdiction_eligible, accredited_investor, jurisdiction, accreditation_basis, attested_by)
-       VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'approved', true, true, 'US', 'Sample accredited investor attestation', 'founder-test-seed')
-       ON CONFLICT (chain, lower(wallet_address)) DO NOTHING`,
-      [orgRows[0].id]
-    ).catch(() => {});
-    await pool.query(
-      `INSERT INTO institutional_investor_checks (chain, wallet_address, organization_id, decision, reasons, risk_score, risk_level, sanctions_match, requested_by)
-       VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'APPROVE', '[]'::jsonb, 8, 'LOW', false, 'founder-test-seed'),
-              ('ethereum', '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', $1, 'REJECT', '["Wallet has direct or near-hop sanctions exposure."]'::jsonb, 100, 'CRITICAL', true, 'founder-test-seed')`,
-      [orgRows[0].id]
-    ).catch(() => {});
+    if (hasProduct('institutional')) {
+      await pool.query(
+        `INSERT INTO institutional_identity_attestations (chain, wallet_address, organization_id, kyc_status, jurisdiction_eligible, accredited_investor, jurisdiction, accreditation_basis, attested_by)
+         VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'approved', true, true, 'US', 'Sample accredited investor attestation', 'founder-test-seed')
+         ON CONFLICT (chain, lower(wallet_address)) DO NOTHING`,
+        [orgRows[0].id]
+      ).catch(() => {});
+      await pool.query(
+        `INSERT INTO institutional_investor_checks (chain, wallet_address, organization_id, decision, reasons, risk_score, risk_level, sanctions_match, requested_by)
+         VALUES ('ethereum', '0x1e7b01f8d28e757b07887ff6bf23e46bde4e4cbd', $1, 'APPROVE', '[]'::jsonb, 8, 'LOW', false, 'founder-test-seed'),
+                ('ethereum', '0x8576acc5c05d6ce88f4e49bf65bdf0c62f91353c', $1, 'REJECT', '["Wallet has direct or near-hop sanctions exposure."]'::jsonb, 100, 'CRITICAL', true, 'founder-test-seed')`,
+        [orgRows[0].id]
+      ).catch(() => {});
+    }
 
     return res.status(201).json({
       success: true,
@@ -335,7 +363,8 @@ router.post('/test-access', async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name },
       orgApiKey: orgKey.apiKey,
       verifyApiKey: verifyKey,
-      message: 'Founder test access created across Verify, Compliance, Shield, Agents, Institutional/RWA, and Audit without payment.'
+      products: selectedProducts,
+      message: `Founder test access created for ${selectedProducts.join(', ')} without payment.`
     });
   } catch (err) {
     console.error('❌ Founder test access error:', err);

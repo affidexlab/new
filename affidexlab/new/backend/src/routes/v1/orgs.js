@@ -58,8 +58,8 @@ router.get('/me', async (req, res) => {
 });
 
 // GET /v1/orgs/me/dashboard — per-product customer dashboard data.
-// Founder test orgs (plan 'founder-test') see every product unlocked;
-// everyone else sees only products with an active/converted customer record.
+// Founder test orgs are comped accounts, but product access still follows the
+// customer records created for the selected preview products.
 router.get('/me/dashboard', async (req, res) => {
   try {
     const principal = await authenticateOrgSession(req, res);
@@ -81,7 +81,7 @@ router.get('/me/dashboard', async (req, res) => {
     ]);
 
     const activeStates = ['active', 'converted', 'paid_queued', 'paid_ready_to_scope', 'paid_pending_key'];
-    const hasAccess = (rows) => isFounderTest || rows.some(r => activeStates.includes(r.status));
+    const hasAccess = (rows) => rows.some(r => activeStates.includes(r.status));
 
     const shieldCustomerIds = shieldCustomers.map(c => c.id);
     const contracts = shieldCustomerIds.length
@@ -90,10 +90,7 @@ router.get('/me/dashboard', async (req, res) => {
     const contractAddresses = contracts.map(c => String(c.address || '').toLowerCase());
     let alerts = [];
     let incidents = [];
-    if (isFounderTest) {
-      alerts = await one(`SELECT chain, address, severity, alert_type, message, created_at FROM shield_alerts ORDER BY created_at DESC LIMIT 8`, []);
-      incidents = await one(`SELECT title, severity, status, created_at FROM shield_incidents ORDER BY created_at DESC LIMIT 6`, []);
-    } else if (contractAddresses.length) {
+    if (contractAddresses.length) {
       alerts = await one(`SELECT chain, address, severity, alert_type, message, created_at FROM shield_alerts WHERE lower(address) = ANY($1) ORDER BY created_at DESC LIMIT 8`, [contractAddresses]);
       incidents = await one(
         `SELECT i.title, i.severity, i.status, i.created_at FROM shield_incidents i
