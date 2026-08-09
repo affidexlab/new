@@ -22,6 +22,7 @@ import Shield from "./pages/Shield";
 import Institutional from "./pages/Institutional";
 import IssuerPortal from "./pages/IssuerPortal";
 import Agents from "./pages/Agents";
+import CustomerPortal from "./pages/CustomerPortal";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 import ProductGate from "./components/ProductGate";
 
@@ -95,6 +96,9 @@ function getPageFromLocation(): string {
   if (path.startsWith("/agents") || hash === "#agents") {
     return "agents";
   }
+  if (path.startsWith("/login") || path.startsWith("/account") || hash === "#login" || hash === "#account") {
+    return "customer-portal";
+  }
   return "home";
 }
 
@@ -144,6 +148,7 @@ export default function App() {
       {currentPage === "institutional" && <ProductGate productKey="institutional"><Institutional /></ProductGate>}
       {currentPage === "agents" && <ProductGate productKey="agents"><Agents /></ProductGate>}
       {currentPage === "issuer-portal" && <ProductGate productKey="institutional"><IssuerPortal /></ProductGate>}
+      {currentPage === "customer-portal" && <CustomerPortal />}
     </TransactionEventsProvider>
   );
 }

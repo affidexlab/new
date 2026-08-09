@@ -372,3 +372,29 @@ For Verify/Compliance pilots, ask for:
 For Shield pilots, keep asking for watched contract addresses, chains, labels, admin/owner addresses, alert recipients, and critical events. If they also want counterparty risk, ask for important treasury/customer wallets so DecaFlow can graph and score interactions.
 
 The best commercial motion remains design-partner selling. The message is stronger now because the product has real ingestion and enterprise controls, but the honest wedge is still: “help us tune DecaFlow’s proprietary risk graph against your real cases,” not “we already have every risky wallet in the world.”
+
+## Product playbook and rebrand — 2026-08-09
+
+### Rebrand
+
+"Agents" is now sold as **DecaFlow Autopilot — Agentic Compliance**. Same URL (/agents), stronger name. Pitch: "Autopilot turns risk checks into accountable workflows — and earns the right to automate by learning your team's own decisions."
+
+### Step-by-step per product (what the customer actually does)
+
+- **Verify API**: pay → receive API key → call `POST /v1/verify/check` from their backend → get approve/review/reject with evidence. Demo on the site is clearly a preview; the API is the product.
+- **Compliance**: pay → onboarding call → their team screens wallets and records decisions with a full evidence trail.
+- **Shield**: pay → send us chains, contract addresses, alert emails, and contract ABIs → monitoring live in 15-minute cycles with alerts, incidents, playbooks, and ABI-aware privileged-function findings.
+- **Autopilot**: pay → org account and scoped API key → set rules → review queue → approve automation for proven patterns only.
+- **Institutional/RWA**: issuer engagement → org API key with attestation/check scopes → they record ZK-KYC attestations, run investor checks before every mint/transfer, and deploy DecaFlow's pre-audited templates with their own multisig and counsel.
+- **Audit**: pay a package → scoping call → report → upsell Shield ("the audit is a snapshot; Shield is the watchtower").
+
+### Customer login story (use in demos)
+
+Every customer gets passwordless login at decaflow.xyz/login: email link → account page → team, API keys, all products in one place. Buying another product uses the same account email, so access accumulates under one organization.
+
+### What BD owns operationally
+
+- Confirm the product is `accepting customers` in founder-control before campaigns.
+- Route paid enquiries to Compliance Ops same day; nothing paid waits more than 24 hours.
+- For Shield pilots, collect: chain, addresses, labels, admin addresses, alert recipients, ABIs, critical events.
+- For Institutional, position DecaFlow as the compliance layer for the issuer's counsel-approved offering — never as the issuer's lawyer.

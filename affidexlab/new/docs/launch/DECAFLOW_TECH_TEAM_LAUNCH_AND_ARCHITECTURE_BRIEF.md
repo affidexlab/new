@@ -552,3 +552,39 @@ Issuer API surface (org API key scopes `institutional:attest` / `institutional:c
 - `GET /v1/institutional/templates` — public template catalog.
 
 Positioning note: DecaFlow sells this suite to issuers. Each issuer still owns its securities-law obligations for its own offering; DecaFlow provides the identity, compliance-check, and contract infrastructure they build on.
+
+## Product manuals and operator runbooks — 2026-08-09
+
+### Product renaming note
+
+The Agents product is publicly branded **DecaFlow Autopilot (Agentic Compliance)**. The URL stays `/agents` and the API stays `/v1/agents/*` for compatibility; only display naming changed.
+
+### Customer portal
+
+Customers log in at `/login` with an email magic link (no passwords). After login, `/account` shows their organization, team members, and self-service API keys (create/revoke), plus links to every product. Sessions last 30 days. Backend: `/v1/org-auth/magic-link/request`, `/v1/org-auth/magic-link/verify`, `/v1/orgs/me*`.
+
+### Per-product step-by-step and operator runbook
+
+**Verify API** — wallet screening.
+Customer flow: 1) buy/receive a plan (NOWPayments checkout or founder-issued), 2) get an org or Verify API key, 3) call `POST /v1/verify/check` with `x-api-key` and `{address, chain}`, 4) receive score/level/recommendation/flags/exposures, 5) every check is recorded in `risk_screenings`.
+Operator runbook (Risk Intelligence Owner): daily — check Production Risk Ingestion run is green in GitHub Actions; weekly — review `GET /v1/risk/coverage` label counts, add curated labels from incident reports via `POST /v1/risk/labels`, process case reviews with `POST /v1/risk/case-reviews`; monthly — run calibration and expand `riskCalibrationCases.json`.
+
+**Compliance** — screening workflow product.
+Customer flow: 1) checkout (crypto or bank), 2) team contact and onboarding, 3) screening + review workflow through the API and analyst process.
+Operator runbook (Compliance Ops): monitor `compliance_enquiries` in the founder console; respond to paid enquiries within 24h; send bank details for manual transfers; record decisions through case reviews so labels improve.
+
+**Shield** — continuous security monitoring.
+Customer flow: 1) checkout or waitlist, 2) provide chain, contract addresses, labels, alert emails, and contract ABIs, 3) DecaFlow registers contracts in `shield_contracts` and uploads ABIs via `POST /v1/shield/contracts/:chain/:address/abi`, 4) scanning runs every 15 minutes.
+Operator runbook (Security Operator): daily — review open alerts (`GET /v1/shield/alerts`), incidents, and vulnerability findings (`GET /v1/shield/vulnerability-findings`); triage incidents using their playbook steps; update statuses; weekly — tune `POST /v1/shield/anomaly-thresholds` per customer and confirm the Shield Monitor workflow is green.
+
+**Autopilot (Agents)** — agentic compliance workflows.
+Customer flow: 1) checkout, 2) org account + scoped API key issued, 3) define rules (`POST /v1/agents/rules`), 4) evaluations route flagged wallets into the review queue, 5) named humans decide; after ≥5 consistent decisions at ≥90%, Autopilot suggests automation the customer must explicitly enable.
+Operator runbook (Compliance Ops): monitor review queues for stuck items; verify automation enablements have named owners; never enable auto-decisions on a customer's behalf.
+
+**Institutional/RWA** — compliance suite for issuers.
+Customer flow: 1) issuer signs up (Issuer/Scale plan), 2) DecaFlow issues an org API key with `institutional:attest`/`institutional:check` scopes, 3) issuer records ZK-KYC attestations (`POST /v1/institutional/identity/attestations`), 4) issuer runs investor checks before mint/transfer (`POST /v1/institutional/compliance/check-investor`), 5) issuer deploys the pre-audited templates (catalog at `GET /v1/institutional/templates`) with their own Safe/multisig and counsel.
+Operator runbook (Institutional Lead): review each issuer's engagement before granting attestation scopes; keep `APPROVED_IDENTITY_REGISTRIES` current per deployed registry; coordinate the final pre-deployment re-review per engagement.
+
+**Audit** — manual security review engagements.
+Customer flow: checkout a package → scoping call → audit delivery → optional Shield upsell.
+Operator runbook: respond to `audit_enquiries` with `paid_ready_to_scope` status within 24h.

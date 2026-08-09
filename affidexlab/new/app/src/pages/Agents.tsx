@@ -27,7 +27,7 @@ const FAQS = [
 ];
 
 export default function Agents() {
-  useEffect(() => { document.title = "Agents — Compliance Workflows | DecaFlow"; }, []);
+  useEffect(() => { document.title = "Autopilot — Agentic Compliance Workflows | DecaFlow"; }, []);
 
   const checkoutStatus = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("checkout") : null;
 
@@ -132,7 +132,7 @@ export default function Agents() {
 
   const NAV_LINKS = [
     { label: "Compliance", href: "/compliance" }, { label: "Shield", href: "/shield" },
-    { label: "Institutional", href: "/institutional" }, { label: "Agents", href: "/agents" }, { label: "Verify API", href: "/verify" },
+    { label: "Institutional", href: "/institutional" }, { label: "Autopilot", href: "/agents" }, { label: "Verify API", href: "/verify" },
   ];
 
   return (
@@ -152,7 +152,7 @@ export default function Agents() {
           <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.025em" }}>Deca<span style={{ color: "#3B82F6" }}>Flow</span></span>
         </a>
         <div className="desktop-nav" style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
-          {NAV_LINKS.map(l => <a key={l.label} href={l.href} style={{ color: l.label === "Agents" ? "#fff" : "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 }}>{l.label}</a>)}
+          {NAV_LINKS.map(l => <a key={l.label} href={l.href} style={{ color: l.label === "Autopilot" ? "#fff" : "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500 }}>{l.label}</a>)}
           <a href="#" onClick={(e) => { e.preventDefault(); openForm("Growth"); }} style={{ background: "#3B82F6", color: "#fff", padding: "0.5rem 1.25rem", borderRadius: "8px", textDecoration: "none", fontSize: "0.875rem", fontWeight: 700 }}>Get Started</a>
         </div>
         <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-btn" style={{ display: "none", background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer" }}>{menuOpen ? "✕" : "☰"}</button>
@@ -166,10 +166,10 @@ export default function Agents() {
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} /> Phase 3: Pattern Suggestions Live — Never Autonomous
         </div>
         <h1 style={{ fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.5rem" }}>
-          Compliance rules that <span style={{ background: "linear-gradient(135deg,#3B82F6 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>flag, never freeze</span>
+          DecaFlow <span style={{ background: "linear-gradient(135deg,#3B82F6 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Autopilot</span> — agentic compliance
         </h1>
         <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "640px", margin: "0 auto 2.5rem", lineHeight: 1.75 }}>
-          Set rules on risk scores, route matches to a review queue, keep a human accountable for every decision. Now: the system notices your own consistent patterns and asks before automating anything — it never decides that on its own.
+          Set rules on risk scores, route matches to a review queue, and keep a named human accountable for every decision. Autopilot learns your team's consistent patterns and asks before automating anything — automation is earned and approved, never assumed.
         </p>
         <button onClick={() => openForm("Growth")} style={{ background: "#3B82F6", color: "#fff", padding: "0.95rem 2.25rem", borderRadius: "11px", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 700, boxShadow: "0 0 32px rgba(59,130,246,0.35)" }}>Get Started</button>
       </section>

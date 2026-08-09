@@ -229,3 +229,30 @@ Leadership should still avoid:
 - “Agents can operate without accountable human or org-level controls.”
 
 The next CEO-level operating requirement is to assign a risk-intelligence owner who adds new public and internally verified sources every week, reviews false positives, tags new incidents, and uses customer pilot cases to improve DecaFlow’s proprietary graph.
+
+## Product guide and staffing plan — 2026-08-09
+
+### The product line, in plain language
+
+1. **Verify API** — a company sends us a wallet address; we answer approve, review, or reject, with reasons. Sold as monthly API plans.
+2. **Compliance** — the workflow around those answers: who reviewed what, what was decided, and the evidence trail. Sold as monthly plans with onboarding.
+3. **Shield** — a watchtower for deployed smart contracts. It checks every 15 minutes for ownership changes, upgrades, suspicious approvals/transfers, code changes, and exposed privileged functions, then opens alerts and incidents with step-by-step response playbooks. Sold per monitored contract.
+4. **Autopilot** (new name for "Agents") — agentic compliance workflows. Customers set rules; flagged wallets go to a human review queue; after a team shows a consistent pattern, Autopilot asks permission to handle that pattern automatically. Automation is earned and approved, never assumed.
+5. **Institutional/RWA** — the compliance suite RWA issuers build on: ZK-KYC identity attestations, automated accredited-investor checks, and pre-audited smart contract templates. DecaFlow sells the rails; issuers own their offering and their counsel.
+6. **Audit** — paid one-time security reviews, and the natural entry point into Shield.
+
+### Customer experience
+
+Customers log in at decaflow.xyz/login with an email link — no passwords. Their account page shows their team, their API keys, and every product. Crypto payments run through NOWPayments and confirmation emails go out automatically when payment is confirmed; bank transfers stay manual by design.
+
+### Who should man each product
+
+- **Risk Intelligence Owner** (1 person): owns Verify/Compliance data quality. Weekly: add new risk labels from public incidents, review false positives, check the coverage dashboard. This person grows the moat.
+- **Security Operator** (1 person): owns Shield. Daily: triage alerts, incidents, and vulnerability findings using the built-in playbooks; confirm scans are green.
+- **Compliance Ops** (1 person, can be shared): owns Autopilot review queues and customer enquiries across Compliance/Verify/Audit; responds to paid enquiries within 24 hours; sends manual bank-transfer details.
+- **Institutional Lead** (founder for now): approves each issuer engagement, grants attestation scopes, coordinates the final contract re-review per engagement.
+- **Founder**: uses `/founder-control` for product on/off switches, customers, payments, keys, incidents, and audit logs.
+
+### On Pivot 4 honesty
+
+Autopilot delivers agentic compliance workflows with human-approved automation today. It does not yet auto-freeze transactions from predictive models — that capability is deliberately gated until the predictive models, legal posture, and customer risk ownership are in place. Sell the accountability story, not a hollow autonomy claim.

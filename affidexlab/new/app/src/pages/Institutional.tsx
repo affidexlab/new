@@ -144,14 +144,14 @@ export default function Institutional() {
         )}
         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.6rem", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "100px", padding: "0.4rem 1.1rem", fontSize: "0.78rem", color: "#93C5FD", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "2rem" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-          Early Development — Not Audited
+          Guardian-Audited Templates — Final Re-Review Per Engagement
         </div>
         <h1 style={{ fontSize: "clamp(2.2rem,5vw,3.8rem)", fontWeight: 900, lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.5rem" }}>
           The compliance layer{" "}
           <span style={{ background: "linear-gradient(135deg,#3B82F6 0%,#3B82F6 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>for tokenized assets</span>
         </h1>
-        <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "640px", margin: "0 auto 1.5rem", lineHeight: 1.75 }}>
-          On-chain identity, transfer restrictions, and reporting for real-world-asset issuers, built on ERC-3643 — the open standard for compliant security tokens.
+        <p style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.6)", maxWidth: "680px", margin: "0 auto 1.5rem", lineHeight: 1.75 }}>
+          The complete RWA compliance suite: on-chain identity verification with Zero-Knowledge KYC attestations, automated accredited-investor compliance checks powered by DecaFlow risk intelligence, and pre-audited smart contract templates for tokenized securities.
         </p>
         <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.4)", maxWidth: "560px", margin: "0 auto 2.5rem", lineHeight: 1.6 }}>
           Not a substitute for securities counsel. Talk to your own lawyer before issuing anything.
