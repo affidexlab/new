@@ -92,6 +92,23 @@ async function setCursor(chain, address, blockNumber) {
   }
 }
 
+async function loadAnomalyThreshold({ alertType, chain, address }) {
+  const { rows } = await pool.query(
+    `SELECT *
+     FROM shield_anomaly_thresholds
+     WHERE enabled = true
+       AND alert_type = $1
+       AND (chain IS NULL OR lower(chain) = lower($2))
+       AND (address IS NULL OR lower(address) = lower($3))
+     ORDER BY CASE WHEN address IS NOT NULL THEN 0 ELSE 1 END,
+              CASE WHEN chain IS NOT NULL THEN 0 ELSE 1 END,
+              threshold ASC
+     LIMIT 1`,
+    [alertType, chain, address]
+  ).catch(() => ({ rows: [] }));
+  return rows[0] || null;
+}
+
 async function checkCodeHash({ provider, chain, address, label, blockNumber }) {
   const code = await provider.getCode(address);
   const codeHash = ethers.keccak256(code === '0x' ? '0x' : code);
@@ -141,6 +158,19 @@ async function scanContract(contract, options = {}) {
 
   for (const rule of EVENT_RULES) {
     const logs = await provider.getLogs({ address: contract.address, fromBlock, toBlock, topics: [topic(rule.signature)] });
+    const threshold = await loadAnomalyThreshold({ alertType: rule.type, chain: contract.chain, address: contract.address });
+    if (threshold && logs.length >= Number(threshold.threshold)) {
+      const result = await createShieldAlert({
+        chain: contract.chain,
+        address: contract.address,
+        label: contract.label,
+        severity: threshold.severity || 'high',
+        alertType: `${rule.type}_anomaly`,
+        message: `${logs.length} ${rule.type.replace(/_/g, ' ')} events detected across blocks ${fromBlock}-${toBlock}, exceeding threshold ${threshold.threshold}.`,
+        metadata: { fromBlock, toBlock, count: logs.length, threshold: threshold.threshold, windowBlocks: threshold.window_blocks, signature: rule.signature }
+      });
+      alerts.push(result.alert);
+    }
     for (const log of logs) {
       const result = await createShieldAlert({
         chain: contract.chain,

@@ -56,10 +56,20 @@ export async function createShieldAlert({ chain, address, label = null, severity
   const alert = rows[0];
 
   if (rank(severity) >= rank('high')) {
+    const playbook = await pool.query(
+      `SELECT steps FROM shield_incident_playbooks
+       WHERE enabled = true AND alert_type = $1
+       ORDER BY CASE WHEN severity = $2 THEN 0 ELSE 1 END, id ASC
+       LIMIT 1`,
+      [alertType, severity]
+    ).catch(() => ({ rows: [] }));
+    const nextSteps = playbook.rows[0]?.steps?.length
+      ? playbook.rows[0].steps.map((step, index) => `${index + 1}. ${step}`).join('\n')
+      : 'Triage alert, confirm authorized activity, and record decision.';
     await pool.query(
       `INSERT INTO shield_incidents (alert_id, title, severity, summary, next_steps)
        VALUES ($1, $2, $3, $4, $5)`,
-      [alert.id, `${severity.toUpperCase()} ${alertType.replace(/_/g, ' ')} on ${label || address}`, severity, message, 'Triage alert, confirm authorized activity, and record decision.']
+      [alert.id, `${severity.toUpperCase()} ${alertType.replace(/_/g, ' ')} on ${label || address}`, severity, message, nextSteps]
     );
   }
 

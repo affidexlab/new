@@ -7,6 +7,7 @@ import { sendEnquiryEmail } from '../../utils/mailer.js';
 import { safeCompare } from '../../utils/security.js';
 import { createShieldAlert } from '../../services/shieldActionEngine.js';
 import { runShieldSecurityScan } from '../../services/shieldSecurityScanner.js';
+import { runShieldVulnerabilityScan } from '../../services/shieldVulnerabilityScanner.js';
 
 const router = express.Router();
 const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -181,6 +182,115 @@ router.patch('/incidents/:id', async (req, res) => {
   }
 });
 
+router.get('/vulnerability-findings', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { status = 'open', limit = 100, offset = 0 } = req.query;
+    const { rows } = await pool.query(
+      `SELECT * FROM shield_vulnerability_findings WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+      [status, Number(limit), Number(offset)]
+    );
+    return res.json({ success: true, findings: rows });
+  } catch (err) {
+    console.error('❌ Shield findings list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch Shield findings.' });
+  }
+});
+
+router.patch('/vulnerability-findings/:id', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { status } = req.body || {};
+    if (!['open', 'acknowledged', 'resolved', 'false_positive'].includes(status)) return res.status(400).json({ success: false, error: 'Invalid status.' });
+    const { rows } = await pool.query(
+      `UPDATE shield_vulnerability_findings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [status, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Finding not found.' });
+    return res.json({ success: true, finding: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield finding update error:', err);
+    return res.status(500).json({ success: false, error: 'Could not update Shield finding.' });
+  }
+});
+
+router.post('/contracts/:chain/:address/abi', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { abi, source = 'customer-provided' } = req.body || {};
+    if (!Array.isArray(abi)) return res.status(400).json({ success: false, error: 'abi must be an array.' });
+    const { rows } = await pool.query(
+      `INSERT INTO shield_contract_abis (chain, address, abi, source)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (chain, lower(address))
+       DO UPDATE SET abi = EXCLUDED.abi, source = EXCLUDED.source, updated_at = NOW()
+       RETURNING id, chain, address, source, created_at, updated_at`,
+      [String(req.params.chain).toLowerCase(), String(req.params.address).toLowerCase(), JSON.stringify(abi), source]
+    );
+    return res.status(201).json({ success: true, abi: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield ABI upsert error:', err);
+    return res.status(500).json({ success: false, error: 'Could not save contract ABI.' });
+  }
+});
+
+router.get('/playbooks', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { rows } = await pool.query(`SELECT * FROM shield_incident_playbooks ORDER BY alert_type, id`);
+    return res.json({ success: true, playbooks: rows });
+  } catch (err) {
+    console.error('❌ Shield playbooks list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch playbooks.' });
+  }
+});
+
+router.post('/playbooks', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { name, alertType, severity = 'high', steps = [], customerId = null } = req.body || {};
+    if (!name?.trim() || !alertType?.trim()) return res.status(400).json({ success: false, error: 'name and alertType are required.' });
+    if (!Array.isArray(steps) || !steps.length) return res.status(400).json({ success: false, error: 'steps must be a non-empty array.' });
+    const { rows } = await pool.query(
+      `INSERT INTO shield_incident_playbooks (name, alert_type, severity, steps, customer_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name.trim(), alertType.trim(), severity, JSON.stringify(steps.map(String)), customerId]
+    );
+    return res.status(201).json({ success: true, playbook: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield playbook create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create playbook.' });
+  }
+});
+
+router.get('/anomaly-thresholds', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { rows } = await pool.query(`SELECT * FROM shield_anomaly_thresholds ORDER BY alert_type, chain NULLS FIRST, address NULLS FIRST`);
+    return res.json({ success: true, thresholds: rows });
+  } catch (err) {
+    console.error('❌ Shield thresholds list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch anomaly thresholds.' });
+  }
+});
+
+router.post('/anomaly-thresholds', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { alertType, chain = null, address = null, threshold, windowBlocks = 10, severity = 'high' } = req.body || {};
+    if (!alertType?.trim() || !Number(threshold)) return res.status(400).json({ success: false, error: 'alertType and numeric threshold are required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO shield_anomaly_thresholds (alert_type, chain, address, threshold, window_blocks, severity)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [alertType.trim(), chain, address ? String(address).toLowerCase() : null, Number(threshold), Number(windowBlocks), severity]
+    );
+    return res.status(201).json({ success: true, threshold: rows[0] });
+  } catch (err) {
+    console.error('❌ Shield threshold create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create anomaly threshold.' });
+  }
+});
+
 router.get('/action-rules', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
@@ -258,6 +368,17 @@ router.post('/scan/security', async (req, res) => {
   } catch (err) {
     console.error('❌ Shield security scan trigger error:', err);
     return res.status(500).json({ success: false, error: 'Could not run Shield security scan.' });
+  }
+});
+
+router.post('/scan/vulnerabilities', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const result = await runShieldVulnerabilityScan();
+    return res.status(202).json({ success: true, result });
+  } catch (err) {
+    console.error('❌ Shield vulnerability scan trigger error:', err);
+    return res.status(500).json({ success: false, error: 'Could not run Shield vulnerability scan.' });
   }
 });
 

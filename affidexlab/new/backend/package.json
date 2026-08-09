@@ -17,6 +17,7 @@
     "risk:calibrate": "node src/scripts/calibrate-risk-scoring.js",
     "risk:backfill-graph": "node src/scripts/run-risk-graph-backfill.js",
     "shield:scan-security": "node src/scripts/run-shield-security-scan.js",
+    "shield:scan-vulnerabilities": "node src/scripts/run-shield-vulnerability-scan.js",
     "admin:create-key": "node src/scripts/create-admin-api-key.js",
     "org:create": "node src/scripts/create-organization.js"
   },

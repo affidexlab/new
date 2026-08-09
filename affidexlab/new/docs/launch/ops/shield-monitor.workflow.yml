@@ -25,6 +25,7 @@ jobs:
         run: |
           node src/services/shieldMonitor.js
           npm run shield:scan-security
+          npm run shield:scan-vulnerabilities
         env:
           NODE_ENV: production
           RPC_ARBITRUM: ${{ secrets.RPC_ARBITRUM }}

@@ -358,6 +358,20 @@ export const initializeDatabase = async () => {
     }
   }
 
+  try {
+    await runSqlFile('migrations/024_shield_full_saas.sql');
+    console.log('✅ Shield full SaaS migration applied successfully');
+  } catch (migrationError) {
+    if (['42P07', '42710', '42701'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {
+      console.log('ℹ️  Shield full SaaS migration already applied');
+    } else if (migrationError.code === 'ENOENT') {
+      console.log('ℹ️  Shield full SaaS migration file not found, skipping');
+    } else {
+      console.warn('⚠️  Migration warning:', migrationError.message);
+      throw migrationError;
+    }
+  }
+
   return true;
 };
 
