@@ -2,9 +2,41 @@ import express from 'express';
 import pool from '../../db/connection.js';
 import crypto from 'crypto';
 import { authorizeAdmin, createAdminKeyMaterial } from '../../services/adminAuth.js';
-import { createOrgApiKey, slugify, upsertOrgUser } from '../../services/orgAuth.js';
+import { createOrgApiKey, createToken, hashSecret, slugify, upsertOrgUser } from '../../services/orgAuth.js';
 
 const router = express.Router();
+
+// POST /v1/admin/org-login-link — founder/admin fallback that mints a one-time
+// customer login link directly, so login works even if SMTP delivery fails.
+router.post('/org-login-link', async (req, res) => {
+  try {
+    if (!(await authorizeAdmin(req, res, 'orgs:admin'))) return;
+    const { email } = req.body || {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'valid email is required.' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const userCheck = await pool.query(
+      `SELECT u.id FROM org_users u JOIN org_memberships m ON m.user_id = u.id
+       WHERE u.email = $1 AND u.status = 'active' AND m.status = 'active' LIMIT 1`,
+      [normalizedEmail]
+    );
+    if (!userCheck.rows.length) return res.status(404).json({ success: false, error: 'No active organization account found for this email.' });
+    const token = createToken('df_login');
+    await pool.query(
+      `INSERT INTO org_login_tokens (email, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+      [normalizedEmail, hashSecret(token)]
+    );
+    const frontendUrl = process.env.FRONTEND_URL || 'https://www.decaflow.xyz';
+    return res.status(201).json({
+      success: true,
+      loginUrl: `${frontendUrl}/login?token=${token}`,
+      expiresInMinutes: 15,
+      warning: 'One-time link. Anyone with this URL can log into the account — share it only with the account owner.'
+    });
+  } catch (err) {
+    console.error('❌ Org login link error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create login link.' });
+  }
+});
 
 
 router.get('/overview', async (req, res) => {

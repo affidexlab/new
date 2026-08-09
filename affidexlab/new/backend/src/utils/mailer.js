@@ -71,7 +71,7 @@ const buildText = (type, fields) => {
 export const sendEnquiryEmail = async ({ type, to, subject, fields, isConfirmation = false, isApiKey = false }) => {
   if (!process.env.SMTP_PASS) {
     console.warn(`⚠️  SMTP_PASS not set — skipping email to ${to}: "${subject}"`);
-    return;
+    return false;
   }
   try {
     const from = `"DecaFlow" <${process.env.SMTP_USER || 'decaflowsolutions@gmail.com'}>`;
@@ -81,7 +81,9 @@ export const sendEnquiryEmail = async ({ type, to, subject, fields, isConfirmati
       html: buildHtml(type, fields, isConfirmation, isApiKey),
     });
     console.log(`✅ Email sent: "${subject}" → ${to}`);
+    return true;
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
+    return false;
   }
 };

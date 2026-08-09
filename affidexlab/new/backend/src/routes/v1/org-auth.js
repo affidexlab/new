@@ -23,7 +23,7 @@ router.post('/magic-link/request', async (req, res) => {
       [normalizedEmail, hashSecret(token)]
     );
     const frontendUrl = process.env.FRONTEND_URL || 'https://www.decaflow.xyz';
-    await sendEnquiryEmail({
+    const sent = await sendEnquiryEmail({
       type: 'Org Login',
       to: normalizedEmail,
       subject: 'Your DecaFlow login link',
@@ -34,6 +34,9 @@ router.post('/magic-link/request', async (req, res) => {
       },
       isConfirmation: true
     });
+    if (!sent) {
+      return res.status(502).json({ success: false, error: 'Login link could not be emailed. Email delivery is not configured or failed — contact support or use the founder console login-link tool.' });
+    }
     return res.json({ success: true, message: 'Login link sent if the account is active.' });
   } catch (err) {
     console.error('❌ Org magic link request error:', err);
