@@ -11,7 +11,7 @@ export async function findOrgApiKey(apiKey, requiredScope = null) {
   if (!apiKey) return null;
   const { rows } = await pool.query(
     `SELECT k.id, k.organization_id, k.name, k.scopes, k.active, k.expires_at,
-            o.name AS organization_name, o.billing_email, o.status AS organization_status
+            o.name AS organization_name, o.billing_email, o.plan AS organization_plan, o.status AS organization_status
      FROM org_api_keys k
      JOIN organizations o ON o.id = k.organization_id
      WHERE k.key_hash = $1

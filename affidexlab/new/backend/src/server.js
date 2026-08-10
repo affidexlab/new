@@ -30,6 +30,9 @@ import adminRoutes from './routes/v1/admin.js';
 import orgRoutes from './routes/v1/orgs.js';
 import orgAuthRoutes from './routes/v1/org-auth.js';
 import productRoutes from './routes/v1/products.js';
+import { runShieldCheck } from './services/shieldMonitor.js';
+import { runShieldSecurityScan } from './services/shieldSecurityScanner.js';
+import { runShieldVulnerabilityScan } from './services/shieldVulnerabilityScanner.js';
 
 dotenv.config();
 
@@ -232,6 +235,42 @@ app.use((req, res) => {
 });
 
 const port = process.env.PORT || 3000;
+let shieldMonitorRunning = false;
+
+async function runShieldMonitorCycle(source = 'server-scheduler') {
+  if (shieldMonitorRunning) {
+    console.warn('⚠️  Shield monitor cycle skipped because a previous cycle is still running');
+    return;
+  }
+  shieldMonitorRunning = true;
+  const startedAt = Date.now();
+  try {
+    console.log(`🛡️  Shield monitor cycle started (${source})`);
+    await runShieldCheck();
+    await runShieldSecurityScan();
+    await runShieldVulnerabilityScan();
+    console.log(`✅ Shield monitor cycle completed in ${Date.now() - startedAt}ms`);
+  } catch (err) {
+    console.error('❌ Shield monitor cycle failed:', err.message);
+  } finally {
+    shieldMonitorRunning = false;
+  }
+}
+
+function startShieldMonitorScheduler() {
+  if (process.env.SHIELD_AUTO_MONITOR === 'false') {
+    console.log('ℹ️  Shield auto-monitor disabled by SHIELD_AUTO_MONITOR=false');
+    return;
+  }
+  if (!process.env.DATABASE_URL) {
+    console.log('ℹ️  Shield auto-monitor skipped because DATABASE_URL is not set');
+    return;
+  }
+  const intervalMs = Number(process.env.SHIELD_MONITOR_INTERVAL_MS || 15 * 60 * 1000);
+  setTimeout(() => runShieldMonitorCycle('startup'), 60 * 1000).unref?.();
+  setInterval(() => runShieldMonitorCycle('interval'), intervalMs).unref?.();
+  console.log(`✅ Shield auto-monitor scheduled every ${Math.round(intervalMs / 1000)} seconds`);
+}
 
 async function startServer() {
   try {
@@ -253,6 +292,7 @@ async function startServer() {
     console.log(`🌍 Environment: ${isSandbox ? 'Sandbox' : 'Production'}`);
     console.log(`🔒 CORS: ${origins.length} origins allowed`);
     console.log(`⏰ Started: ${new Date().toISOString()}`);
+    startShieldMonitorScheduler();
   });
 }
 

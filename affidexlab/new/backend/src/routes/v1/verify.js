@@ -14,6 +14,49 @@ const generateApiKey = () => `df_verify_${crypto.randomBytes(24).toString('hex')
 const planChecks = { Developer: 1000, Growth: 50000, Business: 500000, Enterprise: null };
 const PLAN_PRICES_USD = { Growth: 299, Business: 799 };
 
+function monthlyLimitForPlan(plan) {
+  const normalized = String(plan || 'Developer').trim();
+  if (/enterprise/i.test(normalized)) return null;
+  if (/business/i.test(normalized)) return planChecks.Business;
+  if (/growth/i.test(normalized)) return planChecks.Growth;
+  return planChecks.Developer;
+}
+
+async function resolveVerifyQuota({ orgKey = null, legacyKeyRow = null }) {
+  if (orgKey) {
+    const emails = Array.from(new Set([orgKey.billing_email].filter(Boolean)));
+    const { rows } = emails.length ? await pool.query(
+      `SELECT plan FROM verify_enquiries
+       WHERE email = ANY($1) AND status IN ('active','converted','paid_queued','paid_ready_to_scope','paid_pending_key')
+       ORDER BY created_at DESC LIMIT 1`,
+      [emails]
+    ).catch(() => ({ rows: [] })) : { rows: [] };
+    const plan = rows[0]?.plan || orgKey.organization_plan || 'Developer';
+    const limit = monthlyLimitForPlan(plan);
+    const { rows: usageRows } = await pool.query(
+      `SELECT COUNT(*)::int AS used
+       FROM risk_screenings
+       WHERE product = 'verify'
+         AND organization_id = $1
+         AND created_at >= date_trunc('month', NOW())`,
+      [orgKey.organization_id]
+    );
+    return { plan, limit, used: Number(usageRows[0]?.used || 0), organizationId: orgKey.organization_id };
+  }
+
+  const plan = legacyKeyRow?.plan || 'Developer';
+  const limit = monthlyLimitForPlan(plan);
+  const { rows: usageRows } = await pool.query(
+    `SELECT COUNT(*)::int AS used
+     FROM risk_screenings
+     WHERE product = 'verify'
+       AND api_key = $1
+       AND created_at >= date_trunc('month', NOW())`,
+    [legacyKeyRow.api_key]
+  );
+  return { plan, limit, used: Number(usageRows[0]?.used || 0), organizationId: null };
+}
+
 
 router.post('/nowpayments/create-invoice', async (req, res) => {
   try {
@@ -191,13 +234,23 @@ router.post('/check', async (req, res) => {
 
     const orgKey = await findOrgApiKey(apiKey, 'verify:check');
     let customerId = orgKey ? `org:${orgKey.organization_id}` : null;
+    let legacyKeyRow = null;
     if (!orgKey) {
       const keyResult = await pool.query(
-        `SELECT id, email, plan FROM verify_enquiries WHERE api_key = $1 AND api_key_issued = TRUE LIMIT 1`,
+        `SELECT id, email, plan, api_key FROM verify_enquiries WHERE api_key = $1 AND api_key_issued = TRUE LIMIT 1`,
         [apiKey]
       );
       if (!keyResult.rows.length) return res.status(401).json({ success: false, error: 'Invalid API key.' });
-      customerId = keyResult.rows[0].email;
+      legacyKeyRow = keyResult.rows[0];
+      customerId = legacyKeyRow.email;
+    }
+    const quota = await resolveVerifyQuota({ orgKey, legacyKeyRow });
+    if (quota.limit !== null && quota.used >= quota.limit) {
+      return res.status(402).json({
+        success: false,
+        error: `Monthly Verify quota exceeded for ${quota.plan}. Limit: ${quota.limit.toLocaleString()} checks/month.`,
+        quota: { plan: quota.plan, used: quota.used, limit: quota.limit, remaining: 0 },
+      });
     }
 
     const { address, chain = 'ethereum' } = req.body;
@@ -206,12 +259,12 @@ router.post('/check', async (req, res) => {
     const data = await screenWallet({ address: address.trim(), chain, customerId, purpose: 'verify-api' });
 
     await pool.query(
-      `INSERT INTO risk_screenings (product, api_key, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
-       VALUES ('verify', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [apiKey, data.address, data.chain, data.provider, data.riskScore, data.riskLevel, data.recommendation, data.sanctionsMatch, data.mixerExposure, data.darknetExposure, data.reportId, data.raw || data]
+      `INSERT INTO risk_screenings (product, api_key, organization_id, wallet_address, chain, provider, risk_score, risk_level, recommendation, sanctions_match, mixer_exposure, darknet_exposure, report_id, raw_response)
+       VALUES ('verify', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [apiKey, quota.organizationId, data.address, data.chain, data.provider, data.riskScore, data.riskLevel, data.recommendation, data.sanctionsMatch, data.mixerExposure, data.darknetExposure, data.reportId, data.raw || data]
     );
 
-    return res.json({ success: true, data });
+    return res.json({ success: true, data, quota: { plan: quota.plan, used: quota.used + 1, limit: quota.limit, remaining: quota.limit === null ? null : Math.max(quota.limit - quota.used - 1, 0) } });
   } catch (err) {
     console.error('❌ Verify check error:', err);
     return res.status(503).json({ success: false, error: err.message || 'Live screening failed.' });

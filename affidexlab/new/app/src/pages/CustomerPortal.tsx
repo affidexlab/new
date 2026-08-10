@@ -72,6 +72,8 @@ export default function CustomerPortal() {
   const [attAccredited, setAttAccredited] = useState(true);
   const [checkWallet, setCheckWallet] = useState("");
   const [checkResult, setCheckResult] = useState<any>(null);
+  const [newPolicy, setNewPolicy] = useState({ name: "Default AML policy", autoReviewScore: "70", autoRejectScore: "90", escalationEmail: "" });
+  const [newCase, setNewCase] = useState({ walletAddress: "", chain: "ethereum", assignedTo: "", priority: "normal", notes: "" });
   const [busy, setBusy] = useState("");
 
   const authHeaders = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
@@ -167,6 +169,21 @@ export default function CustomerPortal() {
     loadAccount(session);
   };
 
+  const exportCompliance = async () => {
+    if (!session) return;
+    try {
+      const res = await fetch(`${API_BASE}/v1/orgs/me/compliance/export`, { headers: authHeaders(session) });
+      if (!res.ok) throw new Error("Export failed.");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "decaflow-compliance-cases.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { setError("Could not export compliance cases."); }
+  };
+
   const logout = () => { localStorage.removeItem(SESSION_KEY); setSession(null); setAccount(null); };
 
   return (
@@ -225,10 +242,11 @@ export default function CustomerPortal() {
                   <p style={{ color: "#93C5FD", fontSize: "0.78rem", marginBottom: "1rem" }}>Founder test account — showing the same product dashboards selected in founder-control, matching paid-user access for those products.</p>
                 )}
 
-                {dashboard.products.verify?.access && (
-                  <DashSection title="Verify API">
-                    <Stat label="Plans" value={dashboard.products.verify.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
-                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+	                {dashboard.products.verify?.access && (
+	                  <DashSection title="Verify API">
+	                    <Stat label="Plans" value={dashboard.products.verify.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+	                    {dashboard.products.verify.quota && <Stat label="Monthly usage" value={`${dashboard.products.verify.quota.used.toLocaleString()} / ${dashboard.products.verify.quota.limit === null ? "unlimited" : dashboard.products.verify.quota.limit.toLocaleString()} checks`} />}
+	                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                       <input style={{ ...input, flex: 1, minWidth: "220px" }} placeholder="0x... wallet to screen" value={screenWalletAddr} onChange={e => setScreenWalletAddr(e.target.value)} />
                       <button style={btn} disabled={busy === "screen"} onClick={() => act("screen", "/v1/orgs/me/verify/screen", { address: screenWalletAddr }, (d) => { setScreenResult(d.data); setScreenWalletAddr(""); })}>
                         {busy === "screen" ? "Screening…" : "Run screening"}
@@ -344,11 +362,46 @@ export default function CustomerPortal() {
                   </DashSection>
                 )}
 
-                {dashboard.products.compliance?.access && (
-                  <DashSection title="Compliance">
-                    <Stat label="Engagements" value={dashboard.products.compliance.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
-                  </DashSection>
-                )}
+	                {dashboard.products.compliance?.access && (
+	                  <DashSection title="Compliance">
+	                    <Stat label="Engagements" value={dashboard.products.compliance.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
+	                    {dashboard.products.compliance.quota && <Stat label="Screening quota" value={`${dashboard.products.compliance.quota.used.toLocaleString()} / ${dashboard.products.compliance.quota.limit === null ? "unlimited" : dashboard.products.compliance.quota.limit.toLocaleString()} monthly checks`} />}
+	                    <h4 style={{ fontSize: "0.82rem", fontWeight: 700, margin: "0.8rem 0 0.45rem", color: "rgba(255,255,255,0.6)" }}>Configurable policies</h4>
+	                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+	                      <input style={{ ...input, flex: 2, minWidth: "170px" }} placeholder="Policy name" value={newPolicy.name} onChange={e => setNewPolicy(p => ({ ...p, name: e.target.value }))} />
+	                      <input style={{ ...input, width: "110px" }} type="number" placeholder="Review ≥" value={newPolicy.autoReviewScore} onChange={e => setNewPolicy(p => ({ ...p, autoReviewScore: e.target.value }))} />
+	                      <input style={{ ...input, width: "110px" }} type="number" placeholder="Reject ≥" value={newPolicy.autoRejectScore} onChange={e => setNewPolicy(p => ({ ...p, autoRejectScore: e.target.value }))} />
+	                      <input style={{ ...input, flex: 1, minWidth: "180px" }} placeholder="Escalation email" value={newPolicy.escalationEmail} onChange={e => setNewPolicy(p => ({ ...p, escalationEmail: e.target.value }))} />
+	                      <button style={btn} disabled={busy === "policy"} onClick={() => act("policy", "/v1/orgs/me/compliance/policies", { name: newPolicy.name, autoReviewScore: Number(newPolicy.autoReviewScore), autoRejectScore: Number(newPolicy.autoRejectScore), escalationEmail: newPolicy.escalationEmail || null }, () => setNewPolicy({ name: "Default AML policy", autoReviewScore: "70", autoRejectScore: "90", escalationEmail: "" }))}>Save policy</button>
+	                    </div>
+	                    <MiniTable
+	                      headers={["Policy", "Review", "Reject", "Escalation"]}
+	                      rows={(dashboard.products.compliance.policies || []).map((p: any) => [p.name, `≥ ${p.auto_review_score}`, `≥ ${p.auto_reject_score}`, p.escalation_email || "—"])}
+	                      empty="No policies yet — create one above."
+	                    />
+	                    <h4 style={{ fontSize: "0.82rem", fontWeight: 700, margin: "0.8rem 0 0.45rem", color: "rgba(255,255,255,0.6)" }}>Case management</h4>
+	                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+	                      <input style={{ ...input, flex: 1, minWidth: "190px" }} placeholder="0x... wallet" value={newCase.walletAddress} onChange={e => setNewCase(p => ({ ...p, walletAddress: e.target.value }))} />
+	                      <select style={{ ...input, width: "125px" }} value={newCase.chain} onChange={e => setNewCase(p => ({ ...p, chain: e.target.value }))}>{["ethereum", "arbitrum", "base", "polygon", "avalanche", "optimism"].map(c => <option key={c} value={c} style={{ background: "#1f2937" }}>{c}</option>)}</select>
+	                      <input style={{ ...input, flex: 1, minWidth: "170px" }} placeholder="Assign to email" value={newCase.assignedTo} onChange={e => setNewCase(p => ({ ...p, assignedTo: e.target.value }))} />
+	                      <select style={{ ...input, width: "115px" }} value={newCase.priority} onChange={e => setNewCase(p => ({ ...p, priority: e.target.value }))}>{["normal", "high", "urgent"].map(p => <option key={p} value={p} style={{ background: "#1f2937" }}>{p}</option>)}</select>
+	                      <button style={btn} disabled={busy === "case"} onClick={() => act("case", "/v1/orgs/me/compliance/cases", { ...newCase, assignedTo: newCase.assignedTo || null }, () => setNewCase({ walletAddress: "", chain: "ethereum", assignedTo: "", priority: "normal", notes: "" }))}>Open case</button>
+	                    </div>
+	                    <MiniTable
+	                      headers={["Wallet", "Score", "Status", "Assigned", "Escalation"]}
+	                      rows={(dashboard.products.compliance.cases || []).map((c: any) => [short(c.wallet_address), `${c.risk_score ?? "—"} ${c.risk_level || ""}`, c.status, c.assigned_to || "unassigned", c.escalation_state || "none"])}
+	                      empty="No compliance cases yet — open one above."
+	                    />
+	                    {(dashboard.products.compliance.cases || []).slice(0, 5).map((c: any) => (
+	                      <div key={c.id} style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+	                        <button style={{ ...btn, padding: "0.3rem 0.65rem", fontSize: "0.72rem" }} onClick={() => act(`approve${c.id}`, `/v1/orgs/me/compliance/cases/${c.id}`, { status: "closed", decision: "approved" })}>Approve</button>
+	                        <button style={{ ...btn, padding: "0.3rem 0.65rem", fontSize: "0.72rem", background: "rgba(239,68,68,0.2)", color: "#fca5a5" }} onClick={() => act(`reject${c.id}`, `/v1/orgs/me/compliance/cases/${c.id}`, { status: "closed", decision: "rejected" })}>Reject</button>
+	                        <button style={{ ...btn, padding: "0.3rem 0.65rem", fontSize: "0.72rem", background: "rgba(245,158,11,0.2)", color: "#fcd34d" }} onClick={() => act(`esc${c.id}`, `/v1/orgs/me/compliance/cases/${c.id}/escalate`, { escalatedTo: c.assigned_to || account.email, reason: "Escalated from customer dashboard" })}>Escalate</button>
+	                      </div>
+	                    ))}
+	                    <button style={{ ...btn, padding: "0.45rem 0.8rem", fontSize: "0.78rem", background: "rgba(59,130,246,0.18)", color: "#93C5FD" }} onClick={exportCompliance}>Export regulator CSV</button>
+	                  </DashSection>
+	                )}
 
                 {dashboard.products.audit?.access && (
                   <DashSection title="Security Audit">
