@@ -99,9 +99,9 @@ function getPageFromLocation(): string {
   }
   if (path.startsWith("/login") || path.startsWith("/account") || hash === "#login" || hash === "#account") {
     return "customer-portal";
+  }
   if (path.startsWith("/kyc-admin") || hash === "#kyc-admin") {
     return "kyc-admin";
-  }
   }
   return "home";
 }
