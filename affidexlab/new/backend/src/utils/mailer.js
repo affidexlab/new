@@ -2,15 +2,19 @@ import nodemailer from 'nodemailer';
 
 let _transporter = null;
 
+const getSmtpPass = () => process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || '';
+
 const getTransporter = () => {
   if (_transporter) return _transporter;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const secure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465;
   _transporter = nodemailer.createTransport({
-    host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-    port:   Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port,
+    secure,
     auth: {
       user: process.env.SMTP_USER || 'decaflowsolutions@gmail.com',
-      pass: process.env.SMTP_PASS,
+      pass: getSmtpPass(),
     },
     // Found alongside the Guardian audit's MEDIUM "TLS Certificate Verification
     // Disabled" finding in db/connection.js — same issue (rejectUnauthorized: false),
@@ -69,8 +73,8 @@ const buildText = (type, fields) => {
 };
 
 export const sendEnquiryEmail = async ({ type, to, subject, fields, isConfirmation = false, isApiKey = false }) => {
-  if (!process.env.SMTP_PASS) {
-    console.warn(`⚠️  SMTP_PASS not set — skipping email to ${to}: "${subject}"`);
+  if (!getSmtpPass()) {
+    console.warn(`⚠️  SMTP credentials not set — skipping email to ${to}: "${subject}"`);
     return false;
   }
   try {

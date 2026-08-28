@@ -21,15 +21,15 @@ const formatDate = (value?: string) => value ? new Date(value).toLocaleDateStrin
 
 function DashSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "1rem", marginTop: "1rem" }}>
-      <h3 style={{ fontSize: "0.92rem", fontWeight: 700, marginBottom: "0.7rem", color: "#93C5FD" }}>{title}</h3>
+    <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(147,197,253,0.2)", borderRadius: 14, padding: "1rem", marginTop: "0.9rem" }}>
+      <h3 style={{ fontSize: "0.98rem", fontWeight: 800, marginBottom: "0.8rem", color: "#93C5FD", letterSpacing: "0.01em" }}>{title}</h3>
       {children}
     </div>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
-  return <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.6)", margin: "0 0 0.6rem" }}><strong style={{ color: "#fff" }}>{label}:</strong> {value}</p>;
+  return <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.72)", margin: "0 0 0.55rem", lineHeight: 1.45 }}><strong style={{ color: "#fff" }}>{label}:</strong> {value}</p>;
 }
 
 function MiniTable({ headers, rows, empty }: { headers: string[]; rows: string[][]; empty: string }) {
@@ -55,6 +55,7 @@ export default function CustomerPortal() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [sendingLink, setSendingLink] = useState(false);
   const [account, setAccount] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [keys, setKeys] = useState<any[]>([]);
@@ -136,8 +137,10 @@ export default function CustomerPortal() {
   useEffect(() => { if (session) loadAccount(session); }, [session]);
 
   const requestLink = async () => {
+    if (sendingLink) return;
     setStatus(""); setError("");
     if (!email.includes("@")) { setError("Enter the email on your DecaFlow account."); return; }
+    setSendingLink(true);
     try {
       const res = await fetch(`${API_BASE}/v1/org-auth/magic-link/request`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }),
@@ -146,6 +149,7 @@ export default function CustomerPortal() {
       if (data.success) setStatus("Login link sent. Check your email — the link expires in 15 minutes.");
       else setError(data.error || "Could not send login link.");
     } catch { setError("Could not reach the server."); }
+    setSendingLink(false);
   };
 
   const createKey = async () => {
@@ -188,25 +192,36 @@ export default function CustomerPortal() {
 
   return (
     <div style={{ background: "#0A0E27", color: "#fff", minHeight: "100vh", fontFamily: "Inter,system-ui,sans-serif" }}>
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.1rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <style>{`
+        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 0.9rem; }
+        .portal-card { text-decoration: none; color: #fff; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem; transition: all .2s ease; }
+        .portal-card:hover { border-color: rgba(59,130,246,0.5); transform: translateY(-1px); }
+        @media (max-width: 768px) {
+          .portal-nav { padding: 0.9rem 1rem !important; }
+          .portal-main { padding: 1.6rem 0.9rem 3rem !important; }
+          .portal-login { margin: 1rem auto !important; }
+          .portal-login-row { flex-direction: column !important; }
+        }
+      `}</style>
+      <nav className="portal-nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.1rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <a href="/" style={{ textDecoration: "none" }}>
           <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.025em" }}>Deca<span style={{ color: "#3B82F6" }}>Flow</span></span>
         </a>
         {session && <button onClick={logout} style={{ ...btn, background: "rgba(255,255,255,0.08)" }}>Sign out</button>}
       </nav>
 
-      <main style={{ maxWidth: "860px", margin: "0 auto", padding: "3rem 1.25rem 5rem" }}>
+      <main className="portal-main" style={{ maxWidth: "1100px", margin: "0 auto", padding: "2.4rem 1.25rem 5rem" }}>
         {!session && (
-          <div style={{ maxWidth: "460px", margin: "3rem auto" }}>
+          <div className="portal-login" style={{ maxWidth: "520px", margin: "2rem auto", ...card }}>
             <h1 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: "0.5rem" }}>Customer login</h1>
             <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
               Enter your account email and we'll send a secure one-time login link. No passwords.
             </p>
             {verifying && <p style={{ color: "#93C5FD", fontSize: "0.88rem" }}>Verifying your login link…</p>}
-            <div style={{ display: "flex", gap: "0.6rem" }}>
+            <div className="portal-login-row" style={{ display: "flex", gap: "0.6rem" }}>
               <input style={input} type="email" placeholder="you@company.com" value={email}
                 onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && requestLink()} />
-              <button style={btn} onClick={requestLink}>Send link</button>
+              <button style={{ ...btn, opacity: sendingLink ? 0.7 : 1, cursor: sendingLink ? "not-allowed" : "pointer" }} onClick={requestLink} disabled={sendingLink}>{sendingLink ? "Sending..." : "Send link"}</button>
             </div>
             {status && <p style={{ color: "#86efac", fontSize: "0.85rem", marginTop: "1rem" }}>{status}</p>}
             {error && <p style={{ color: "#fca5a5", fontSize: "0.85rem", marginTop: "1rem" }}>{error}</p>}
@@ -222,11 +237,11 @@ export default function CustomerPortal() {
 
             <div style={card}>
               <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "1rem" }}>Your products</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: "0.9rem" }}>
+              <div className="portal-grid">
                 {PRODUCT_LINKS.map(p => (
-                  <a key={p.name} href={p.href} style={{ textDecoration: "none", color: "#fff", background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "1rem" }}>
+                  <a key={p.name} href={p.href} className="portal-card">
                     <div style={{ fontWeight: 700, marginBottom: "0.3rem" }}>{p.name}</div>
-                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", lineHeight: 1.55 }}>{p.desc}</div>
+                    <div style={{ color: "rgba(255,255,255,0.56)", fontSize: "0.82rem", lineHeight: 1.55 }}>{p.desc}</div>
                   </a>
                 ))}
               </div>
