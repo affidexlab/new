@@ -19,12 +19,16 @@ const btn: React.CSSProperties = { background: "#3B82F6", color: "#fff", padding
 const short = (a: string) => (a && a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-4)}` : a || "—");
 const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "No expiry";
 
-function DashSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DashSection({ title, icon, subtitle, children }: { title: string; icon: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(147,197,253,0.2)", borderRadius: 14, padding: "1rem", marginTop: "0.9rem" }}>
-      <h3 style={{ fontSize: "0.98rem", fontWeight: 800, marginBottom: "0.8rem", color: "#93C5FD", letterSpacing: "0.01em" }}>{title}</h3>
+    <section style={{ background: "linear-gradient(180deg, rgba(19,28,56,0.9), rgba(10,14,39,0.9))", border: "1px solid rgba(147,197,253,0.22)", borderRadius: 16, padding: "1rem", marginTop: "0.9rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", marginBottom: "0.35rem" }}>
+        <span style={{ fontSize: "1rem" }}>{icon}</span>
+        <h3 style={{ fontSize: "0.98rem", fontWeight: 800, color: "#bfdbfe", letterSpacing: "0.01em", margin: 0 }}>{title}</h3>
+      </div>
+      <p style={{ margin: "0 0 0.8rem", color: "rgba(255,255,255,0.55)", fontSize: "0.8rem", lineHeight: 1.5 }}>{subtitle}</p>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -256,9 +260,23 @@ export default function CustomerPortal() {
                 {dashboard.isFounderTest && (
                   <p style={{ color: "#93C5FD", fontSize: "0.78rem", marginBottom: "1rem" }}>Founder test account — showing the same product dashboards selected in founder-control, matching paid-user access for those products.</p>
                 )}
+                <div className="portal-grid" style={{ marginBottom: "0.8rem" }}>
+                  <div className="portal-card" style={{ cursor: "default" }}>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Active products</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.25rem" }}>{Object.values(dashboard.products || {}).filter((p: any) => p?.access).length}</div>
+                  </div>
+                  <div className="portal-card" style={{ cursor: "default" }}>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Team members</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.25rem" }}>{members.length}</div>
+                  </div>
+                  <div className="portal-card" style={{ cursor: "default" }}>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Active API keys</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, marginTop: "0.25rem" }}>{keys.filter(k => k.active).length}</div>
+                  </div>
+                </div>
 
 	                {dashboard.products.verify?.access && (
-	                  <DashSection title="Verify API">
+	                  <DashSection title="Verify API" icon="🛡️" subtitle="Run live wallet screenings, see risk decisions, and track monthly usage.">
 	                    <Stat label="Plans" value={dashboard.products.verify.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
 	                    {dashboard.products.verify.quota && <Stat label="Monthly usage" value={`${dashboard.products.verify.quota.used.toLocaleString()} / ${dashboard.products.verify.quota.limit === null ? "unlimited" : dashboard.products.verify.quota.limit.toLocaleString()} checks`} />}
 	                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
@@ -281,7 +299,7 @@ export default function CustomerPortal() {
                 )}
 
                 {dashboard.products.shield?.access && (
-                  <DashSection title="Shield Monitoring">
+                  <DashSection title="Shield Monitoring" icon="🚨" subtitle="Monitor contracts, review alerts, and track incidents in one place.">
                     <Stat label="Watched contracts" value={dashboard.products.shield.contracts.length ? dashboard.products.shield.contracts.map((c: any) => `${c.chain}:${short(c.address)}`).join(", ") : "None yet — add your first contract below"} />
                     <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                       <select style={{ ...input, width: "130px" }} value={newContract.chain} onChange={e => setNewContract(p => ({ ...p, chain: e.target.value }))}>
@@ -307,7 +325,7 @@ export default function CustomerPortal() {
                 )}
 
                 {dashboard.products.agents?.access && (
-                  <DashSection title="Autopilot (Agentic Compliance)">
+                  <DashSection title="Autopilot (Agentic Compliance)" icon="🤖" subtitle="Create compliance rules and process queued decisions with accountability.">
                     <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                       <input style={{ ...input, flex: 2, minWidth: "170px" }} placeholder="Rule name" value={newRule.name} onChange={e => setNewRule(p => ({ ...p, name: e.target.value }))} />
                       <span style={{ alignSelf: "center", fontSize: "0.8rem", color: "rgba(255,255,255,0.5)" }}>risk score</span>
@@ -343,7 +361,7 @@ export default function CustomerPortal() {
                 )}
 
                 {dashboard.products.institutional?.access && (
-                  <DashSection title="Institutional / RWA">
+                  <DashSection title="Institutional / RWA" icon="🏛️" subtitle="Manage attestations and run investor eligibility checks for tokenized assets.">
                     <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                       <input style={{ ...input, flex: 1, minWidth: "200px" }} placeholder="0x... investor wallet to attest" value={attWallet} onChange={e => setAttWallet(e.target.value)} />
                       <label style={{ alignSelf: "center", fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", display: "flex", gap: "0.3rem", alignItems: "center" }}>
@@ -378,7 +396,7 @@ export default function CustomerPortal() {
                 )}
 
 	                {dashboard.products.compliance?.access && (
-	                  <DashSection title="Compliance">
+	                  <DashSection title="Compliance" icon="📋" subtitle="Configure policies, manage cases, and export regulator-ready evidence.">
 	                    <Stat label="Engagements" value={dashboard.products.compliance.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
 	                    {dashboard.products.compliance.quota && <Stat label="Screening quota" value={`${dashboard.products.compliance.quota.used.toLocaleString()} / ${dashboard.products.compliance.quota.limit === null ? "unlimited" : dashboard.products.compliance.quota.limit.toLocaleString()} monthly checks`} />}
 	                    <h4 style={{ fontSize: "0.82rem", fontWeight: 700, margin: "0.8rem 0 0.45rem", color: "rgba(255,255,255,0.6)" }}>Configurable policies</h4>
@@ -419,7 +437,7 @@ export default function CustomerPortal() {
 	                )}
 
                 {dashboard.products.audit?.access && (
-                  <DashSection title="Security Audit">
+                  <DashSection title="Security Audit" icon="🔍" subtitle="Track your audit engagement status and next delivery milestones.">
                     <Stat label="Engagements" value={dashboard.products.audit.records.map((r: any) => `${r.plan} (${r.status})`).join(", ") || "—"} />
                   </DashSection>
                 )}

@@ -2,7 +2,10 @@ import nodemailer from 'nodemailer';
 
 let _transporter = null;
 
-const getSmtpPass = () => process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || '';
+const getSmtpPass = () => {
+  const raw = process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || '';
+  return String(raw).replace(/\s+/g, '');
+};
 
 const getTransporter = () => {
   if (_transporter) return _transporter;
@@ -13,9 +16,12 @@ const getTransporter = () => {
     port,
     secure,
     auth: {
-      user: process.env.SMTP_USER || 'decaflowsolutions@gmail.com',
+      user: (process.env.SMTP_USER || 'decaflowsolutions@gmail.com').trim(),
       pass: getSmtpPass(),
     },
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 12000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 12000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
     // Found alongside the Guardian audit's MEDIUM "TLS Certificate Verification
     // Disabled" finding in db/connection.js — same issue (rejectUnauthorized: false),
     // just not in the audit's file list since it's SMTP, not the DB connection.
