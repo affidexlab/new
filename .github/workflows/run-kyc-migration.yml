@@ -29,8 +29,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          echo "Running KYC database migration..."
-          psql "$DATABASE_URL" -f affidexlab/new/backend/src/db/migrations/018_decaflow_kyc_tables.sql
+          echo "Running KYC database migration (fix version - drops and recreates)..."
+          psql "$DATABASE_URL" -f affidexlab/new/backend/src/db/migrations/018_decaflow_kyc_tables_fix.sql
           echo "✅ KYC migration complete!"
 
       - name: Verify tables created
