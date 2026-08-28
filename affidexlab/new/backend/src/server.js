@@ -26,6 +26,7 @@ import institutionalRoutes from './routes/v1/institutional.js';
 import agentsRoutes from './routes/v1/agents.js';
 import partnersRoutes from './routes/v1/partners.js';
 import riskRoutes from './routes/v1/risk.js';
+import kycRoutes from './routes/v1/kyc.js';
 import adminRoutes from './routes/v1/admin.js';
 import orgRoutes from './routes/v1/orgs.js';
 import orgAuthRoutes from './routes/v1/org-auth.js';
@@ -205,6 +206,7 @@ app.use('/v1/verify', verifyRoutes);         // Verify API signups + public prev
 app.use('/v1/shield', shieldRoutes);         // Shield early-access waitlist
 app.use('/v1/institutional', institutionalRoutes);  // Institutional/RWA waitlist + payments
 app.use('/v1/agents', agentsRoutes);         // Compliance workflow rules + human review queue
+app.use('/v1/kyc', kycRoutes);         // DecaFlow native KYC/KYB/Accreditation
 app.use('/v1/partners', partnersRoutes);     // Partner dashboard + usage stats
 app.use('/v1/risk', riskRoutes);             // DecaFlow-owned risk intelligence graph/admin
 app.use('/v1/admin', adminRoutes);            // Scoped admin keys and audit logs

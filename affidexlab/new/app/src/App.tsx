@@ -25,6 +25,7 @@ import Agents from "./pages/Agents";
 import CustomerPortal from "./pages/CustomerPortal";
 import { TransactionEventsProvider } from "./contexts/TransactionEventsContext";
 import ProductGate from "./components/ProductGate";
+import KycAdmin from "./pages/KycAdmin";
 
 function getPageFromLocation(): string {
   const path = window.location.pathname;
@@ -98,6 +99,9 @@ function getPageFromLocation(): string {
   }
   if (path.startsWith("/login") || path.startsWith("/account") || hash === "#login" || hash === "#account") {
     return "customer-portal";
+  if (path.startsWith("/kyc-admin") || hash === "#kyc-admin") {
+    return "kyc-admin";
+  }
   }
   return "home";
 }
@@ -149,6 +153,7 @@ export default function App() {
       {currentPage === "agents" && <ProductGate productKey="agents"><Agents /></ProductGate>}
       {currentPage === "issuer-portal" && <ProductGate productKey="institutional"><IssuerPortal /></ProductGate>}
       {currentPage === "customer-portal" && <CustomerPortal />}
+      {currentPage === "kyc-admin" && <KycAdmin />}
     </TransactionEventsProvider>
   );
 }

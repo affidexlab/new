@@ -6,7 +6,7 @@ import ProductNav from "../components/ProductNav";
 const FEATURES = [
   { icon: "🪪", title: "On-Chain Identity Registry", desc: "ERC-3643 (T-REX) identity registry — wallets carry a verified compliance status without exposing personal data on a public ledger." },
   { icon: "⚖️", title: "Programmable Transfer Compliance", desc: "Every transfer checks jurisdiction, investor limits, and whitelist status before it settles — restrictions enforced by the contract itself, not a policy document." },
-  { icon: "🔐", title: "Zero-Knowledge KYC (Roadmap)", desc: "Investors prove they meet jurisdiction and accreditation requirements without your platform ever storing their raw PII on-chain." },
+  { icon: "🔐", title: "DecaFlow Native KYC & Accreditation", desc: "DecaFlow is your KYC/KYB/accreditation provider — no third-party dependency. Document verification, liveness checks, accredited investor verification, and on-chain identity attestations all handled internally." },
   { icon: "🧯", title: "Court-Ordered Freeze / Recovery", desc: "Multi-sig controlled forced-transfer capability for legitimate legal orders — a standard, often regulator-required feature of compliant security tokens, not a backdoor." },
   { icon: "📄", title: "Regulator-Ready Reporting", desc: "Pull on-chain holder and transfer data into exportable reports formatted for the regulators relevant to your offering." },
   { icon: "🏗️", title: "Issuer Portal (Roadmap)", desc: "A dashboard for whitelisting, holder distribution, and compliance health — planned for teams past initial integration." },
