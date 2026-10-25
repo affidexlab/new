@@ -598,3 +598,65 @@ Operator runbook (Institutional Lead): review each issuer's engagement before gr
 **Audit** — manual security review engagements.
 Customer flow: checkout a package → scoping call → audit delivery → optional Shield upsell.
 Operator runbook: respond to `audit_enquiries` with `paid_ready_to_scope` status within 24h.
+
+---
+
+## Live main update — enterprise launch hardening and Institutional/RWA readiness
+
+Current live commits after the original `84e4c17` launch-doc baseline include production-readiness hardening through `d5a88fd9`.
+
+### GitHub Actions and production proof
+
+The recurring production workflows are installed under `.github/workflows`:
+
+- `production-risk-ingestion.yml` runs OFAC, public sanctions, public scam/phishing feeds, curated labels, graph backfill, and calibration every 6 hours or manually.
+- `shield-monitor.yml` runs Shield monitor, security scan, and vulnerability scan every 15 minutes or manually.
+
+Enablement and proof instructions are maintained in `docs/launch/operations/GITHUB_ACTIONS_ENABLEMENT.md`. After manual or scheduled runs, production evidence should be pulled from GitHub Actions run history, `/v1/risk/coverage`, `/v1/shield/proof`, and `/v1/institutional/ops/readiness`.
+
+### Compliance case-management suite
+
+Compliance is no longer just a lightweight dashboard. The backend now includes DecaFlow-owned enterprise case-management primitives:
+
+- Configurable policies and case creation/update flows.
+- Analyst assignment, priority, decision, status, escalation, and SLA fields.
+- Case comments.
+- Evidence records with hashes/URIs/metadata.
+- Hash-backed audit events for case changes, comments, and evidence.
+- Case timeline API.
+- Audit-event API.
+- Report templates.
+- CSV regulator export.
+
+The remaining difference between “code-ready” and “operationally mature” is production usage: real customer cases, retained evidence, analyst workflows, and exported reports.
+
+### Shield production proof
+
+Shield now has two proof layers:
+
+- Scheduler/run layer: backend startup scheduler records monitor runs in `shield_monitor_runs`; GitHub Actions also runs the monitor every 15 minutes.
+- Proof endpoint: `GET /v1/shield/proof` returns scheduler config, RPC configuration flags, recent runs, monitored contracts, alert rollups, incident rollups, vulnerability rollups, and SLA targets.
+
+This is the source of truth for proving scheduled monitor runs, alert delivery readiness, RPC configuration, real monitored contracts, and response SLAs.
+
+### Security Audit launch operations
+
+Security Audit launch readiness is tracked in `docs/launch/operations/SECURITY_AUDIT_LAUNCH_RUNBOOK.md` and `audit_delivery_templates`. DecaFlow can sell audits once every engagement follows: signed scope, frozen commit hash, severity taxonomy, manual review checklist, automated test review, draft QA, client remediation window, fix verification, final PDF, and Shield handoff.
+
+### Institutional/RWA DecaFlow-owned stack
+
+Institutional/RWA now has DecaFlow-owned backend infrastructure for:
+
+- Identity attestations.
+- Investor eligibility checks.
+- Contract template catalog.
+- Operator runbooks.
+- Safe/multisig admin records.
+- Issuer onboarding gates.
+- Evidence retention records.
+- Regulatory report records.
+- Deployment records for identity registry, compliance rules, risk oracle, RWA token, and admin Safe.
+
+The proof endpoint is `GET /v1/institutional/ops/readiness`. It returns gate-by-gate readiness for identity registry data, compliance rules, risk oracle, operator runbooks, Safe admin, issuer onboarding, evidence retention, investor checks, reporting, and live deployments.
+
+Important: the platform infrastructure is now code-ready, but a specific RWA product is only fully launch-ready after production records exist: verified Safe, approved issuer onboarding, live deployed contract addresses, retained evidence, investor checks, and at least one generated report.

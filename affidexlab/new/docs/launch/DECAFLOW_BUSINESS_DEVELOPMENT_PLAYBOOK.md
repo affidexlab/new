@@ -402,3 +402,51 @@ Founder test accounts created from founder-control are special preview accounts.
 - Route paid enquiries to Compliance Ops same day; nothing paid waits more than 24 hours.
 - For Shield pilots, collect: chain, addresses, labels, admin addresses, alert recipients, ABIs, critical events.
 - For Institutional, position DecaFlow as the compliance layer for the issuer's counsel-approved offering — never as the issuer's lawyer.
+
+---
+
+## Live main update — sales positioning after launch hardening
+
+### Updated proof-backed sales claims
+
+BD can now say:
+
+- “DecaFlow has scheduled production ingestion and Shield monitoring workflows in GitHub Actions.”
+- “Compliance includes a customer case-management workflow with policies, cases, assignment, escalation, evidence, audit trail, report templates, and exports.”
+- “Shield has an operational proof endpoint that shows recent monitor runs, monitored contracts, alerts, incidents, vulnerability findings, configured RPCs, and SLA targets.”
+- “Institutional/RWA includes DecaFlow-owned infrastructure for identity attestations, investor checks, operator runbooks, Safe/multisig admin records, issuer onboarding, evidence retention, regulatory reports, and deployment records.”
+
+### Claims BD should still avoid
+
+Do not say:
+
+- “We already match Chainalysis/TRM coverage.” Say DecaFlow owns the engine and is expanding coverage through scheduled ingestion, graph data, curated labels, and analyst/customer feedback.
+- “Every RWA issuer can launch immediately.” Say DecaFlow owns the infrastructure, then each issuer must pass counsel/KYC/Safe/deployment/review gates.
+- “Shield prevents exploits.” Say Shield monitors contracts, creates alerts/incidents, runs scans, and supports response workflows.
+- “99.9% SLA is proven” unless the operations team has live uptime/response evidence.
+
+### Updated Institutional/RWA pitch
+
+> DecaFlow Institutional gives issuers a DecaFlow-owned compliance operations layer: identity attestations, investor checks, risk-oracle records, Safe/multisig administration records, evidence retention, reporting, and deployment tracking. We do not replace issuer counsel or regulated KYC evidence; we operationalize those requirements into an auditable on-chain/off-chain workflow.
+
+### Updated sales qualification checklist
+
+For Institutional/RWA prospects, ask for:
+
+1. Issuer entity and jurisdiction.
+2. Asset type and investor geography.
+3. Counsel-approved transfer restrictions or offering rules.
+4. KYC/KYB/accreditation evidence source.
+5. Required chains.
+6. Safe/multisig owner list and threshold.
+7. Reporting/export requirements.
+8. Target launch date and post-deployment monitoring needs.
+
+### Sales readiness proof to request internally
+
+Before telling a customer a product is fully live, BD should ask ops for the relevant proof:
+
+- Verify/Compliance: `/v1/risk/coverage` and sample authenticated check/case evidence.
+- Shield: `/v1/shield/proof` plus GitHub Actions run URLs.
+- Institutional/RWA: `/v1/institutional/ops/readiness` for that issuer.
+- Audit: delivery calendar, assigned auditor, signed scope, and report template.

@@ -260,3 +260,31 @@ Founder-created test accounts are the only exception to paid-product gating. New
 ### On Pivot 4 honesty
 
 Autopilot delivers agentic compliance workflows with human-approved automation today. It does not yet auto-freeze transactions from predictive models — that capability is deliberately gated until the predictive models, legal posture, and customer risk ownership are in place. Sell the accountability story, not a hollow autonomy claim.
+
+---
+
+## Live main update — what is now stronger
+
+Since the original launch brief baseline, DecaFlow has added the missing launch-readiness infrastructure for Compliance, Shield, Security Audit operations, and Institutional/RWA proof.
+
+### What DecaFlow can now credibly say
+
+- DecaFlow owns the risk-screening and compliance workflow infrastructure rather than only wrapping third-party tools.
+- Production ingestion and Shield monitoring are installed as GitHub Actions, so operations can run on a schedule and produce logs.
+- Compliance now has enterprise case-management foundations: policies, cases, assignments, escalations, evidence, audit events, templates, exports, and timelines.
+- Shield now has a proof endpoint that shows whether monitoring is actually running, which RPCs are configured, what contracts are monitored, and what alerts/incidents/findings exist.
+- Institutional/RWA now has DecaFlow-owned infrastructure for identity records, investor checks, operator runbooks, Safe/multisig admin records, issuer onboarding, evidence retention, reporting, and deployment records.
+
+### What still requires real production evidence
+
+The code is ready to support these operations, but public “100% launch ready” claims should be tied to live production proof:
+
+- Recent successful GitHub Actions runs.
+- Non-empty risk coverage data.
+- Shield proof showing monitored real customer contracts and recent successful runs.
+- Institutional/RWA readiness showing verified Safe admin, approved issuer onboarding, deployment addresses, retained evidence, investor checks, and generated reports.
+- Security Audit delivery capacity: named reviewers, report QA, delivery calendar, and client handoff process.
+
+### CEO launch position
+
+The strongest accurate position is: DecaFlow has moved from beta-only infrastructure toward an owned production platform. Verify, Compliance, Shield, Audit, and Autopilot can be sold with proof-backed claims. Institutional/RWA has the owned infrastructure in code, but each issuer launch must still pass legal, KYC/accreditation, Safe, deployment, and review gates before DecaFlow should say that issuer is live.
