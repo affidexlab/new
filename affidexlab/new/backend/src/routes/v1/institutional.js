@@ -490,3 +490,101 @@ router.post('/kyc/applicants', async (req, res) => {
     return res.status(503).json({ success: false, error: err.message || 'Could not create KYC applicant.' });
   }
 });
+
+router.get('/ops/readiness', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:check'))) return;
+    const orgId = req.issuer.organizationId;
+    const [runbooks, safes, onboarding, retention, reports, deployments, attestations, checks] = await Promise.all([
+      pool.query(`SELECT * FROM institutional_operator_runbooks WHERE active = true AND (organization_id IS NULL OR organization_id = $1) ORDER BY organization_id NULLS FIRST, runbook_key`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT * FROM institutional_safe_admins WHERE organization_id = $1 ORDER BY created_at DESC`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT * FROM institutional_issuer_onboarding WHERE organization_id = $1 ORDER BY created_at DESC`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT * FROM institutional_evidence_retention WHERE organization_id = $1 ORDER BY retention_until DESC LIMIT 100`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT * FROM institutional_regulatory_reports WHERE organization_id = $1 ORDER BY created_at DESC LIMIT 50`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT * FROM institutional_deployments WHERE organization_id = $1 ORDER BY created_at DESC`, [orgId]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT COUNT(*)::int AS count FROM institutional_identity_attestations WHERE organization_id = $1 AND revoked_at IS NULL`, [orgId]).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(`SELECT COUNT(*)::int AS count, MAX(created_at) AS latest FROM institutional_investor_checks WHERE organization_id = $1`, [orgId]).catch(() => ({ rows: [{ count: 0, latest: null }] })),
+    ]);
+    const gates = {
+      identityRegistry: attestations.rows[0]?.count > 0,
+      complianceRules: deployments.rows.some(d => d.compliance_rules),
+      riskOracle: deployments.rows.some(d => d.risk_oracle),
+      operatorRunbooks: runbooks.rows.length >= 3,
+      safeMultisigAdmin: safes.rows.some(s => s.status === 'verified' && Number(s.threshold) > 1),
+      issuerOnboarding: onboarding.rows.some(o => ['approved','deployment-ready','live'].includes(o.stage)),
+      evidenceRetention: retention.rows.length > 0,
+      investorChecks: checks.rows[0]?.count > 0,
+      reporting: reports.rows.length > 0,
+      deployedContracts: deployments.rows.some(d => d.status === 'live'),
+    };
+    return res.json({ success: true, ready: Object.values(gates).every(Boolean), gates, runbooks: runbooks.rows, safes: safes.rows, onboarding: onboarding.rows, retention: retention.rows, reports: reports.rows, deployments: deployments.rows, investorChecks: checks.rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional readiness error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch Institutional readiness.' });
+  }
+});
+
+router.post('/ops/safe-admins', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:admin'))) return;
+    const { chain = 'ethereum', safeAddress, threshold, owners = [], purpose = 'rwa-admin', status = 'pending-verification', evidence = null } = req.body || {};
+    if (!safeAddress || !ethers.isAddress(safeAddress)) return res.status(400).json({ success: false, error: 'A valid safeAddress is required.' });
+    if (!Number(threshold) || Number(threshold) < 2) return res.status(400).json({ success: false, error: 'threshold must be at least 2.' });
+    const { rows } = await pool.query(`INSERT INTO institutional_safe_admins (organization_id, chain, safe_address, threshold, owners, purpose, status, evidence_hash, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (organization_id, chain, lower(safe_address)) DO UPDATE SET threshold = EXCLUDED.threshold, owners = EXCLUDED.owners, purpose = EXCLUDED.purpose, status = EXCLUDED.status, evidence_hash = EXCLUDED.evidence_hash, updated_at = NOW() RETURNING *`, [req.issuer.organizationId, chain, safeAddress, Number(threshold), JSON.stringify(owners), purpose, status, evidence ? computeEvidenceHash(evidence) : null, req.issuer.principal]);
+    return res.status(201).json({ success: true, safe: rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional Safe admin error:', err);
+    return res.status(500).json({ success: false, error: 'Could not save Safe admin.' });
+  }
+});
+
+router.post('/ops/onboarding', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:admin'))) return;
+    const { issuerName, assetType = null, jurisdiction = null, stage = 'intake', checklist = [], counselEvidence = null, kycEvidence = null, operatorEvidence = null, deploymentEvidence = null } = req.body || {};
+    if (!issuerName?.trim()) return res.status(400).json({ success: false, error: 'issuerName is required.' });
+    const { rows } = await pool.query(`INSERT INTO institutional_issuer_onboarding (organization_id, issuer_name, asset_type, jurisdiction, stage, checklist, counsel_signoff_hash, kyc_process_hash, operator_signoff_hash, deployment_signoff_hash, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`, [req.issuer.organizationId, issuerName.trim(), assetType, jurisdiction, stage, JSON.stringify(checklist), counselEvidence ? computeEvidenceHash(counselEvidence) : null, kycEvidence ? computeEvidenceHash(kycEvidence) : null, operatorEvidence ? computeEvidenceHash(operatorEvidence) : null, deploymentEvidence ? computeEvidenceHash(deploymentEvidence) : null, req.issuer.principal]);
+    return res.status(201).json({ success: true, onboarding: rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional onboarding error:', err);
+    return res.status(500).json({ success: false, error: 'Could not save issuer onboarding.' });
+  }
+});
+
+router.post('/ops/evidence-retention', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:admin'))) return;
+    const { subjectType, subjectId, evidence, storageUri = null, retentionUntil, legalBasis = null } = req.body || {};
+    if (!subjectType || !subjectId || evidence === undefined || !retentionUntil) return res.status(400).json({ success: false, error: 'subjectType, subjectId, evidence, and retentionUntil are required.' });
+    const { rows } = await pool.query(`INSERT INTO institutional_evidence_retention (organization_id, subject_type, subject_id, evidence_hash, storage_uri, retention_until, legal_basis, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [req.issuer.organizationId, subjectType, String(subjectId), computeEvidenceHash(evidence), storageUri, retentionUntil, legalBasis, req.issuer.principal]);
+    return res.status(201).json({ success: true, evidence: rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional evidence retention error:', err);
+    return res.status(500).json({ success: false, error: 'Could not save evidence retention record.' });
+  }
+});
+
+router.post('/ops/reports', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:admin'))) return;
+    const { reportType = 'issuer-compliance', periodStart = null, periodEnd = null, payload = {}, status = 'draft' } = req.body || {};
+    const { rows } = await pool.query(`INSERT INTO institutional_regulatory_reports (organization_id, report_type, period_start, period_end, status, payload, generated_by) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [req.issuer.organizationId, reportType, periodStart, periodEnd, status, JSON.stringify(payload), req.issuer.principal]);
+    return res.status(201).json({ success: true, report: rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional report error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create regulatory report.' });
+  }
+});
+
+router.post('/ops/deployments', async (req, res) => {
+  try {
+    if (!(await authorizeIssuer(req, res, 'institutional:admin'))) return;
+    const { chain = 'ethereum', assetSymbol = null, identityRegistry = null, complianceRules = null, riskOracle = null, rwaToken = null, adminSafe = null, status = 'planned', deploymentTxHash = null, postDeployReview = null } = req.body || {};
+    const { rows } = await pool.query(`INSERT INTO institutional_deployments (organization_id, chain, asset_symbol, identity_registry, compliance_rules, risk_oracle, rwa_token, admin_safe, status, deployment_tx_hash, post_deploy_review_hash, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [req.issuer.organizationId, chain, assetSymbol, identityRegistry, complianceRules, riskOracle, rwaToken, adminSafe, status, deploymentTxHash, postDeployReview ? computeEvidenceHash(postDeployReview) : null, req.issuer.principal]);
+    return res.status(201).json({ success: true, deployment: rows[0] });
+  } catch (err) {
+    console.error('❌ Institutional deployment error:', err);
+    return res.status(500).json({ success: false, error: 'Could not save deployment record.' });
+  }
+});
+
