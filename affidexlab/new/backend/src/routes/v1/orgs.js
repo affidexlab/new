@@ -51,6 +51,18 @@ async function resolveVerifyUsage({ organizationId, emails, verifyRows = null })
   return { plan, limit, used, remaining: limit === null ? null : Math.max(limit - used, 0), verifyKeys, screeningKeys };
 }
 
+
+async function recordComplianceAudit({ principal, action, entityType, entityId, beforeState = null, afterState = null }) {
+  const payload = JSON.stringify({ organizationId: principal.organization_id, actor: principal.email, action, entityType, entityId, beforeState, afterState, at: new Date().toISOString() });
+  const crypto = await import('crypto');
+  const eventHash = crypto.createHash('sha256').update(payload).digest('hex');
+  await pool.query(
+    `INSERT INTO compliance_audit_events (organization_id, actor_email, action, entity_type, entity_id, before_state, after_state, event_hash)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [principal.organization_id, principal.email, action, entityType, String(entityId), beforeState, afterState, eventHash]
+  ).catch(err => console.error('Compliance audit event failed:', err.message));
+}
+
 async function resolveOrgApiKeyPolicy(principal) {
   const { rows: orgRows } = await pool.query(`SELECT plan, billing_email FROM organizations WHERE id = $1`, [principal.organization_id]);
   const emails = Array.from(new Set([principal.email, orgRows[0]?.billing_email].filter(Boolean)));
@@ -390,6 +402,7 @@ router.post('/me/compliance/cases', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, 'open', $6, $7, $8, $9) RETURNING *`,
       [principal.organization_id, risk.address, risk.chain, risk.riskScore, risk.riskLevel, priority, assignedTo, notes, principal.email]
     );
+    await recordComplianceAudit({ principal, action: 'case.created', entityType: 'compliance_case', entityId: rows[0].id, afterState: rows[0] });
     return res.status(201).json({ success: true, case: rows[0], risk });
   } catch (err) {
     console.error('❌ Compliance case create error:', err);
@@ -417,6 +430,7 @@ router.patch('/me/compliance/cases/:caseId', async (req, res) => {
       [status || null, priority || null, assignedTo || null, decision || null, notes || null, principal.email, req.params.caseId, principal.organization_id]
     );
     if (!rows[0]) return res.status(404).json({ success: false, error: 'Compliance case not found.' });
+    await recordComplianceAudit({ principal, action: 'case.updated', entityType: 'compliance_case', entityId: rows[0].id, afterState: rows[0] });
     return res.json({ success: true, case: rows[0] });
   } catch (err) {
     console.error('❌ Compliance case update error:', err);
@@ -465,6 +479,94 @@ router.get('/me/compliance/export', async (req, res) => {
   } catch (err) {
     console.error('❌ Compliance export error:', err);
     return res.status(500).json({ success: false, error: 'Could not export compliance cases.' });
+  }
+});
+
+
+router.post('/me/compliance/cases/:caseId/comments', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
+    if (!principal) return;
+    const { body, visibility = 'internal' } = req.body || {};
+    if (!body?.trim()) return res.status(400).json({ success: false, error: 'Comment body is required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO compliance_case_comments (case_id, organization_id, body, visibility, created_by)
+       SELECT id, organization_id, $1, $2, $3 FROM compliance_cases WHERE id = $4 AND organization_id = $5 RETURNING *`,
+      [body.trim(), visibility, principal.email, req.params.caseId, principal.organization_id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Compliance case not found.' });
+    await recordComplianceAudit({ principal, action: 'case.comment.created', entityType: 'compliance_case', entityId: req.params.caseId, afterState: rows[0] });
+    return res.status(201).json({ success: true, comment: rows[0] });
+  } catch (err) {
+    console.error('❌ Compliance comment create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not add case comment.' });
+  }
+});
+
+router.post('/me/compliance/cases/:caseId/evidence', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst']);
+    if (!principal) return;
+    const { title, evidenceType = 'document', uri = null, contentHash = null, metadata = {} } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ success: false, error: 'Evidence title is required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO compliance_case_evidence (case_id, organization_id, evidence_type, title, uri, content_hash, metadata, uploaded_by)
+       SELECT id, organization_id, $1, $2, $3, $4, $5, $6 FROM compliance_cases WHERE id = $7 AND organization_id = $8 RETURNING *`,
+      [evidenceType, title.trim(), uri, contentHash, metadata, principal.email, req.params.caseId, principal.organization_id]
+    );
+    if (!rows[0]) return res.status(404).json({ success: false, error: 'Compliance case not found.' });
+    await recordComplianceAudit({ principal, action: 'case.evidence.added', entityType: 'compliance_case', entityId: req.params.caseId, afterState: rows[0] });
+    return res.status(201).json({ success: true, evidence: rows[0] });
+  } catch (err) {
+    console.error('❌ Compliance evidence create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not add case evidence.' });
+  }
+});
+
+router.get('/me/compliance/cases/:caseId/timeline', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst', 'viewer']);
+    if (!principal) return;
+    const caseRows = await pool.query(`SELECT * FROM compliance_cases WHERE id = $1 AND organization_id = $2`, [req.params.caseId, principal.organization_id]);
+    if (!caseRows.rows[0]) return res.status(404).json({ success: false, error: 'Compliance case not found.' });
+    const [comments, evidence, audit] = await Promise.all([
+      pool.query(`SELECT * FROM compliance_case_comments WHERE case_id = $1 AND organization_id = $2 ORDER BY created_at DESC`, [req.params.caseId, principal.organization_id]),
+      pool.query(`SELECT * FROM compliance_case_evidence WHERE case_id = $1 AND organization_id = $2 ORDER BY created_at DESC`, [req.params.caseId, principal.organization_id]),
+      pool.query(`SELECT * FROM compliance_audit_events WHERE entity_type = 'compliance_case' AND entity_id = $1 AND organization_id = $2 ORDER BY created_at DESC LIMIT 200`, [String(req.params.caseId), principal.organization_id]),
+    ]);
+    return res.json({ success: true, case: caseRows.rows[0], comments: comments.rows, evidence: evidence.rows, auditEvents: audit.rows });
+  } catch (err) {
+    console.error('❌ Compliance timeline error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch case timeline.' });
+  }
+});
+
+router.get('/me/compliance/audit-events', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin', 'analyst', 'viewer']);
+    if (!principal) return;
+    const { rows } = await pool.query(`SELECT * FROM compliance_audit_events WHERE organization_id = $1 ORDER BY created_at DESC LIMIT 500`, [principal.organization_id]);
+    return res.json({ success: true, auditEvents: rows });
+  } catch (err) {
+    console.error('❌ Compliance audit event list error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch compliance audit events.' });
+  }
+});
+
+router.post('/me/compliance/report-templates', async (req, res) => {
+  try {
+    const principal = await authenticateOrgSession(req, res, ['owner', 'admin']);
+    if (!principal) return;
+    const { name, format = 'csv', fields = [] } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ success: false, error: 'Template name is required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO compliance_report_templates (organization_id, name, format, fields, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [principal.organization_id, name.trim(), format, fields, principal.email]
+    );
+    return res.status(201).json({ success: true, template: rows[0] });
+  } catch (err) {
+    console.error('❌ Compliance report template create error:', err);
+    return res.status(500).json({ success: false, error: 'Could not create report template.' });
   }
 });
 

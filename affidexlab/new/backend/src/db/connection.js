@@ -402,6 +402,7 @@ export const initializeDatabase = async () => {
 
   try {
     await runSqlFile('migrations/027_full_scale_launch_ops.sql');
+    await runSqlFile('migrations/028_enterprise_launch_readiness.sql');
     console.log('✅ Full-scale launch ops migration applied successfully');
   } catch (migrationError) {
     if (['42P07', '42710', '42701'].includes(migrationError.code) || migrationError.message?.includes('already exists')) {

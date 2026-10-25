@@ -246,13 +246,27 @@ async function runShieldMonitorCycle(source = 'server-scheduler') {
   }
   shieldMonitorRunning = true;
   const startedAt = Date.now();
+  let runId = null;
   try {
+    if (process.env.DATABASE_URL) {
+      const run = await (await import('./db/connection.js')).default.query(
+        `INSERT INTO shield_monitor_runs (source, status, started_at) VALUES ($1, 'running', NOW()) RETURNING id`,
+        [source]
+      ).catch(() => ({ rows: [] }));
+      runId = run.rows?.[0]?.id || null;
+    }
     console.log(`🛡️  Shield monitor cycle started (${source})`);
     await runShieldCheck();
     await runShieldSecurityScan();
     await runShieldVulnerabilityScan();
+    if (runId) {
+      await (await import('./db/connection.js')).default.query(`UPDATE shield_monitor_runs SET status = 'success', completed_at = NOW(), metadata = $2 WHERE id = $1`, [runId, { durationMs: Date.now() - startedAt }]).catch(() => {});
+    }
     console.log(`✅ Shield monitor cycle completed in ${Date.now() - startedAt}ms`);
   } catch (err) {
+    if (runId) {
+      await (await import('./db/connection.js')).default.query(`UPDATE shield_monitor_runs SET status = 'failed', error_message = $2, completed_at = NOW() WHERE id = $1`, [runId, err.message]).catch(() => {});
+    }
     console.error('❌ Shield monitor cycle failed:', err.message);
   } finally {
     shieldMonitorRunning = false;

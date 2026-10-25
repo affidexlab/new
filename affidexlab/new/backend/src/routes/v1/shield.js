@@ -113,6 +113,37 @@ router.get('/waitlist', async (req, res) => {
   }
 });
 
+
+router.get('/proof', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const [runs, contracts, alerts, incidents, findings] = await Promise.all([
+      pool.query(`SELECT * FROM shield_monitor_runs ORDER BY started_at DESC LIMIT 50`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT sc.*, cust.company_name, cust.email FROM shield_contracts sc LEFT JOIN shield_customers cust ON cust.id = sc.customer_id ORDER BY sc.created_at DESC LIMIT 200`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT severity, status, COUNT(*)::int AS count, MAX(created_at) AS latest FROM shield_alerts GROUP BY severity, status ORDER BY latest DESC`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT severity, status, COUNT(*)::int AS count, MAX(created_at) AS latest FROM shield_incidents GROUP BY severity, status ORDER BY latest DESC`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT severity, status, COUNT(*)::int AS count, MAX(created_at) AS latest FROM shield_vulnerability_findings GROUP BY severity, status ORDER BY latest DESC`).catch(() => ({ rows: [] })),
+    ]);
+    const rpcConfigured = ['ETHEREUM','ARBITRUM','BASE','POLYGON','AVALANCHE','OPTIMISM'].map(chain => ({ chain: chain.toLowerCase(), configured: Boolean(process.env[`RPC_${chain}`]) }));
+    return res.json({
+      success: true,
+      proof: {
+        scheduler: { serverAutoMonitor: process.env.SHIELD_AUTO_MONITOR !== 'false', intervalMs: Number(process.env.SHIELD_MONITOR_INTERVAL_MS || 15 * 60 * 1000) },
+        rpcConfigured,
+        recentRuns: runs.rows,
+        monitoredContracts: contracts.rows,
+        alertRollup: alerts.rows,
+        incidentRollup: incidents.rows,
+        vulnerabilityRollup: findings.rows,
+        operationalSla: { critical: '15 minute acknowledgement target', high: '4 business hour acknowledgement target', standard: 'next business day' },
+      }
+    });
+  } catch (err) {
+    console.error('❌ Shield proof error:', err);
+    return res.status(500).json({ success: false, error: 'Could not fetch Shield proof package.' });
+  }
+});
+
 router.get('/alerts', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
