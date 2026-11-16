@@ -54,25 +54,25 @@ jobs:
         run: npm ci --omit=dev
 
       - name: Run OFAC ingestion
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'ofac' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'ofac') }}
         run: npm run ingest:ofac
 
       - name: Run public sanctions ingestion
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'sanctions' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'sanctions') }}
         run: npm run ingest:sanctions
 
       - name: Run public scam and phishing feed ingestion
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'public-feeds' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'public-feeds') }}
         run: npm run ingest:public-feeds
 
       - name: Run curated label ingestion
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'curated' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'curated') }}
         run: npm run ingest:curated
 
       - name: Run targeted graph backfill
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'graph-backfill' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'graph-backfill') }}
         run: npm run risk:backfill-graph
 
       - name: Run risk calibration check
-        if: ${{ github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'calibrate' }}
+        if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.job == 'all' || inputs.job == 'calibrate') }}
         run: npm run risk:calibrate
