@@ -1,6 +1,20 @@
 import pool from '../db/connection.js';
 import { addRiskLabel } from '../services/internalRiskEngine.js';
 
+const UK_SANCTIONS_LIST_URL = 'https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml';
+
+// The old OFSI Consolidated List host stopped serving data when the list closed (28 Jan 2026).
+// If a stale env var/secret still points there, ignore it and use the official UK Sanctions List instead.
+function resolveUkSanctionsUrl() {
+  const configured = (process.env.UK_HMT_CONSOLIDATED_SANCTIONS_URL || '').trim();
+  if (!configured) return UK_SANCTIONS_LIST_URL;
+  if (/ofsistorage\.blob\.core\.windows\.net|ConList\.(csv|xml|txt)/i.test(configured)) {
+    console.warn(`⚠️ UK_HMT_CONSOLIDATED_SANCTIONS_URL points at the closed OFSI list; using ${UK_SANCTIONS_LIST_URL} instead. Update or delete that secret.`);
+    return UK_SANCTIONS_LIST_URL;
+  }
+  return configured;
+}
+
 const DEFAULT_SOURCES = [
   {
     key: 'un-consolidated',
@@ -19,12 +33,14 @@ const DEFAULT_SOURCES = [
     labelPrefix: 'EU Consolidated Financial Sanctions'
   },
   {
+    // Source key kept as 'uk-hmt-consolidated' so existing labels and risk.js lookups keep working.
+    // The OFSI Consolidated List closed on 28 Jan 2026; the FCDO UK Sanctions List is now the only UK source.
     key: 'uk-hmt-consolidated',
     category: 'sanctions',
     severity: 'critical',
     confidence: 0.95,
-    url: process.env.UK_HMT_CONSOLIDATED_SANCTIONS_URL || 'https://ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv',
-    labelPrefix: 'UK OFSI/HMT Consolidated Sanctions'
+    url: resolveUkSanctionsUrl(),
+    labelPrefix: 'UK Sanctions List (FCDO)'
   }
 ];
 
