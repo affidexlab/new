@@ -190,7 +190,7 @@ router.post('/case-reviews', async (req, res) => {
       const update = await pool.query(
         `UPDATE risk_address_labels
          SET active = false, updated_at = NOW(), metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deactivatedByReviewId', $${params.length + 1}, 'deactivationDecision', 'false_positive')
-         WHERE chain = $1 AND lower(address) = $2${categoryFilter} AND source != 'ofac-sdn' AND active = true`,
+         WHERE chain = $1 AND lower(address) = $2${categoryFilter} AND source NOT IN ('ofac-sdn') AND source NOT LIKE 'ofac-mirror-%' AND active = true`,
         [...params, rows[0].id]
       );
       feedbackApplied = `deactivated_${update.rowCount}_labels`;
@@ -198,7 +198,7 @@ router.post('/case-reviews', async (req, res) => {
       const update = await pool.query(
         `UPDATE risk_address_labels
          SET active = false, updated_at = NOW(), metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deactivatedByReviewId', $3, 'deactivationDecision', 'trusted')
-         WHERE chain = $1 AND lower(address) = $2 AND source NOT IN ('ofac-sdn', 'un-consolidated', 'eu-consolidated', 'uk-hmt-consolidated') AND active = true`,
+         WHERE chain = $1 AND lower(address) = $2 AND source NOT IN ('ofac-sdn', 'un-consolidated', 'eu-consolidated', 'uk-hmt-consolidated') AND source NOT LIKE 'ofac-mirror-%' AND active = true`,
         [String(chain).toLowerCase(), walletAddress.toLowerCase(), rows[0].id]
       );
       feedbackApplied = `deactivated_${update.rowCount}_labels`;

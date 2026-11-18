@@ -1,0 +1,43 @@
+{
+  "_note": "Real, publicly listed OFAC SDN digital-currency addresses (public record), used as checksum test vectors.",
+  "addresses": {
+    "bitcoin": [
+      "123WBUDmSJv4GctdVEz6Qq6z8nXSKrJ4KX",
+      "125W5ek3DT6Zqy5S2iPt4FHQdNMCbZA3FU",
+      "bc1q05aktddf9ce4p7hh3stgsf253m4vweu7nkhtmw",
+      "31nadacWrgPeAQxKRMabhn3fPhnhi3hjKa"
+    ],
+    "ethereum": [
+      "0x0330070FD38Ec3bB94F58FA55D40368271E9e54A",
+      "0x038989cbb1710c72b9920dc4fa529158f463e72c"
+    ],
+    "litecoin": [
+      "LNf2JDiuunBz7GMDKFYHN4rq5meXWxiwfb",
+      "LNwgtMxcKUQ51dw7bQL1yPQjBVZh6QEqsd",
+      "ltc1qr8ntsedq8tv0svmxqhzvdcdl5k7kntdmnhwep7"
+    ],
+    "dash": [
+      "XcuGqRfrR85zyDrzVr1gSL5RNjwwpbu2KS",
+      "XnPFsRWTaSgiVauosEwQ6dEitGYXgwznz2"
+    ],
+    "zcash": [
+      "t1LHesgnkapziGQCJtrfZWYXhyjfTVo1dvh",
+      "t1MMXtBrSp1XG38Lx9cePcNUCJj5vdWfUWL"
+    ],
+    "tron": [
+      "TA3rH2A7iHnm6pKH8gr9cK1EZnShnmZdFg",
+      "TA82wQ77kb9DieW4C8q7C4KwMfnCzfziqN"
+    ],
+    "monero": [
+      "44dZUJ7w1T3fKAvFW8XyXUVoAGSbFvXef2wcbnsjNKGWYorpLJBjth5VKSFhLGkpYKJb2J341tdZHBnbpv72WL7e8zuxfR2",
+      "45ezvPejNsKYntjhyyeb7fbfzi1sxYQozc5Ffseh8jPGW4JZQQVXykNTfK5uGFiij7Hp3qPv3T5HCR7F3Fnmz2mzE1aKQwo"
+    ],
+    "solana": [
+      "42RLPACwZPx3vYYmxSueqsogfynBDqXK298EDsNoyoHi",
+      "6wjqWWra8ombzaw6VHrG5xpQ972jCYF6bbHiFCbWmr4U"
+    ],
+    "ripple": [
+      "rnXyVQzgxZe7TR1EPzTkGj2jxH4LMJYh66"
+    ]
+  }
+}

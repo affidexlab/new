@@ -1,5 +1,7 @@
 import pool from '../db/connection.js';
 import { addRiskLabel } from '../services/internalRiskEngine.js';
+import { recordRiskIngestionRun } from '../services/riskCoverageService.js';
+import { findAddressesInText } from '../services/cryptoAddressValidation.js';
 
 const UK_SANCTIONS_LIST_URL = 'https://sanctionslist.fcdo.gov.uk/docs/UK-Sanctions-List.xml';
 
@@ -44,15 +46,6 @@ const DEFAULT_SOURCES = [
   }
 ];
 
-const ADDRESS_PATTERNS = [
-  { chain: 'ethereum', regex: /\b0x[a-fA-F0-9]{40}\b/g },
-  { chain: 'bitcoin', regex: /\b(?:bc1[ac-hj-np-z02-9]{11,71}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b/g },
-  { chain: 'litecoin', regex: /\b(?:ltc1[ac-hj-np-z02-9]{11,71}|[LM3][a-km-zA-HJ-NP-Z1-9]{26,33})\b/g },
-  { chain: 'zcash', regex: /\bt1[a-km-zA-HJ-NP-Z1-9]{33}\b/g },
-  { chain: 'dash', regex: /\bX[1-9A-HJ-NP-Za-km-z]{33}\b/g },
-  { chain: 'monero', regex: /\b4[0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b/g }
-];
-
 function stripTags(value) {
   return String(value || '')
     .replace(/<[^>]+>/g, ' ')
@@ -82,32 +75,25 @@ function extractName(context, fallback) {
   return fallback;
 }
 
+// Only checksum-valid addresses are accepted (see services/cryptoAddressValidation.js).
 function extractAddresses(source, body) {
-  const labels = [];
-  const seen = new Set();
-  for (const pattern of ADDRESS_PATTERNS) {
-    let match;
-    pattern.regex.lastIndex = 0;
-    while ((match = pattern.regex.exec(body))) {
-      const address = match[0];
-      const key = `${pattern.chain}:${address.toLowerCase()}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const context = nearbyText(body, match.index);
-      labels.push({
-        chain: pattern.chain,
-        address,
-        category: source.category,
-        label: `${source.labelPrefix}: ${extractName(context, 'listed entity')}`.slice(0, 255),
-        severity: source.severity,
-        confidence: source.confidence,
-        source: source.key,
-        evidence: context || `${source.labelPrefix} source contained this digital-asset address`,
-        metadata: { sourceUrl: source.url, sourceKey: source.key }
-      });
-    }
-  }
-  return labels;
+  const stats = {};
+  const found = findAddressesInText(body, stats);
+  const labels = found.map(({ chain, address, index }) => {
+    const context = nearbyText(body, index);
+    return {
+      chain,
+      address,
+      category: source.category,
+      label: `${source.labelPrefix}: ${extractName(context, 'listed entity')}`.slice(0, 255),
+      severity: source.severity,
+      confidence: source.confidence,
+      source: source.key,
+      evidence: context || `${source.labelPrefix} source contained this digital-asset address`,
+      metadata: { sourceUrl: source.url, sourceKey: source.key, validated: 'checksum' }
+    };
+  });
+  return { labels, rejectedInvalid: stats.rejected || 0 };
 }
 
 async function fetchSource(source) {
@@ -117,14 +103,33 @@ async function fetchSource(source) {
 }
 
 async function ingestSource(source) {
+  const startedAt = (await pool.query('SELECT NOW() AS now')).rows[0].now;
   const body = await fetchSource(source);
-  const labels = extractAddresses(source, body);
+  const { labels, rejectedInvalid } = extractAddresses(source, body);
   let inserted = 0;
   for (const label of labels) {
     await addRiskLabel(label);
     inserted += 1;
   }
-  return { source: source.key, fetchedBytes: body.length, labels: inserted };
+
+  // Deactivate labels from this source that the latest snapshot no longer contains
+  // (de-listed addresses, and look-alike strings stored by older, unvalidated runs).
+  // Skipped when nothing valid was found, so a bad download can never wipe a source.
+  let deactivatedStale = 0;
+  if (inserted > 0) {
+    const stale = await pool.query(
+      `UPDATE risk_address_labels
+       SET active = false, updated_at = NOW(),
+           metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('deactivatedReason', 'not_in_latest_source_snapshot')
+       WHERE source = $1 AND active = true AND updated_at < $2`,
+      [source.key, startedAt]
+    );
+    deactivatedStale = stale.rowCount;
+  }
+
+  const result = { source: source.key, fetchedBytes: body.length, labels: inserted, rejectedInvalid, deactivatedStale };
+  await recordRiskIngestionRun({ source: source.key, status: 'success', labelsCount: inserted, fetchedBytes: body.length, metadata: { rejectedInvalid, deactivatedStale, sourceUrl: source.url } });
+  return result;
 }
 
 async function main() {
@@ -135,6 +140,7 @@ async function main() {
     try {
       results.push(await ingestSource(source));
     } catch (err) {
+      await recordRiskIngestionRun({ source: source.key, status: 'failed', error: err.message, metadata: { sourceUrl: source.url } });
       results.push({ source: source.key, error: err.message });
     }
   }

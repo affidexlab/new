@@ -10,6 +10,7 @@
     "dev": "node --watch src/server.js",
     "start:sandbox": "ENVIRONMENT=sandbox node src/server.js",
     "build": "node --check src/server.js",
+    "test:addresses": "node --test tests/cryptoAddressValidation.test.js",
     "ingest:ofac": "node src/scripts/ingest-ofac-sdn-crypto.js",
     "ingest:sanctions": "node src/scripts/ingest-public-sanctions-lists.js",
     "ingest:public-feeds": "node src/scripts/ingest-public-risk-feeds.js",
