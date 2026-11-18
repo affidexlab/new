@@ -37,6 +37,7 @@ export default function Compliance() {
   const [demoWallet, setDemoWallet] = useState("");
   const [demoResult, setDemoResult] = useState<any>(null);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
   const [formStep, setFormStep] = useState<"form"|"success">("form");
@@ -51,16 +52,17 @@ export default function Compliance() {
 
   const runDemo = async () => {
     if (!demoWallet.trim()) return;
-    setDemoLoading(true); setDemoResult(null);
+    setDemoLoading(true); setDemoResult(null); setDemoError("");
     try {
       const res = await fetch(`${API_BASE}/v1/compliance/demo-score`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({address:demoWallet}) });
-      if (res.ok) { const d = await res.json(); setDemoResult(d.data||d); setDemoLoading(false); return; }
-    } catch {}
-    const seed = (demoWallet.charCodeAt(2)||65)+(demoWallet.charCodeAt(3)||66);
-    const score = seed%3===0?12:seed%3===1?67:91;
-    const level = score<30?"LOW":score<70?"MEDIUM":"HIGH";
-    setDemoResult({ riskScore:score, riskLevel:level, recommendation:score<30?"APPROVE":score<70?"REVIEW":"REJECT",
-      flags: score<30?["No sanctions matches","No mixer activity","Clean history"]:score<70?["Interaction with flagged DEX","Moderate anonymity pattern"]:["OFAC watchlist proximity","Mixer usage detected","High-risk jurisdiction"] });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d?.data && d.data.provider !== "demo") setDemoResult(d.data);
+      else if (res.status === 429) setDemoError("Too many checks from your network. Wait a minute and try again.");
+      else if (res.ok && d?.data?.provider === "demo") setDemoError("Live screening isn't available right now, so we can't show a real result.");
+      else setDemoError(d?.error || "The check couldn't be completed. Try again in a moment.");
+    } catch {
+      setDemoError("Couldn't reach the screening service. Check your connection and try again.");
+    }
     setDemoLoading(false);
   };
 
@@ -138,6 +140,7 @@ export default function Compliance() {
               style={{flex:"1",padding:"0.875rem 1rem",borderRadius:"10px",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",fontSize:"0.9rem",outline:"none",minWidth:"0",width:"100%",fontFamily:"monospace"}} />
             <button onClick={runDemo} disabled={demoLoading} style={{background:"#3B82F6",color:"#fff",padding:"0.875rem 1.5rem",borderRadius:"10px",border:"none",cursor:"pointer",fontWeight:700,opacity:demoLoading?0.6:1,whiteSpace:"nowrap"}}>{demoLoading?"Scanning...":"Check Risk"}</button>
           </div>
+          {demoError&&(<div role="alert" style={{marginTop:"1.5rem",padding:"1rem 1.25rem",borderRadius:"12px",background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",fontSize:"0.9rem",lineHeight:1.55}}>{demoError}</div>)}
           {demoResult&&(
             <div style={{marginTop:"1.5rem",padding:"1.25rem",borderRadius:"12px",background:"rgba(255,255,255,0.04)",border:`1px solid ${levelColor(demoResult.riskLevel)}40`}}>
               <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"0.75rem"}}>

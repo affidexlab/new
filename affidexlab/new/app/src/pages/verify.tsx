@@ -45,6 +45,7 @@ export default function Verify() {
   const [demoChain, setDemoChain] = useState("ethereum");
   const [demoResult, setDemoResult] = useState<any>(null);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState("");
   const [activeTab, setActiveTab] = useState<"response"|"fields">("response");
   const [formOpen, setFormOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("");
@@ -60,15 +61,17 @@ export default function Verify() {
 
   const runDemo = async () => {
     if (!demoAddress.trim()) return;
-    setDemoLoading(true); setDemoResult(null);
+    setDemoLoading(true); setDemoResult(null); setDemoError("");
     try {
-      const res = await fetch(`${API_BASE}/v1/verify/demo`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({address:demoAddress,chain:demoChain})});
-      if (res.ok){const d=await res.json();setDemoResult(d.data||d);setDemoLoading(false);return;}
-    } catch {}
-    const seed=(demoAddress.replace("0x","").charCodeAt(0)||65)+(demoAddress.replace("0x","").charCodeAt(1)||66);
-    const score=seed%3===0?8:seed%3===1?54:89;
-    const level=score<25?"LOW":score<60?"MEDIUM":score<85?"HIGH":"CRITICAL";
-    setDemoResult({riskScore:score,riskLevel:level,sanctionsMatch:score>85,mixerExposure:score>60?0.34:score>30?0.08:0,darknetExposure:score>75?0.12:0,jurisdictionRisk:score>60?"HIGH":score>30?"MEDIUM":"LOW",hopsAnalysed:5,recommendation:score<25?"APPROVE":score<60?"REVIEW":"REJECT",flags:score<25?[]:score<60?["Interaction with flagged exchange","Moderate transaction velocity"]:["Mixer exposure (Tornado Cash)","High-risk jurisdiction activity","OFAC watchlist proximity"],reportId:`rpt_${Math.random().toString(36).substr(2,9)}`,checkedAt:new Date().toISOString()});
+      const res = await fetch(`${API_BASE}/v1/verify/demo`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({address:demoAddress,chain:demoChain}) });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d?.data && d.data.provider !== "demo") setDemoResult(d.data);
+      else if (res.status === 429) setDemoError("Too many checks from your network. Wait a minute and try again.");
+      else if (res.ok && d?.data?.provider === "demo") setDemoError("Live screening isn't available right now, so we can't show a real result.");
+      else setDemoError(d?.error || "The check couldn't be completed. Try again in a moment.");
+    } catch {
+      setDemoError("Couldn't reach the screening service. Check your connection and try again.");
+    }
     setDemoLoading(false);
   };
 
@@ -142,6 +145,7 @@ export default function Verify() {
               {demoLoading?"Scanning...":"Verify Wallet"}
             </button>
           </div>
+          {demoError&&(<div role="alert" style={{marginTop:"1.5rem",padding:"1rem 1.25rem",borderRadius:"12px",background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",fontSize:"0.9rem",lineHeight:1.55}}>{demoError}</div>)}
           {demoResult&&(
             <div style={{marginTop:"1.5rem"}}>
               <div style={{display:"flex",gap:"1rem",flexWrap:"wrap",padding:"1.25rem",borderRadius:"12px",background:`${levelColor(demoResult.riskLevel)}10`,border:`1px solid ${levelColor(demoResult.riskLevel)}30`,marginBottom:"1rem",alignItems:"center"}}>

@@ -1,3 +1,4 @@
+import SiteNav from "../components/site/SiteNav";
 import { useState, useEffect } from "react";
 
 import { API_BASE } from "../lib/apiBase";
@@ -35,17 +36,7 @@ export default function Contact() {
     <div style={{ background: "#0A0E27", color: "#fff", minHeight: "100vh", fontFamily: "Inter,system-ui,sans-serif" }}>
 
       {/* Nav */}
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 2rem", borderBottom: "1px solid rgba(255,255,255,0.08)", position: "sticky", top: 0, background: "rgba(10,14,39,0.97)", backdropFilter: "blur(12px)", zIndex: 100 }}>
-        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <img src="/logo.png" alt="DecaFlow" style={{ width: 36, height: 36, objectFit: "contain" }} />
-          <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "#fff", letterSpacing: "-0.025em" }}>Deca<span style={{ color: "#3B82F6" }}>Flow</span></span>
-        </a>
-        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          {[["Compliance", "/compliance"], ["Security Audit", "/audit"], ["Verify API", "/verify"]].map(([l, h]) => (
-            <a key={l} href={h} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.9rem" }}>{l}</a>
-          ))}
-        </div>
-      </nav>
+      <SiteNav cta={{ label: "Check a wallet free", href: "/#check" }} />
 
       {/* Content */}
       <section style={{ padding: "5rem 2rem", maxWidth: "1000px", margin: "0 auto" }}>
